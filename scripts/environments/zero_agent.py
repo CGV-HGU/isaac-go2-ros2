@@ -11,6 +11,7 @@ import argparse
 
 from isaaclab.app import AppLauncher
 
+
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Zero agent for Isaac Lab environments.")
 parser.add_argument(

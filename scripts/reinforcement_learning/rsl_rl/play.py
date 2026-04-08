@@ -121,9 +121,9 @@ def update_keyboard_state(state, event):
     elif event.input == carb.input.KeyboardInput.D:
         state["side"] = -1.0 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.Q:
-        state["yaw"] = 1.0 if pressed else 0.0
+        state["yaw"] = 100.0 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.E:
-        state["yaw"] = -1.0 if pressed else 0.0
+        state["yaw"] = -100.0 if pressed else 0.0
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
