@@ -1,6 +1,6 @@
 @echo off
-REM Go2 로봇 평지 보행 강화학습(RL) 실행 스크립트
-REM 윈도우 환경의 5.1.0 데스크탑에서 이 파일을 실행하면 바로 학습이 시작됩니다.
+REM Go2 RL Training Script
+REM Run this on your 5.1.0 Desktop
 
-echo 🚀 Unitree Go2 강화학습(Training)을 시작합니다...
+echo Starting Unitree Go2 Training...
 python scripts\reinforcement_learning\rsl_rl\train.py --task Isaac-Velocity-Flat-Unitree-Go2-v0 --headless
