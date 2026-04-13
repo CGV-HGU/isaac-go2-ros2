@@ -28,6 +28,8 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         if hasattr(self.commands, "base_velocity"):
             # ang_vel_z 가 회전(Yaw) 범위입니다.
             self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+            # 연속적인 제자리 회전을 위해 절대 방향(Heading) 제어 끄기
+            self.commands.base_velocity.heading_command = False
 
         # 지형 및 관측치 설정 (기존과 동일)
         self.scene.terrain.terrain_type = "plane"
