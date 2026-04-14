@@ -212,8 +212,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # 1. 로봇의 base(몸통) 아래에 카메라 Prim 생성 (앞쪽을 바라보도록 위치/회전 설정)
     if not prim_utils.is_prim_path_valid(camera_path):
         cam = UsdGeom.Camera.Define(env.unwrapped.scene.stage, camera_path)
-        # 로봇 앞부분(X축)으로 0.3m, 살짝 위(Z축) 0.1m 위치. 
-        cam.AddTranslateOp().Set(Gf.Vec3d(0.3, 0.0, 0.1))
+        # 로봇 머리 위(X축 0.15m, Z축 0.25m) 위치로 수정. 
+        cam.AddTranslateOp().Set(Gf.Vec3d(0.15, 0.0, 0.25))
         # 카메라 렌즈 방향(기본 -Z)을 앞쪽(+X)으로 회전 (Pitch 90도)
         cam.AddRotateXYZOp().Set(Gf.Vec3d(90, 0, 90))
         cam.GetFocalLengthAttr().Set(24.0)
