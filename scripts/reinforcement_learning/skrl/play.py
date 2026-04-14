@@ -200,8 +200,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # ==========================================
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
     # ==========================================
-    from omni.isaac.core.utils.extensions import enable_extension
-    enable_extension("omni.isaac.ros2_bridge")
+    import omni
+    ext_manager = omni.kit.app.get_app().get_extension_manager()
+    ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
     
     import omni.graph.core as og
     import omni.isaac.core.utils.prims as prim_utils
