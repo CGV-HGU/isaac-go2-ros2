@@ -204,8 +204,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
     # ==========================================
     ext_manager = omni.kit.app.get_app().get_extension_manager()
-    ext_manager.set_extension_enabled_immediate("omni.isaac.core_nodes", True)
-    ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
+    ext_manager.set_extension_enabled_immediate("isaacsim.core.nodes", True)
+    ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
     
     camera_path = "/World/envs/env_0/Robot/base/front_cam"
     
@@ -225,9 +225,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         {
             og.Controller.Keys.CREATE_NODES: [
                 ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                ("RenderProduct", "omni.isaac.core_nodes.IsaacCreateRenderProduct"),
-                ("ROS2CameraRGB", "omni.isaac.ros2_bridge.ROS2CameraHelper"),
-                ("ROS2CameraDepth", "omni.isaac.ros2_bridge.ROS2CameraHelper"),
+                ("RenderProduct", "isaacsim.core.nodes.IsaacCreateRenderProduct"),
+                ("ROS2CameraRGB", "isaacsim.ros2.bridge.ROS2CameraHelper"),
+                ("ROS2CameraDepth", "isaacsim.ros2.bridge.ROS2CameraHelper"),
             ],
             og.Controller.Keys.SET_VALUES: [
                 ("RenderProduct.inputs:cameraPrim", camera_path),
