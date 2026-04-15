@@ -215,8 +215,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         cam = UsdGeom.Camera.Define(stage, camera_path)
         # 로봇 머리 위(X축 0.15m, Z축 0.25m) 위치로 수정. 
         cam.AddTranslateOp().Set(Gf.Vec3d(0.15, 0.0, 0.25))
-        # 카메라 렌즈가 로봇의 정면(+X)을 바라보도록 회전 수정
-        cam.AddRotateXYZOp().Set(Gf.Vec3d(0, 90, 0))
+        # 카메라 렌즈가 정면을 보고 수직이 맞도록 회전 교정 (0, -90, -90)
+        cam.AddRotateXYZOp().Set(Gf.Vec3d(0, -90, -90))
         cam.GetFocalLengthAttr().Set(24.0)
 
     # 2. ROS2 Bridge (RGB & Depth) OmniGraph 생성
