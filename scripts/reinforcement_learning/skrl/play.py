@@ -231,7 +231,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             ],
             og.Controller.Keys.SET_VALUES: [
                 ("RenderProduct.inputs:cameraPrim", camera_path),
-                ("RenderProduct.inputs:resolution", [640, 480]),
+                ("RenderProduct.inputs:width", 640),
+                ("RenderProduct.inputs:height", 480),
                 
                 # RGB 설정
                 ("ROS2CameraRGB.inputs:type", "rgb"),
