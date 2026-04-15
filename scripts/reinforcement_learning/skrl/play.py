@@ -352,14 +352,4 @@ if __name__ == "__main__":
     main()
     # close sim app
     simulation_app.close()
-rd, keyboard_sub)
 
-    # close the simulator
-    env.close()
-
-
-if __name__ == "__main__":
-    # run the main function
-    main()
-    # close sim app
-    simulation_app.close()
