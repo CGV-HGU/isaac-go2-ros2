@@ -197,62 +197,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
-    # ==========================================
-    # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
-    # ==========================================
-    from omni.isaac.core.utils.extensions import enable_extension
-    enable_extension("omni.isaac.ros2_bridge")
-    
-    import omni.graph.core as og
-    import omni.isaac.core.utils.prims as prim_utils
-    from pxr import UsdGeom, Gf
-    
-    camera_path = "/World/envs/env_0/Robot/base/front_cam"
-    
-    # 1. 로봇의 base(몸통) 아래에 카메라 Prim 생성 (앞쪽을 바라보도록 위치/회전 설정)
-    if not prim_utils.is_prim_path_valid(camera_path):
-        cam = UsdGeom.Camera.Define(env.unwrapped.scene.stage, camera_path)
-        # 로봇 머리 위(X축 0.15m, Z축 0.25m) 위치로 수정. 
-        cam.AddTranslateOp().Set(Gf.Vec3d(0.15, 0.0, 0.25))
-        # 카메라 렌즈 방향(기본 -Z)을 앞쪽(+X)으로 회전 (Pitch 90도)
-        cam.AddRotateXYZOp().Set(Gf.Vec3d(90, 0, 90))
-        cam.GetFocalLengthAttr().Set(24.0)
-
-    # 2. ROS2 Bridge (RGB & Depth) OmniGraph 생성
-    og.Controller.edit(
-        {"graph_path": "/World/ROS2_Camera_Graph", "evaluator_name": "execution"},
-        {
-            og.Controller.Keys.CREATE_NODES: [
-                ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                ("RenderProduct", "omni.isaac.core_nodes.IsaacCreateRenderProduct"),
-                ("ROS2CameraRGB", "omni.isaac.ros2_bridge.ROS2CameraHelper"),
-                ("ROS2CameraDepth", "omni.isaac.ros2_bridge.ROS2CameraHelper"),
-            ],
-            og.Controller.Keys.SET_VALUES: [
-                ("RenderProduct.inputs:cameraPrim", camera_path),
-                ("RenderProduct.inputs:resolution", [640, 480]),
-                
-                # RGB 설정
-                ("ROS2CameraRGB.inputs:type", "rgb"),
-                ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb"),
-                ("ROS2CameraRGB.inputs:frameId", "go2_front_cam"),
-                
-                # Depth 설정
-                ("ROS2CameraDepth.inputs:type", "depth"),
-                ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth"),
-                ("ROS2CameraDepth.inputs:frameId", "go2_front_cam"),
-            ],
-            og.Controller.Keys.CONNECT: [
-                ("OnTick.outputs:tick", "RenderProduct.inputs:execIn"),
-                ("RenderProduct.outputs:execOut", "ROS2CameraRGB.inputs:execIn"),
-                ("RenderProduct.outputs:renderProductPath", "ROS2CameraRGB.inputs:renderProductPath"),
-                ("RenderProduct.outputs:execOut", "ROS2CameraDepth.inputs:execIn"),
-                ("RenderProduct.outputs:renderProductPath", "ROS2CameraDepth.inputs:renderProductPath"),
-            ],
-        },
-    )
-    # ==========================================
-
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
     if agent_cfg.class_name == "OnPolicyRunner":
