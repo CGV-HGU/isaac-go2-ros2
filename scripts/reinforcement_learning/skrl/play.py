@@ -203,15 +203,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # ==========================================
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
     # ==========================================
-    import omni
-    from pxr import UsdGeom, Gf
-    
     ext_manager = omni.kit.app.get_app().get_extension_manager()
     ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
     
     camera_path = "/World/envs/env_0/Robot/base/front_cam"
     
-    # 1. 로봇의 base(몸통) 아래에 카메라 Prim 생성 (앞쪽을 바라보도록 위치/회전 설정)
+    # 1. 로봇의 base(몸통) 아래에 카메라 Prim 생성
     stage = omni.usd.get_context().get_stage()
     if not stage.GetPrimAtPath(camera_path).IsValid():
         cam = UsdGeom.Camera.Define(stage, camera_path)
@@ -307,7 +304,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # reset environment
     obs = env.get_observations()
-    timestep = 0
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -336,12 +332,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             else:
                 policy_nn.reset(dones)
 
-        if args_cli.video:
-            timestep += 1
-            # Exit the play loop after recording one video
-            if timestep == args_cli.video_length:
-                break
-
         # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
@@ -358,4 +348,3 @@ if __name__ == "__main__":
     main()
     # close sim app
     simulation_app.close()
-
