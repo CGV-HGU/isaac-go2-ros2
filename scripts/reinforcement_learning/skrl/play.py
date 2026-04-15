@@ -200,12 +200,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # ==========================================
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
     # ==========================================
-    import omni
     ext_manager = omni.kit.app.get_app().get_extension_manager()
     ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
-    
-    import omni.graph.core as og
-    from pxr import UsdGeom, Gf
     
     camera_path = "/World/envs/env_0/Robot/base/front_cam"
     
@@ -346,6 +342,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             time.sleep(sleep_time)
 
     input_interface.unsubscribe_to_keyboard_events(keyboard, keyboard_sub)
+
+    # close the simulator
+    env.close()
+
+
+if __name__ == "__main__":
+    # run the main function
+    main()
+    # close sim app
+    simulation_app.close()
+rd, keyboard_sub)
 
     # close the simulator
     env.close()
