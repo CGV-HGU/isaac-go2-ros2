@@ -203,8 +203,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # ==========================================
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
     # ==========================================
-    import sys
-    import os
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     import ros2_sensor_setup
     
