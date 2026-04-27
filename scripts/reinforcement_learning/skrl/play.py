@@ -233,6 +233,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 ("ROS2CameraDepth", "isaacsim.ros2.bridge.ROS2CameraHelper"),
                 ("ROS2CameraInfoRGB", "isaacsim.ros2.bridge.ROS2CameraHelper"),
                 ("ROS2CameraInfoDepth", "isaacsim.ros2.bridge.ROS2CameraHelper"),
+                ("ComputeOdometry", "isaacsim.core.nodes.IsaacComputeOdometry"),
                 ("ROS2Odometry", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
                 ("ROS2TF", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
             ],
@@ -257,13 +258,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 ("ROS2CameraInfoDepth.inputs:frameId", "go2_front_cam"),
 
                 # Odometry
-                ("ROS2Odometry.inputs:chassisPrim", robot_base_path),
+                ("ComputeOdometry.inputs:chassisPrim", robot_base_path),
                 ("ROS2Odometry.inputs:odomFrameId", "odom"),
                 ("ROS2Odometry.inputs:chassisFrameId", "base_link"),
                 ("ROS2Odometry.inputs:topicName", "/odom"),
 
                 # TF Tree
-                ("ROS2TF.inputs:parentPrim", "/World/envs/env_0/Robot"),
+                ("ROS2TF.inputs:parentPrim", "/World"),
                 ("ROS2TF.inputs:targetPrims", [robot_base_path, camera_path]),
             ],
             og.Controller.Keys.CONNECT: [
@@ -281,7 +282,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 ("RenderProduct.outputs:execOut", "ROS2CameraInfoDepth.inputs:execIn"),
                 ("RenderProduct.outputs:renderProductPath", "ROS2CameraInfoDepth.inputs:renderProductPath"),
 
-                ("OnTick.outputs:tick", "ROS2Odometry.inputs:execIn"),
+                ("OnTick.outputs:tick", "ComputeOdometry.inputs:execIn"),
+                ("ComputeOdometry.outputs:execOut", "ROS2Odometry.inputs:execIn"),
+                ("ComputeOdometry.outputs:position", "ROS2Odometry.inputs:position"),
+                ("ComputeOdometry.outputs:orientation", "ROS2Odometry.inputs:orientation"),
+                ("ComputeOdometry.outputs:linearVelocity", "ROS2Odometry.inputs:linearVelocity"),
+                ("ComputeOdometry.outputs:angularVelocity", "ROS2Odometry.inputs:angularVelocity"),
+                ("ReadSimTime.outputs:simulationTime", "ROS2Odometry.inputs:timeStamp"),
+
                 ("OnTick.outputs:tick", "ROS2TF.inputs:execIn"),
                 ("ReadSimTime.outputs:simulationTime", "ROS2TF.inputs:timeStamp"),
             ],
