@@ -55,8 +55,10 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2CameraDepth.inputs:frameId", "go2_front_cam"),
 
                 # Camera Info
+                ("ROS2CameraInfoRGB.inputs:type", "camera_info"),
                 ("ROS2CameraInfoRGB.inputs:topicName", "/go2_camera/rgb/camera_info"),
                 ("ROS2CameraInfoRGB.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraInfoDepth.inputs:type", "camera_info"),
                 ("ROS2CameraInfoDepth.inputs:topicName", "/go2_camera/depth/camera_info"),
                 ("ROS2CameraInfoDepth.inputs:frameId", "go2_front_cam"),
 
