@@ -208,6 +208,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
     
     camera_path = "/World/envs/env_0/Robot/base/front_cam"
+    robot_base_path = "/World/envs/env_0/Robot/base"
     
     # 1. 로봇의 base(몸통) 아래에 카메라 Prim 생성
     stage = omni.usd.get_context().get_stage()
@@ -219,37 +220,72 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         cam.AddRotateXYZOp().Set(Gf.Vec3d(90, 0, -90))
         cam.GetFocalLengthAttr().Set(24.0)
 
-    # 2. ROS2 Bridge (RGB & Depth) OmniGraph 생성
+    # 2. ROS2 Bridge 풀세트 (카메라, Info, TF, Odom, Clock) OmniGraph 생성
     og.Controller.edit(
         {"graph_path": "/World/ROS2_Camera_Graph", "evaluator_name": "execution"},
         {
             og.Controller.Keys.CREATE_NODES: [
                 ("OnTick", "omni.graph.action.OnPlaybackTick"),
+                ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                ("ROS2Clock", "isaacsim.ros2.bridge.ROS2PublishClock"),
                 ("RenderProduct", "isaacsim.core.nodes.IsaacCreateRenderProduct"),
                 ("ROS2CameraRGB", "isaacsim.ros2.bridge.ROS2CameraHelper"),
                 ("ROS2CameraDepth", "isaacsim.ros2.bridge.ROS2CameraHelper"),
+                ("ROS2CameraInfoRGB", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
+                ("ROS2CameraInfoDepth", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
+                ("ROS2Odometry", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
+                ("ROS2TF", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
             ],
             og.Controller.Keys.SET_VALUES: [
+                # Render Product
                 ("RenderProduct.inputs:cameraPrim", camera_path),
                 ("RenderProduct.inputs:width", 640),
                 ("RenderProduct.inputs:height", 480),
                 
-                # RGB 설정
+                # RGB & Depth Image
                 ("ROS2CameraRGB.inputs:type", "rgb"),
-                ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb"),
+                ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb/image_raw"),
                 ("ROS2CameraRGB.inputs:frameId", "go2_front_cam"),
-                
-                # Depth 설정
                 ("ROS2CameraDepth.inputs:type", "depth"),
-                ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth"),
+                ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth/image_raw"),
                 ("ROS2CameraDepth.inputs:frameId", "go2_front_cam"),
+
+                # Camera Info
+                ("ROS2CameraInfoRGB.inputs:type", "camera_info"),
+                ("ROS2CameraInfoRGB.inputs:topicName", "/go2_camera/rgb/camera_info"),
+                ("ROS2CameraInfoRGB.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraInfoDepth.inputs:type", "camera_info"),
+                ("ROS2CameraInfoDepth.inputs:topicName", "/go2_camera/depth/camera_info"),
+                ("ROS2CameraInfoDepth.inputs:frameId", "go2_front_cam"),
+
+                # Odometry
+                ("ROS2Odometry.inputs:chassisPrim", robot_base_path),
+                ("ROS2Odometry.inputs:odomFrameId", "odom"),
+                ("ROS2Odometry.inputs:chassisFrameId", "base_link"),
+                ("ROS2Odometry.inputs:topicName", "/odom"),
+
+                # TF Tree
+                ("ROS2TF.inputs:parentPrim", "/World/envs/env_0/Robot"),
+                ("ROS2TF.inputs:targetPrims", [robot_base_path, camera_path]),
             ],
             og.Controller.Keys.CONNECT: [
+                ("OnTick.outputs:tick", "ROS2Clock.inputs:execIn"),
+                ("ReadSimTime.outputs:simulationTime", "ROS2Clock.inputs:timeStamp"),
+                
                 ("OnTick.outputs:tick", "RenderProduct.inputs:execIn"),
                 ("RenderProduct.outputs:execOut", "ROS2CameraRGB.inputs:execIn"),
                 ("RenderProduct.outputs:renderProductPath", "ROS2CameraRGB.inputs:renderProductPath"),
                 ("RenderProduct.outputs:execOut", "ROS2CameraDepth.inputs:execIn"),
                 ("RenderProduct.outputs:renderProductPath", "ROS2CameraDepth.inputs:renderProductPath"),
+                
+                ("RenderProduct.outputs:execOut", "ROS2CameraInfoRGB.inputs:execIn"),
+                ("RenderProduct.outputs:renderProductPath", "ROS2CameraInfoRGB.inputs:renderProductPath"),
+                ("RenderProduct.outputs:execOut", "ROS2CameraInfoDepth.inputs:execIn"),
+                ("RenderProduct.outputs:renderProductPath", "ROS2CameraInfoDepth.inputs:renderProductPath"),
+
+                ("OnTick.outputs:tick", "ROS2Odometry.inputs:execIn"),
+                ("OnTick.outputs:tick", "ROS2TF.inputs:execIn"),
+                ("ReadSimTime.outputs:simulationTime", "ROS2TF.inputs:timeStamp"),
             ],
         },
     )
