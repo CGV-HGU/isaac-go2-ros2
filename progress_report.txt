@@ -1,0 +1,5 @@
+### Isaac Sim 5.1 Compatibility Issue Report
+- **File**: scripts/reinforcement_learning/skrl/play.py
+- **Issue**: OmniGraph ROS2 Bridge node attributes like 'inputs:chassisPrim' and 'inputs:prim' are not recognized in Isaac Sim 5.1.
+- **Temporary Fix**: Commented out ROS2 Bridge setup code to allow reinforcement learning simulation to run.
+- **Status**: Simulation runs successfully with keyboard control after commenting out the problematic block.
