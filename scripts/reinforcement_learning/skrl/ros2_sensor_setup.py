@@ -50,21 +50,21 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 # RGB & Depth Image
                 ("ROS2CameraRGB.inputs:type", "rgb"),
                 ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb/image_raw"),
-                ("ROS2CameraRGB.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraRGB.inputs:frameId", "front_cam"),
                 ("ROS2CameraDepth.inputs:type", "depth"),
                 ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth/image_raw"),
-                ("ROS2CameraDepth.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraDepth.inputs:frameId", "front_cam"),
 
                 # Camera Info
                 ("ROS2CameraInfoRGB.inputs:topicName", "/go2_camera/rgb/camera_info"),
-                ("ROS2CameraInfoRGB.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraInfoRGB.inputs:frameId", "front_cam"),
                 ("ROS2CameraInfoDepth.inputs:topicName", "/go2_camera/depth/camera_info"),
-                ("ROS2CameraInfoDepth.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraInfoDepth.inputs:frameId", "front_cam"),
 
                 # Odometry
                 ("ComputeOdometry.inputs:chassisPrim", robot_base_path),
                 ("ROS2Odometry.inputs:odomFrameId", "odom"),
-                ("ROS2Odometry.inputs:chassisFrameId", "base_link"),
+                ("ROS2Odometry.inputs:chassisFrameId", "base"),
                 ("ROS2Odometry.inputs:topicName", "/odom"),
 
                 # TF Tree
