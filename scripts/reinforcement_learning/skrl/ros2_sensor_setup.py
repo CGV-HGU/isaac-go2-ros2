@@ -67,9 +67,9 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2Odometry.inputs:chassisFrameId", "base"),
                 ("ROS2Odometry.inputs:topicName", "/odom"),
 
-                # TF Tree
-                ("ROS2TF.inputs:parentPrim", "/World"),
-                ("ROS2TF.inputs:targetPrims", [robot_base_path, camera_path]),
+                # TF Tree (base -> front_cam 등 로봇 내부 관절만 방송)
+                ("ROS2TF.inputs:parentPrim", robot_base_path),
+                ("ROS2TF.inputs:targetPrims", [camera_path]),
                 ("ROS2TF.inputs:topicName", "/tf"),
 
                 # Cmd_vel Subscriber
