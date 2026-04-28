@@ -70,6 +70,7 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 # TF Tree
                 ("ROS2TF.inputs:parentPrim", "/World"),
                 ("ROS2TF.inputs:targetPrims", [robot_base_path, camera_path]),
+                ("ROS2TF.inputs:topicName", "/tf"),
 
                 # Cmd_vel Subscriber
                 ("ROS2CmdVel.inputs:topicName", "/cmd_vel"),
