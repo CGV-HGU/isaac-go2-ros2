@@ -11,6 +11,7 @@ ros2 launch rtabmap_launch rtabmap.launch.py \
     depth_topic:=/go2_camera/depth/image_raw \
     camera_info_topic:=/go2_camera/rgb/camera_info \
     odom_topic:=/odom \
+    odom_frame_id:=World \
     visual_odometry:=false \
     frame_id:=base \
     approx_sync:=true \
