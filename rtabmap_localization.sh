@@ -5,13 +5,16 @@
 echo "📍 1. RTAB-Map 로컬라이제이션 모드를 백그라운드에서 시작합니다..."
 echo "주의: 매핑 모드에서 저장된 지도(~/.ros/rtabmap.db)를 불러옵니다."
 
+echo "🔗 Odom -> World Static TF 연결 중..."
+ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 odom World &
+
 ros2 launch rtabmap_launch rtabmap.launch.py \
     localization:=true \
     rgb_topic:=/go2_camera/rgb/image_raw \
     depth_topic:=/go2_camera/depth/image_raw \
     camera_info_topic:=/go2_camera/rgb/camera_info \
     odom_topic:=/odom \
-    odom_frame_id:=World \
+    odom_frame_id:=odom \
     visual_odometry:=false \
     frame_id:=base \
     approx_sync:=true \
