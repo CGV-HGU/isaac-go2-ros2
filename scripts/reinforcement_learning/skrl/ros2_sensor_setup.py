@@ -39,7 +39,7 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ComputeOdometry", "isaacsim.core.nodes.IsaacComputeOdometry"),
                 ("ROS2Odometry", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
                 ("ROS2TF", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
-                ("ROS2CmdVel", "isaacsim.ros2.bridge.ROS2TwistSubscriber"),
+                ("ROS2CmdVel", "isaacsim.ros2.bridge.ROS2SubscribeTwist"),
             ],
             og.Controller.Keys.SET_VALUES: [
                 # Render Product
