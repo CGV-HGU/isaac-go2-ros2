@@ -200,17 +200,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # ==========================================
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
     # ==========================================
-    from omni.isaac.core.utils.extensions import enable_extension
-    enable_extension("omni.isaac.ros2_bridge")
+    import omni
+    ext_manager = omni.kit.app.get_app().get_extension_manager()
+    ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
     
     import omni.graph.core as og
-    import omni.isaac.core.utils.prims as prim_utils
     from pxr import UsdGeom, Gf
     
     camera_path = "/World/envs/env_0/Robot/base/front_cam"
     
     # 1. 로봇의 base(몸통) 아래에 카메라 Prim 생성 (앞쪽을 바라보도록 위치/회전 설정)
-    if not prim_utils.is_prim_path_valid(camera_path):
+    if not env.unwrapped.scene.stage.GetPrimAtPath(camera_path).IsValid():
         cam = UsdGeom.Camera.Define(env.unwrapped.scene.stage, camera_path)
         # 로봇 머리 위(X축 0.15m, Z축 0.25m) 위치로 수정. 
         cam.AddTranslateOp().Set(Gf.Vec3d(0.15, 0.0, 0.25))

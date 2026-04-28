@@ -38,7 +38,8 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2CameraInfoDepth", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
                 ("ComputeOdometry", "isaacsim.core.nodes.IsaacComputeOdometry"),
                 ("ROS2Odometry", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
-                ("ROS2TF", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
+                ("ROS2TF_World", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
+                ("ROS2TF_Base", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
                 ("ROS2CmdVel", "isaacsim.ros2.bridge.ROS2SubscribeTwist"),
             ],
             og.Controller.Keys.SET_VALUES: [
@@ -63,14 +64,19 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
 
                 # Odometry
                 ("ComputeOdometry.inputs:chassisPrim", robot_base_path),
-                ("ROS2Odometry.inputs:odomFrameId", "World"),
+                ("ROS2Odometry.inputs:odomFrameId", "world"),
                 ("ROS2Odometry.inputs:chassisFrameId", "base"),
                 ("ROS2Odometry.inputs:topicName", "/odom"),
 
-                # TF Tree (World -> ... -> base -> front_cam)
-                ("ROS2TF.inputs:parentPrim", ""),
-                ("ROS2TF.inputs:targetPrims", [robot_base_path, camera_path]),
-                ("ROS2TF.inputs:topicName", "/tf"),
+                # TF Tree 1 (world -> base)
+                ("ROS2TF_World.inputs:parentPrim", "/World"),
+                ("ROS2TF_World.inputs:targetPrims", [robot_base_path]),
+                ("ROS2TF_World.inputs:topicName", "/tf"),
+
+                # TF Tree 2 (base -> front_cam)
+                ("ROS2TF_Base.inputs:parentPrim", robot_base_path),
+                ("ROS2TF_Base.inputs:targetPrims", [camera_path]),
+                ("ROS2TF_Base.inputs:topicName", "/tf"),
 
                 # Cmd_vel Subscriber
                 ("ROS2CmdVel.inputs:topicName", "/cmd_vel"),
@@ -98,8 +104,11 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ComputeOdometry.outputs:angularVelocity", "ROS2Odometry.inputs:angularVelocity"),
                 ("ReadSimTime.outputs:simulationTime", "ROS2Odometry.inputs:timeStamp"),
 
-                ("OnTick.outputs:tick", "ROS2TF.inputs:execIn"),
-                ("ReadSimTime.outputs:simulationTime", "ROS2TF.inputs:timeStamp"),
+                ("OnTick.outputs:tick", "ROS2TF_World.inputs:execIn"),
+                ("ReadSimTime.outputs:simulationTime", "ROS2TF_World.inputs:timeStamp"),
+
+                ("OnTick.outputs:tick", "ROS2TF_Base.inputs:execIn"),
+                ("ReadSimTime.outputs:simulationTime", "ROS2TF_Base.inputs:timeStamp"),
             ],
         },
     )

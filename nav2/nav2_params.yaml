@@ -5,9 +5,9 @@ amcl:
     alpha2: 0.2
     alpha3: 0.2
     alpha4: 0.2
-    base_frame_id: "base_link"
+    base_frame_id: "base"
     global_frame_id: "map"
-    odom_frame_id: "odom"
+    odom_frame_id: "world"
     max_particles: 2000
     min_particles: 500
     pf_err: 0.05
@@ -23,7 +23,7 @@ bt_navigator:
   ros__parameters:
     use_sim_time: True
     global_frame: map
-    robot_base_frame: base_link
+    robot_base_frame: base
     odom_topic: /odom
     default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
     plugin_lib_names:
@@ -107,7 +107,7 @@ local_costmap:
     ros__parameters:
       use_sim_time: True
       global_frame: odom
-      robot_base_frame: base_link
+      robot_base_frame: base
       update_frequency: 5.0
       publish_frequency: 2.0
       rolling_window: true
@@ -136,7 +136,7 @@ global_costmap:
     ros__parameters:
       use_sim_time: True
       global_frame: map
-      robot_base_frame: base_link
+      robot_base_frame: base
       update_frequency: 1.0
       publish_frequency: 1.0
       robot_radius: 0.3
@@ -176,7 +176,7 @@ behavior_server:
     use_sim_time: True
     local_frame: odom
     global_frame: map
-    robot_base_frame: base_link
+    robot_base_frame: base
     behavior_plugins: ["spin", "backup", "wait"]
     spin:
       plugin: "nav2_behaviors::Spin"
@@ -185,4 +185,4 @@ behavior_server:
     wait:
       plugin: "nav2_behaviors::Wait"
     global_frame: odom
-    robot_base_frame: base_link
+    robot_base_frame: base
