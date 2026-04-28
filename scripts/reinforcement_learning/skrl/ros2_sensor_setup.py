@@ -39,6 +39,7 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ComputeOdometry", "isaacsim.core.nodes.IsaacComputeOdometry"),
                 ("ROS2Odometry", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
                 ("ROS2TF", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
+                ("ROS2CmdVel", "isaacsim.ros2.bridge.ROS2TwistSubscriber"),
             ],
             og.Controller.Keys.SET_VALUES: [
                 # Render Product
@@ -71,6 +72,9 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 # TF Tree
                 ("ROS2TF.inputs:parentPrim", "/World"),
                 ("ROS2TF.inputs:targetPrims", [robot_base_path, camera_path]),
+
+                # Cmd_vel Subscriber
+                ("ROS2CmdVel.inputs:topicName", "/cmd_vel"),
             ],
             og.Controller.Keys.CONNECT: [
                 ("OnTick.outputs:tick", "ROS2Clock.inputs:execIn"),
