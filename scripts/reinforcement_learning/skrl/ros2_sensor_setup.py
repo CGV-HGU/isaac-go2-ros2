@@ -17,10 +17,10 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
     # 1. Create Camera Prim attached to the robot's base
     if not stage.GetPrimAtPath(camera_path).IsValid():
         cam = UsdGeom.Camera.Define(stage, camera_path)
-        # Position: 0.15m forward, 0.25m up (top of head)
-        cam.AddTranslateOp().Set(Gf.Vec3d(0.15, 0.0, 0.25))
-        # Rotation: Face forward, correct tilt (0, 0, -90)
-        cam.AddRotateXYZOp().Set(Gf.Vec3d(0, 0, -90))
+        # Position: 0.3m forward, 0.1m up (robot nose)
+        cam.AddTranslateOp().Set(Gf.Vec3d(0.3, 0.0, 0.1))
+        # Rotation: Face forward (90, 0, -90)
+        cam.AddRotateXYZOp().Set(Gf.Vec3d(90, 0, -90))
         cam.GetFocalLengthAttr().Set(24.0)
 
     # 2. Create OmniGraph for ROS 2 Bridge (Full SLAM setup)
