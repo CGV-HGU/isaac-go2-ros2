@@ -25,7 +25,13 @@ sleep 5
 echo "🚗 2. Nav2 자율주행 스택을 시작합니다..."
 ros2 launch nav2_bringup navigation_launch.py \
     use_sim_time:=True \
-    params_file:=$(pwd)/nav2/nav2_params.yaml
+    params_file:=$(pwd)/nav2/nav2_params.yaml &
+
+sleep 3
+
+echo "🖥️ 3. RViz2 (자율주행 조종 화면)를 시작합니다..."
+ros2 launch nav2_bringup rviz_launch.py \
+    use_sim_time:=True
 
 wait
 
