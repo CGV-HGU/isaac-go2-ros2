@@ -16,7 +16,16 @@ sleep 2
 echo "🔗 Odom -> World Static TF 연결 중..."
 ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 odom World &
 
-echo "📍 2. RTAB-Map 로컬라이제이션 모드를 시작합니다..."
+echo "🔦 2. Depth 이미지를 2D Laser Scan으로 변환합니다 (충돌 방지 및 코스트맵 용)..."
+ros2 run depthimage_to_laserscan depthimage_to_laserscan_node \
+    --ros-args \
+    -r depth:=/go2_camera/depth/image_raw \
+    -r depth_camera_info:=/go2_camera/depth/camera_info \
+    -r scan:=/scan \
+    -p output_frame:=front_cam \
+    -p use_sim_time:=true &
+
+echo "📍 3. RTAB-Map 로컬라이제이션 모드를 시작합니다..."
 ros2 launch rtabmap_launch rtabmap.launch.py \
     localization:=true \
     rgb_topic:=/go2_camera/rgb/image_raw \
