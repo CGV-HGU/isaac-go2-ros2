@@ -64,7 +64,7 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
 
                 # Odometry
                 ("ComputeOdometry.inputs:chassisPrim", robot_base_path),
-                ("ROS2Odometry.inputs:odomFrameId", "odom"),
+                ("ROS2Odometry.inputs:odomFrameId", "World"),
                 ("ROS2Odometry.inputs:chassisFrameId", "base"),
                 ("ROS2Odometry.inputs:topicName", "/odom"),
 
@@ -109,6 +109,8 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
 
                 ("OnTick.outputs:tick", "ROS2TF_Base.inputs:execIn"),
                 ("ReadSimTime.outputs:simulationTime", "ROS2TF_Base.inputs:timeStamp"),
+
+                ("OnTick.outputs:tick", "ROS2CmdVel.inputs:execIn"),
             ],
         },
     )

@@ -267,13 +267,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         start_time = time.time()
         # run everything in inference mode
         with torch.inference_mode():
-            # keyboard -> base_velocity
+            # Get velocity from ROS 2 Twist Subscriber node (Nav2)
+            nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
+            try:
+                cmd_node = og.Controller.node("/World/ROS2_Camera_Graph/ROS2CmdVel")
+                if cmd_node.is_valid():
+                    lin_vel = og.Controller.get(og.Controller.attribute("outputs:linearVelocity", cmd_node))
+                    ang_vel = og.Controller.get(og.Controller.attribute("outputs:angularVelocity", cmd_node))
+                    if lin_vel is not None and ang_vel is not None:
+                        nav_x, nav_y, nav_yaw = float(lin_vel[0]), float(lin_vel[1]), float(ang_vel[2])
+            except Exception:
+                pass
+
+            # keyboard -> base_velocity (Keyboard override Nav2)
+            kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
+            
+            final_x = kb_x if kb_x != 0.0 else nav_x
+            final_y = kb_y if kb_y != 0.0 else nav_y
+            final_yaw = kb_yaw if kb_yaw != 0.0 else nav_yaw
+
             cmd = torch.tensor(
-                [
-                    keyboard_state["forward"],
-                    keyboard_state["side"],
-                    keyboard_state["yaw"],
-                ],
+                [final_x, final_y, final_yaw],
                 device=env.unwrapped.device,
                 dtype=torch.float32,
             )
