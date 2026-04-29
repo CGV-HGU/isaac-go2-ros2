@@ -171,11 +171,14 @@ collision_monitor:
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
     cmd_vel_out_topic: "cmd_vel"
-    state_topic: ""
+    state_topic: "collision_monitor_state"
     transform_tolerance: 0.2
     source_timeout: 1.0
     base_shift_topic: "slip_vel"
-    observation_sources: [""]
+    observation_sources: ["dummy_scan"]
+    dummy_scan:
+      type: "scan"
+      topic: "/scan"
     polygons: ["dummy_polygon"]
     dummy_polygon:
       type: "polygon"
