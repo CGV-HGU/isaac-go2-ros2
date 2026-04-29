@@ -79,7 +79,7 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2TF_Base.inputs:topicName", "/tf"),
 
                 # Cmd_vel Subscriber
-                ("ROS2CmdVel.inputs:topicName", "/cmd_vel"),
+                ("ROS2CmdVel.inputs:topicName", "/cmd_vel_nav"),
             ],
             og.Controller.Keys.CONNECT: [
                 ("OnTick.outputs:tick", "ROS2Clock.inputs:execIn"),
