@@ -7,7 +7,7 @@ amcl:
     alpha4: 0.2
     base_frame_id: "base"
     global_frame_id: "map"
-    odom_frame_id: "world"
+    odom_frame_id: "World"
     max_particles: 2000
     min_particles: 500
     pf_err: 0.05
@@ -166,7 +166,7 @@ planner_server:
     expected_planner_frequency: 2.0
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
+      plugin: "nav2_navfn_planner::NavfnPlanner"
       tolerance: 0.5
       use_astar: false
       allow_unknown: true
