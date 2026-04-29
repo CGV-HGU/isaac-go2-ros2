@@ -199,6 +199,14 @@ collision_monitor:
     source_timeout: 1.0
     base_shift_topic: "slip_vel"
     observation_sources: [""]
+    polygons: ["dummy_polygon"]
+    dummy_polygon:
+      type: "polygon"
+      points: "[[0.1, 0.1], [0.1, -0.1], [-0.1, -0.1], [-0.1, 0.1]]"
+      action_type: "stop"
+      min_points: 4
+      visualize: False
+      polygon_pub_topic: "polygon_stop"
 
 velocity_smoother:
   ros__parameters:
