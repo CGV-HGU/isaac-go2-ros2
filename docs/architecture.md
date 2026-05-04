@@ -1,91 +1,135 @@
 # Sim-to-Real Architecture for Quadruped Robots
 
-This document outlines the conceptual framework for our ICCAS paper. It highlights the seamless Sim-to-Real transfer of autonomous navigation for a quadruped robot (Unitree Go2) using NVIDIA Isaac Sim and ROS 2.
+This document details the data flow and system architecture for our ICCAS paper. The design emphasizes a **Left-to-Right (Sim-to-Real)** progression, showcasing how sensor inputs are processed through three core shared modules (Perception, Navigation, and Locomotion) to output physical joint torques.
 
-## Concept Diagram: Bridging Simulation and Reality
+## 1. System Data Flow Diagram
 
-The architecture is divided into two primary axes: the **Simulation Realm** and the **Real-World Realm**. The simulation environment acts as a robust proving ground, built upon three core pillars, which are then seamlessly transferred to the physical robot.
+The diagram below illustrates the exact input/output (I/O) data flow. The solid lines represent the Simulation pipeline (currently active), while the dashed lines represent the future Real-World pipeline, which will plug into the exact same core stack.
 
 ```mermaid
-flowchart TB
+flowchart LR
     %% Styling
-    classDef simRealm fill:#e8f4f8,stroke:#0277bd,stroke-width:3px,color:#000;
-    classDef realRealm fill:#f1f8e9,stroke:#2e7d32,stroke-width:3px,color:#000;
-    classDef corePillar fill:#fff8e1,stroke:#f57c00,stroke-width:2px,color:#000,stroke-dasharray: 5 5;
-    classDef default fill:#ffffff,stroke:#333,stroke-width:1px;
+    classDef sim fill:#e3f2fd,stroke:#0288d1,stroke-width:2px;
+    classDef real fill:#f1f8e9,stroke:#388e3c,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef core fill:#fff8e1,stroke:#f57c00,stroke-width:2px;
+    classDef topic fill:#ffffff,stroke:#757575,stroke-width:1px;
 
-    %% Axis 1: Simulation
-    subgraph Sim_Realm [Axis 1: Simulation Realm Isaac Sim]
+    %% ----------------------------------------------------
+    %% LEFT: SIMULATION REALM
+    %% ----------------------------------------------------
+    subgraph Sim_Realm [Simulation Realm Isaac Sim]
+        direction TB
+        SimEnv[Gaussian Splatting Env]
+        SimCam[Virtual Camera]
+        SimOdom[Isaac Odometry]
+        
+        SimEnv -->|Render| SimCam
+        SimEnv -->|Physics| SimOdom
+    end
+    class Sim_Realm sim;
+
+    %% ----------------------------------------------------
+    %% MIDDLE: SHARED CORE STACK (Zero-Code Transfer)
+    %% ----------------------------------------------------
+    subgraph Shared_Core [Shared Autonomy Stack ROS 2 & SKRL]
         direction TB
         
-        %% Pillar 1
-        subgraph Pillar1 [Core 1: High-Fidelity Environment]
-            direction LR
-            SfM[Structure from Motion SfM] --> fVDB[fVDB Processing]
-            fVDB --> GS[Gaussian Splatting Map]
+        %% Pillar 1: Perception
+        subgraph Perception [1. Perception]
+            Depth_Topic([/depth/image_raw]) --> |depthimage_to_laserscan| Scan_Topic([/scan])
         end
-        class Pillar1 corePillar
         
-        %% Pillar 2
-        subgraph Pillar2 [Core 2: RL Locomotion]
-            direction LR
-            Train[Parallel RL Training SKRL] --> Policy[Robust Walking Policy]
+        %% Pillar 2: SLAM & Navigation
+        subgraph Navigation [2. RTAB-Map & Nav2]
+            RGB_Topic([/rgb/image_raw])
+            Odom_Topic([/odom])
+            
+            RGB_Topic & Depth_Topic & Odom_Topic --> |RTAB-Map| Map_Topic([/map & map->odom TF])
+            Map_Topic & Scan_Topic --> |Costmap & Planner| Nav2[Nav2 Controller]
+            Nav2 --> |geometry_msgs/Twist| Cmd_Vel([/cmd_vel_nav])
         end
-        class Pillar2 corePillar
 
-        %% Pillar 3
-        subgraph Pillar3 [Core 3: ROS 2 Autonomy Stack]
-            direction LR
-            SLAM[RTAB-Map V-SLAM] <--> Nav[Nav2 Autonomous Navigation]
+        %% Pillar 3: Locomotion
+        subgraph Locomotion [3. RL Locomotion]
+            Cmd_Vel --> Override{Safety Override}
+            Keyboard([Keyboard I/O]) --> Override
+            Override --> |final_cmd_vel| Policy[SKRL Policy best_agent.pt]
+            Policy --> |Action Tensor| Torques([Joint Torques])
         end
-        class Pillar3 corePillar
-
-        %% Connections within Sim
-        GS --> |"Virtual RGB-D & Odometry"| Pillar3
-        Pillar3 --> |"/cmd_vel"| Pillar2
-        Pillar2 --> |"Joint Torques"| SimRobot[Simulated Quadruped]
-        GS -.-> |"Physics & Collision"| SimRobot
     end
-    class Sim_Realm simRealm
+    class Shared_Core,Perception,Navigation,Locomotion core;
+    class Depth_Topic,Scan_Topic,RGB_Topic,Odom_Topic,Map_Topic,Cmd_Vel,Keyboard,Torques topic;
 
-    %% Sim-to-Real Transfer Arrows
-    Pillar2 ===>|"Zero-Shot Transfer"| Policy_Real
-    Pillar3 ===>|"Seamless Code Transfer"| Autonomy_Real
-
-    %% Axis 2: Real-World
-    subgraph Real_Realm [Axis 2: Real-World Realm]
+    %% ----------------------------------------------------
+    %% RIGHT: REAL-WORLD REALM
+    %% ----------------------------------------------------
+    subgraph Real_Realm [Real-World Realm Hardware]
         direction TB
+        RealEnv[Physical Corridor]
+        RealCam[Realsense D435i]
+        RealOdom[Unitree Go2 Hardware Odom]
         
-        RealEnv[Physical Environment Real Corridor] -.-> |"Real Camera & IMU"| Autonomy_Real
-        
-        subgraph RealAutonomy [Deployed ROS 2 Autonomy]
-            direction LR
-            Autonomy_Real[Same RTAB-Map & Nav2 Stack]
-        end
-        class RealAutonomy default
-        
-        subgraph RealPolicy [Deployed Locomotion]
-            direction LR
-            Policy_Real[Same RL Policy]
-        end
-        class RealPolicy default
-        
-        Autonomy_Real --> |"/cmd_vel"| Policy_Real
-        Policy_Real --> |"Joint Torques"| RealRobot[Unitree Go2 Hardware]
-        RealEnv -.-> |"Physical Collision"| RealRobot
+        RealEnv -.->|Optical| RealCam
+        RealEnv -.->|IMU/Kinematics| RealOdom
     end
-    class Real_Realm realRealm
+    class Real_Realm real;
+
+    %% ----------------------------------------------------
+    %% CONNECTIONS (Input / Output mapping)
+    %% ----------------------------------------------------
+    
+    %% Sim Inputs to Core
+    SimCam ==>|RGB-D Data| Depth_Topic
+    SimCam ==>|RGB-D Data| RGB_Topic
+    SimOdom ==>|Odometry Data| Odom_Topic
+    
+    %% Real Inputs to Core (Future)
+    RealCam -.->|RGB-D Data| Depth_Topic
+    RealCam -.->|RGB-D Data| RGB_Topic
+    RealOdom -.->|Odometry Data| Odom_Topic
+
+    %% Core Outputs to Physical Bodies
+    Torques ==>|Apply Force| SimRobot[Simulated Go2]
+    Torques -.->|Apply Force| RealRobot[Physical Go2]
+
 ```
 
-## The 3 Core Pillars of the Simulation (For Paper Narrative)
+---
 
-To maximize the paper's impact at ICCAS, the narrative should focus on how these three distinct technologies were integrated to bridge the Sim-to-Real gap without performance degradation.
+## 2. Visual Architecture (Image Placeholders)
 
-### 1. High-Fidelity Environment via Gaussian Splatting (fVDB + SfM)
-Traditional mesh-based simulations often fail to capture complex lighting, textures, and thin structures, leading to the "reality gap" in visual SLAM. By utilizing **Structure from Motion (SfM)** and processing the point clouds via **fVDB**, we generated highly optimized **Gaussian Splatting** maps. This provided the simulated RGB-D cameras with photorealistic data, allowing the RTAB-Map algorithm to extract visual features identical to what it would see in the real world.
+*Note: Replace the image paths below once the actual photos are uploaded to the `docs/images/` folder.*
 
-### 2. Robust RL Locomotion Policy
-Instead of relying on fragile analytical kinematics, the robot's base movement is governed by a Neural Network trained via Reinforcement Learning (RL) in Isaac Sim. The policy was trained across massively parallel environments to handle diverse terrains and velocity commands, ensuring that when the Nav2 stack commands a sudden turn or acceleration, the robot maintains stability.
+### Left Axis: Simulation Environment
+<div align="center">
+  <!-- TODO: Upload gaussian_sim.png to docs/images/ -->
+  <img src="./images/placeholder_sim.jpg" width="400" alt="Isaac Sim Gaussian Environment">
+  <p><i>Figure 1: Unitree Go2 navigating a Gaussian Splatting map in Isaac Sim.</i></p>
+</div>
 
-### 3. Seamless ROS 2 Autonomy Integration (RTAB-Map + Nav2)
-The autonomy stack was built using industry-standard ROS 2 frameworks. A critical contribution is the **Virtual Sensor Bridge architecture** (OmniGraph & Static TF patching). This bridge translates the absolute ground truth of the simulation (`World`) into the continuous, standard coordinate frames required by ROS 2 (`map -> odom -> base_link`). Consequently, the exact same Docker container running RTAB-Map and Nav2 can be unplugged from the simulation and plugged into the physical robot without rewriting a single line of autonomy code.
+### Center Axis: The Core Stack
+<div align="center">
+  <!-- TODO: Upload rviz_nav.png to docs/images/ -->
+  <img src="./images/placeholder_rviz.jpg" width="400" alt="RViz2 Navigation & Costmap">
+  <p><i>Figure 2: Real-time 2D Costmap generation and path planning via RTAB-Map and Nav2.</i></p>
+</div>
+
+### Right Axis: Real-World Deployment
+<div align="center">
+  <!-- TODO: Upload real_go2.jpg to docs/images/ -->
+  <img src="./images/placeholder_real.jpg" width="400" alt="Real Unitree Go2 with D435i">
+  <p><i>Figure 3: The physical Unitree Go2 robot equipped with an Intel Realsense D435i camera.</i></p>
+</div>
+
+---
+
+## 3. Data Flow Highlights for ICCAS
+
+1. **Input Harmonization (Perception):** 
+   Whether the input comes from the virtual Isaac Sim camera or the real Realsense D435i, the data strictly conforms to `sensor_msgs/Image`. The `depthimage_to_laserscan` node acts as an equalizer, converting 3D depth into a standard 2D `/scan` topic, bridging the gap for the 2D Nav2 Costmap.
+
+2. **Decoupled Autonomy (Navigation):** 
+   The SLAM and Navigation modules (RTAB-Map and Nav2) are completely agnostic to the robot's physical embodiment. They consume standard `/odom` and `/scan` topics and output a highly reliable `/cmd_vel_nav` (`geometry_msgs/Twist`), proving the zero-code transferability of the stack.
+
+3. **RL Translation Layer (Locomotion):** 
+   The final `/cmd_vel_nav` is passed into the RL Policy execution loop. Here, the target velocities are translated into 12-DoF joint torques via the SKRL neural network. A critical safety override is placed just before the network input, allowing human intervention regardless of the autonomy stack's commands.
