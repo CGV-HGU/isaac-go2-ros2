@@ -24,35 +24,6 @@ flowchart LR
     P4 --> P5
 ```
 
-### Visualizing the Pipeline (Image Placeholders)
-
-*Note: Replace the image paths below with actual screenshots of each phase.*
-
-<div align="center">
-  <table style="width:100%; text-align:center;">
-    <tr>
-      <td><b>Phase 1: Environment</b></td>
-      <td><b>Phase 2: RL Training</b></td>
-      <td><b>Phase 3: V-SLAM</b></td>
-    </tr>
-    <tr>
-      <td><img src="./images/placeholder_phase1.jpg" width="250" alt="Gaussian Splatting Corridor"><br><i>Gaussian Splatting Corridor</i></td>
-      <td><img src="./images/placeholder_phase2.jpg" width="250" alt="RL Training in Isaac Sim"><br><i>SKRL Massively Parallel Training</i></td>
-      <td><img src="./images/placeholder_phase3.jpg" width="250" alt="RTAB-Map Point Cloud"><br><i>RTAB-Map 3D Point Cloud</i></td>
-    </tr>
-    <tr>
-      <td><b>Phase 4: Navigation</b></td>
-      <td><b>Phase 5: Real-World</b></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><img src="./images/placeholder_phase4.jpg" width="250" alt="RViz2 Costmap & Path"><br><i>Nav2 2D Costmap & Path Planning</i></td>
-      <td><img src="./images/placeholder_phase5.jpg" width="250" alt="Real Go2 Robot"><br><i>Physical Unitree Go2 Deployment</i></td>
-      <td></td>
-    </tr>
-  </table>
-</div>
-
 ---
 
 ## 2. System Data Flow Diagram (Sim-to-Real)
