@@ -21,7 +21,7 @@ graph TD
             Robot -->|Physics| IsaacOdom[Isaac Compute Odometry]
             Robot -->|Vision| IsaacCam[RGB-D Camera]
             
-            IsaacOdom -->|/odom, /tf (World to base)| ROS2OdomPub[ROS 2 Publisher]
+            IsaacOdom -->|"/odom, /tf (World to base)"| ROS2OdomPub[ROS 2 Publisher]
             IsaacCam -->|/rgb, /depth| ROS2CamPub[ROS 2 Camera Helper]
         end
     end
