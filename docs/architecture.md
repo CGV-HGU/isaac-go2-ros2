@@ -53,7 +53,7 @@ flowchart TD
         class Sim_Hardware simEnv
 
         %% ROS 2 Autonomy Stack
-        subgraph ROS2_Stack [ROS 2 Autonomy Stack (Zero-Code Transferable)]
+        subgraph ROS2_Stack ["ROS 2 Autonomy Stack (Zero-Code Transferable)"]
             Depth2Scan[depthimage_to_laserscan]
             RTABMap[RTAB-Map V-SLAM]
             Nav2[Nav2 Autonomous Navigation]
@@ -109,7 +109,7 @@ flowchart TD
         class Real_Hardware realEnv
 
         %% ROS 2 Autonomy Stack (IDENTICAL TO SIM)
-        subgraph ROS2_Stack_Real [ROS 2 Autonomy Stack (Zero-Code Transferable)]
+        subgraph ROS2_Stack_Real ["ROS 2 Autonomy Stack (Zero-Code Transferable)"]
             Depth2Scan[depthimage_to_laserscan]
             RTABMap[RTAB-Map V-SLAM]
             Nav2[Nav2 Autonomous Navigation]
