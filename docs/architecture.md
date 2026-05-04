@@ -1,10 +1,34 @@
 # Sim-to-Real Architecture for Quadruped Robots
 
-This document details the data flow and system architecture for our ICCAS paper. The design emphasizes a **Left-to-Right (Sim-to-Real)** progression, showcasing how sensor inputs are processed through three core shared modules (Perception, Navigation, and Locomotion) to output physical joint torques.
+This document details the framework for our ICCAS paper. It is divided into two main sections: the **Chronological Research Methodology** (how we built it step-by-step) and the **System Data Flow Architecture** (how the code runs in real-time).
 
-## 1. System Data Flow Diagram
+## 1. Research Methodology Pipeline (Chronological Steps)
 
-The diagram below illustrates the exact input/output (I/O) data flow. The solid lines represent the Simulation pipeline (currently active), while the dashed lines represent the future Real-World pipeline, which will plug into the exact same core stack.
+This flowchart illustrates the 5-step process we followed to achieve Sim-to-Real autonomous navigation.
+
+```mermaid
+flowchart LR
+    %% Styling
+    classDef phase fill:#e8eaf6,stroke:#1565c0,stroke-width:2px,color:#000;
+    classDef deploy fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:#000;
+
+    P1["Phase 1: Environment Generation<br>(fVDB + Gaussian Splatting)"]:::phase
+    P2["Phase 2: RL Locomotion Training<br>(SKRL + Isaac Sim)"]:::phase
+    P3["Phase 3: V-SLAM Integration<br>(RTAB-Map Mapping)"]:::phase
+    P4["Phase 4: Autonomous Navigation<br>(Nav2 + Costmaps)"]:::phase
+    P5["Phase 5: Sim-to-Real Deployment<br>(Physical Go2 Robot)"]:::deploy
+
+    P1 --> P2
+    P2 --> P3
+    P3 --> P4
+    P4 --> P5
+```
+
+---
+
+## 2. Real-Time System Data Flow (Sim-to-Real Architecture)
+
+The diagram below illustrates the exact input/output (I/O) data flow *when the robot is running autonomously*. The solid lines represent the Simulation pipeline (currently active), while the dashed lines represent the future Real-World pipeline, which will plug into the exact same core stack.
 
 ```mermaid
 flowchart LR
