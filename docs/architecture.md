@@ -1,6 +1,6 @@
 # Sim-to-Real Architecture for Quadruped Robots
 
-This document details the framework for our ICCAS paper. It is divided into two main sections: the **Chronological Research Methodology** (how we built it step-by-step) and the **System Data Flow Architecture** (how the data flows from sensors to motors).
+This document details the framework for our Sim-to-Real project. It is divided into two main sections: the **Chronological Research Methodology** (how we built it step-by-step) and the **System Data Flow Architecture** (how the data flows from sensors to motors).
 
 ## 1. Research Methodology Pipeline (Chronological Steps)
 
@@ -12,7 +12,7 @@ flowchart LR
     classDef phase fill:#e8eaf6,stroke:#1565c0,stroke-width:2px,color:#000;
     classDef deploy fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:#000;
 
-    P1["Phase 1: Environment Generation<br>(fVDB + Gaussian Splatting)"]:::phase
+    P1["Phase 1: Custom Environment<br>(Isaac Sim)"]:::phase
     P2["Phase 2: RL Locomotion Training<br>(SKRL + Isaac Sim)"]:::phase
     P3["Phase 3: V-SLAM Integration<br>(RTAB-Map Mapping)"]:::phase
     P4["Phase 4: Autonomous Navigation<br>(Nav2 + Costmaps)"]:::phase
