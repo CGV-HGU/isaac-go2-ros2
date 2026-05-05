@@ -1,19 +1,20 @@
 # Sim-to-Real Autonomous Navigation for Quadruped Robots
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-5.1.0-silver.svg)](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)
+[![IsaacLab](https://img.shields.io/badge/IsaacLab-4.1.0-green.svg)](https://isaac-sim.github.io/IsaacLab/)
 [![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-blue.svg)](https://docs.ros.org/en/jazzy/)
 [![Robot](https://img.shields.io/badge/Hardware-Unitree_Go2_Edu_Plus-orange.svg)]()
 
-This repository contains the codebase for our capstone project and ICCAS paper submission, focusing on a **Zero-Code Sim-to-Real Architecture** for quadruped robots. 
+This repository is developed by the **CGV Lab** to research and establish a highly optimized **Zero-Code Sim-to-Real Architecture** for quadruped robots. It provides a complete workflow to train, test, and deploy autonomous navigation systems, bridging the gap between simulation and real-world deployment.
 
-By integrating Reinforcement Learning (RL) based locomotion with industry-standard ROS 2 autonomy stacks (RTAB-Map & Nav2), this project demonstrates how to train and validate a quadruped robot in a highly realistic virtual environment, and seamlessly deploy the exact same autonomy code to the physical hardware.
+By integrating Reinforcement Learning (RL) based locomotion with industry-standard ROS 2 autonomy stacks (RTAB-Map & Nav2), this project demonstrates how to validate a quadruped robot in a highly realistic virtual environment, and seamlessly deploy the exact same autonomy code to the physical hardware.
 
 ---
 
-## 🌟 Key Features (The 3 Core Pillars)
+## 🌟 Key Features
 
-1. **High-Fidelity Virtual Environment (fVDB + Gaussian Splatting)**
-   - Utilizes advanced photorealistic rendering to minimize the visual reality gap.
+1. **Custom 3D Environment Support**
+   - Built to support high-fidelity custom environments (e.g., imported meshes or Gaussian Splatting maps) to minimize the visual reality gap.
    - Provides identical visual features for V-SLAM algorithms in both simulation and reality.
 
 2. **Robust RL Locomotion (SKRL)**
@@ -37,8 +38,8 @@ flowchart LR
     classDef phase fill:#e8eaf6,stroke:#1565c0,stroke-width:2px,color:#000;
     classDef deploy fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:#000;
 
-    P1["Phase 1: Environment Generation<br>(fVDB + Gaussian Splatting)"]:::phase
-    P2["Phase 2: RL Locomotion Training<br>(SKRL + Isaac Sim)"]:::phase
+    P1["Phase 1: Custom Environment<br>(Isaac Sim)"]:::phase
+    P2["Phase 2: RL Locomotion Training<br>(SKRL + Isaac Lab)"]:::phase
     P3["Phase 3: V-SLAM Integration<br>(RTAB-Map Mapping)"]:::phase
     P4["Phase 4: Autonomous Navigation<br>(Nav2 + Costmaps)"]:::phase
     P5["Phase 5: Sim-to-Real Deployment<br>(Physical Go2 Robot)"]:::deploy
@@ -63,7 +64,7 @@ flowchart TD
         
         %% Environment & Hardware Mock
         subgraph Sim_Hardware [Isaac Sim 5.1.0]
-            Env[Gaussian Splatting Corridor]
+            Env[Virtual Environment]
             Cam[Virtual RGB-D Camera]
             Odom[Isaac Compute Odometry]
             Robot[Simulated Go2 Robot]
@@ -105,24 +106,26 @@ flowchart TD
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Execution Scripts Guide
+
+This repository contains customized bash scripts to easily launch different phases of the Sim-to-Real pipeline.
 
 ### Prerequisites
 - **OS:** Ubuntu 24.04
-- **Simulation:** NVIDIA Isaac Sim 5.1.0
+- **Simulation:** NVIDIA Isaac Sim 5.1.0 & Isaac Lab
 - **ROS 2:** Jazzy Jalisco
 - **Dependencies:** `nav2_bringup`, `rtabmap_ros`, `depthimage_to_laserscan`, `nav2_map_server`
 
-### 1. Launch the Simulation (Isaac Sim + RL Policy)
-This script launches Isaac Sim, loads the Gaussian Splatting environment, and runs the SKRL policy in inference mode. It also activates the OmniGraph ROS 2 bridge.
+### 1. `play.sh` (Simulation + RL Policy)
+This script launches Isaac Sim, loads the environment, and runs the pre-trained SKRL policy in inference mode. It also automatically activates the OmniGraph ROS 2 bridge to publish sensor data.
 
 ```bash
 # Terminal 1
 ./play.sh
 ```
 
-### 2. Mapping Mode (Optional: Create a New Map)
-If you want to explore the environment and generate a new 3D/2D map using RTAB-Map before running autonomous navigation, use the mapping script:
+### 2. `rtabmap_mapping.sh` (Map Creation Mode)
+Use this script to explore a new environment and generate a 3D/2D map using RTAB-Map before running autonomous navigation.
 
 ```bash
 # Terminal 2
@@ -131,8 +134,8 @@ source /opt/ros/jazzy/setup.bash
 ```
 *   **How it works:** Drive the robot around using the keyboard (`W`, `A`, `S`, `D`, `Q`, `E`) within the Isaac Sim window. RTAB-Map will build the map (`~/.ros/rtabmap.db`) and save the 2D projection (`~/.ros/rtabmap.yaml` and `.pgm`).
 
-### 3. Launch the Autonomy Stack (V-SLAM Localization + Nav2)
-Once the robot is spawned in the simulation and you have a pre-built map, run the localization script. This will start the map server, depth-to-laser conversion, RTAB-Map localization, and the Nav2 behavior tree.
+### 3. `rtabmap_localization.sh` (Autonomy Stack: V-SLAM + Nav2)
+Once the robot is spawned in the simulation and you have a pre-built map, run this script to launch the full autonomy stack. It starts the map server, depth-to-laser conversion, RTAB-Map localization, and the Nav2 behavior tree.
 
 ```bash
 # Terminal 2
@@ -144,11 +147,11 @@ source /opt/ros/jazzy/setup.bash
 The `rtabmap_localization.sh` script will automatically open RViz2.
 1. Wait for the `[lifecycle_manager]: Managed nodes are active` message in the terminal.
 2. In RViz2, click the **`2D Goal Pose`** button in the top toolbar.
-3. Click and drag on the map to set a destination. The robot will automatically navigate to the target, avoiding dynamic obstacles dropped in the simulation.
+3. Click and drag on the map to set a destination. The robot will automatically navigate to the target, utilizing the RL policy for locomotion and Nav2 for obstacle avoidance.
 
 ---
 
-## 🧠 Retraining the RL Policy
+## 🧠 `train_go2.sh` (Retraining the RL Policy)
 
 If the robot's locomotion behavior needs tuning (e.g., handling sharper turns, rougher terrain, or preventing falls), you can retrain the base policy using massively parallel environments.
 
@@ -159,19 +162,13 @@ If the robot's locomotion behavior needs tuning (e.g., handling sharper turns, r
 *   **What this does:** This script launches the `skrl` training in headless mode (no UI) and spawns 4,096 parallel Go2 robots in the Isaac Sim environment. It maximizes GPU utilization to train the neural network rapidly.
 
 ### Applying the New Weights
-After the training completes (or even while it's running), the new weights are saved in your `logs/` directory.
+After the training completes, the new weights are saved in the `logs/` directory.
 
 1.  Navigate to `logs/skrl/unitree_go2_flat/<DATE_TIME>_ppo_torch/checkpoints/`
-2.  Find the `best_agent.pt` file (or a specific step checkpoint like `agent_1000.pt`).
+2.  Find the `best_agent.pt` file.
 3.  Open `play.sh` and update the `+checkpoint=` path to point to your newly generated `.pt` file:
     ```bash
     # Example inside play.sh
     ./isaaclab.sh -p scripts/reinforcement_learning/skrl/play.py --task Isaac-Velocity-Flat-Unitree-Go2-v0 --num_envs 1 +checkpoint="logs/skrl/unitree_go2_flat/YOUR_NEW_FOLDER/checkpoints/best_agent.pt"
     ```
-4.  Run `./play.sh` again to see your newly trained brain in action!
-
----
-
-## 👥 Contributors
-- **Minseok** - Architecture Design & Sim-to-Real Strategy
-- **Hayoung** - ROS 2 Integration & Simulation Operation
+4.  Run `./play.sh` again to see your newly trained agent in action!
