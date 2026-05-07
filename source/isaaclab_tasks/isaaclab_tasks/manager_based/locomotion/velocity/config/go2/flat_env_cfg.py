@@ -74,5 +74,13 @@ class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
         self.events.push_robot = None
 
         # [수동 리스폰 구현] 로봇이 넘어지거나 시간이 지나도 자동으로 리스폰되지 않게 끔
-        self.terminations.base_contact = None
-        self.terminations.time_out = None
+        # 1. 타임아웃 시간 무제한 (약 2.7시간)
+        self.episode_length_s = 10000.0 
+        
+        # 2. 모든 자동 종료 조건(base_contact, time_out 등) 완전 삭제
+        from isaaclab.utils import configclass
+        @configclass
+        class EmptyTerminationsCfg:
+            pass
+            
+        self.terminations = EmptyTerminationsCfg()
