@@ -105,6 +105,7 @@ def make_keyboard_state():
         "forward": 0.0,
         "side": 0.0,
         "yaw": 0.0,
+        "reset": False,
     }
 
 
@@ -127,6 +128,8 @@ def update_keyboard_state(state, event):
         state["yaw"] = 1.0 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.E:
         state["yaw"] = -1.0 if pressed else 0.0
+    elif event.input == carb.input.KeyboardInput.R:
+        state["reset"] = True if pressed else False
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -293,6 +296,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             )
             cmd = cmd.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
             env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
+
+            # manual reset via 'R' key
+            if keyboard_state["reset"]:
+                obs, _ = env.reset()
+                keyboard_state["reset"] = False
+                print("[INFO] Manual reset triggered.")
+                continue
 
             # agent stepping
             actions = policy(obs)

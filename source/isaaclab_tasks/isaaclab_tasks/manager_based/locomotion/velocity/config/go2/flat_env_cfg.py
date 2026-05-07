@@ -72,3 +72,7 @@ class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
         self.observations.policy.enable_corruption = False
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+
+        # [수동 리스폰 구현] 로봇이 넘어지거나 시간이 지나도 자동으로 리스폰되지 않게 끔
+        self.terminations.base_contact = None
+        self.terminations.time_out = None
