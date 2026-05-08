@@ -106,6 +106,7 @@ def make_keyboard_state():
         "side": 0.0,
         "yaw": 0.0,
         "reset": False,
+        "spawn_obstacle": False,
     }
 
 
@@ -130,6 +131,8 @@ def update_keyboard_state(state, event):
         state["yaw"] = -1.0 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.R:
         state["reset"] = True if pressed else False
+    elif event.input == carb.input.KeyboardInput.T:
+        state["spawn_obstacle"] = True if pressed else False
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -303,6 +306,31 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 keyboard_state["reset"] = False
                 print("[INFO] Manual reset triggered.")
                 continue
+
+            # spawn dynamic obstacle via 'T' key
+            if keyboard_state["spawn_obstacle"]:
+                keyboard_state["spawn_obstacle"] = False
+                print("[INFO] 📦 Spawning dynamic obstacle (T key pressed)!")
+                try:
+                    import omni.isaac.core.objects as objs
+                    import numpy as np
+                    import uuid
+                    
+                    # 로봇의 현재 위치(root_pos_w)를 가져와서 1.5m 앞, 1m 높이에서 상자를 떨어뜨림
+                    robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].cpu().numpy()
+                    drop_pos = np.array([robot_pos[0] + 1.5, robot_pos[1], robot_pos[2] + 1.0])
+                    
+                    obj_name = f"box_{uuid.uuid4().hex[:4]}"
+                    objs.DynamicCuboid(
+                        prim_path=f"/World/Obstacles/{obj_name}",
+                        name=obj_name,
+                        position=drop_pos,
+                        scale=np.array([0.4, 0.4, 0.4]),
+                        color=np.array([1.0, 0.2, 0.2]),
+                        mass=10.0
+                    )
+                except Exception as e:
+                    print(f"[ERROR] Failed to spawn obstacle: {e}")
 
             # agent stepping
             actions = policy(obs)
