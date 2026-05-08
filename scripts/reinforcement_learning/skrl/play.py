@@ -70,6 +70,7 @@ import gymnasium as gym
 import omni
 import omni.appwindow
 import omni.graph.core as og
+import omni.usd
 from pxr import UsdGeom, Gf
 import torch
 from rsl_rl.runners import DistillationRunner, OnPolicyRunner
@@ -306,7 +307,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 keyboard_state["reset"] = False
                 print("[INFO] Manual reset triggered.")
                 continue
-
             # spawn dynamic obstacle via 'T' key
             if keyboard_state["spawn_obstacle"]:
                 keyboard_state["spawn_obstacle"] = False
@@ -315,7 +315,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     from pxr import UsdGeom, Gf, UsdPhysics, Sdf
                     import numpy as np
                     import uuid
-                    import omni.usd
                     
                     stage = omni.usd.get_context().get_stage()
                     
