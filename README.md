@@ -132,7 +132,16 @@ Use this script to explore a new environment and generate a 3D/2D map using RTAB
 source /opt/ros/jazzy/setup.bash
 ./rtabmap_mapping.sh
 ```
-*   **How it works:** Drive the robot around using the keyboard (`W`, `A`, `S`, `D`, `Q`, `E`) within the Isaac Sim window. RTAB-Map will build the map (`~/.ros/rtabmap.db`) and save the 2D projection (`~/.ros/rtabmap.yaml` and `.pgm`).
+*   **How it works:** Drive the robot around using the keyboard (`W`, `A`, `S`, `D`, `Q`, `E`) within the Isaac Sim window. RTAB-Map will build the 3D database (`~/.ros/rtabmap.db`).
+
+⚠️ **CRITICAL: Saving the 2D Map for Nav2**
+Before you stop the mapping script, you **MUST** save the 2D grid map so Nav2 can use it. Open a new terminal and run:
+```bash
+# Terminal 3 (While Terminal 2 is still running)
+source /opt/ros/jazzy/setup.bash
+ros2 run nav2_map_server map_saver_cli -f ~/.ros/rtabmap
+```
+This will generate `~/.ros/rtabmap.yaml` and `~/.ros/rtabmap.pgm`. You can now safely `Ctrl+C` the mapping script.
 
 ### 3. `rtabmap_localization.sh` (Autonomy Stack: V-SLAM + Nav2)
 Once the robot is spawned in the simulation and you have a pre-built map, run this script to launch the full autonomy stack. It starts the map server, depth-to-laser conversion, RTAB-Map localization, and the Nav2 behavior tree.
