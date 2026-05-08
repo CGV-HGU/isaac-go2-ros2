@@ -312,23 +312,33 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 keyboard_state["spawn_obstacle"] = False
                 print("[INFO] 📦 Spawning dynamic obstacle (T key pressed)!")
                 try:
-                    import omni.isaac.core.objects as objs
+                    from pxr import UsdGeom, Gf, UsdPhysics, Sdf
                     import numpy as np
                     import uuid
+                    import omni.usd
+                    
+                    stage = omni.usd.get_context().get_stage()
                     
                     # 로봇의 현재 위치(root_pos_w)를 가져와서 1.5m 앞, 1m 높이에서 상자를 떨어뜨림
                     robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].cpu().numpy()
-                    drop_pos = np.array([robot_pos[0] + 1.5, robot_pos[1], robot_pos[2] + 1.0])
+                    drop_pos = [float(robot_pos[0] + 1.5), float(robot_pos[1]), float(robot_pos[2] + 1.0)]
                     
                     obj_name = f"box_{uuid.uuid4().hex[:4]}"
-                    objs.DynamicCuboid(
-                        prim_path=f"/World/Obstacles/{obj_name}",
-                        name=obj_name,
-                        position=drop_pos,
-                        scale=np.array([0.4, 0.4, 0.4]),
-                        color=np.array([1.0, 0.2, 0.2]),
-                        mass=10.0
-                    )
+                    prim_path = f"/World/{obj_name}"
+                    
+                    # Create USD Cube
+                    cube = UsdGeom.Cube.Define(stage, prim_path)
+                    cube.CreateSizeAttr(0.4)
+                    cube.AddTranslateOp().Set(Gf.Vec3f(*drop_pos))
+                    cube.GetPrim().CreateAttribute("primvars:displayColor", Sdf.ValueTypeNames.Color3fArray).Set([Gf.Vec3f(1.0, 0.2, 0.2)])
+                    
+                    # Apply Physics
+                    UsdPhysics.RigidBodyAPI.Apply(cube.GetPrim())
+                    UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
+                    mass_api = UsdPhysics.MassAPI.Apply(cube.GetPrim())
+                    mass_api.CreateMassAttr(10.0)
+                    
+                    print(f"[INFO] Successfully spawned: {prim_path}")
                 except Exception as e:
                     print(f"[ERROR] Failed to spawn obstacle: {e}")
 
