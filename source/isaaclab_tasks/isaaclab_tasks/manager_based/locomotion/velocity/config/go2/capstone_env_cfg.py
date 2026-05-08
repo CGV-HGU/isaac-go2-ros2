@@ -3,6 +3,12 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+# =========================================================================
+# 🔥 [캡스톤 전용 설정] 이곳에 새로운 맵(USD)의 절대 경로를 입력하세요! 🔥
+# =========================================================================
+CAPSTONE_CUSTOM_MAP_USD_PATH = "/home/hayoung/workspaces/Go2.usd"
+# =========================================================================
+
 from isaaclab.utils import configclass
 from isaaclab.assets import AssetBaseCfg
 from isaaclab.sim import UsdFileCfg
@@ -41,8 +47,7 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         self.scene.custom_environment = AssetBaseCfg(
             prim_path="/World/fused_scene",
             spawn=UsdFileCfg(
-                # 🔥 나중에 여기에 민석님이 만든 새로운 USD 파일 경로를 넣어주세요! 🔥
-                usd_path="/home/hayoung/workspaces/Go2.usd",
+                usd_path=CAPSTONE_CUSTOM_MAP_USD_PATH,
                 scale=(1.0, 1.0, 1.0),
             ),
             init_state=AssetBaseCfg.InitialStateCfg(
