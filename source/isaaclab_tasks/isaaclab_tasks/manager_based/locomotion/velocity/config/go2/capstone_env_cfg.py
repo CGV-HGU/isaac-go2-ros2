@@ -51,8 +51,8 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         )
 
         # --- [로봇 시작 위치 설정] ---
-        # 1m 상공에서 떨어뜨리는 낙하 테스트용 시작 높이 (원래 -1.0m에서 +1m)
-        self.scene.robot.init_state.pos = (0.0, 0.0, 0.0) 
+        # 복도 메쉬의 원점(0,0,0)에서 로봇이 안전하게 착지하도록 Z축만 -1.0m 설정
+        self.scene.robot.init_state.pos = (0.0, 0.0, -1.0) 
 
         # 지형 스캔 관련 불필요한 기능 끄기
         self.scene.height_scanner = None
