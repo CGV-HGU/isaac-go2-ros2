@@ -54,8 +54,13 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.undesired_contacts = None
         self.rewards.dof_torques_l2.weight = -0.0002
         self.rewards.track_lin_vel_xy_exp.weight = 1.5
-        self.rewards.track_ang_vel_z_exp.weight = 0.75
+        self.rewards.track_ang_vel_z_exp.weight = 2.0 # 원래 0.75 -> 빠른 회전을 위해 2.0으로 상향
         self.rewards.dof_acc_l2.weight = -2.5e-7
+
+        # --- [명령 설정] 회전 속도 학습 범위 확장 ---
+        if hasattr(self.commands, "base_velocity"):
+            self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5) # 회전 학습 범위를 -1.5 ~ 1.5 rad/s로 확장
+            self.commands.base_velocity.heading_command = False
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
