@@ -9,4 +9,5 @@ echo "--------------------------------------------------------"
 ./isaaclab.sh -p scripts/reinforcement_learning/skrl/train.py \
     --task Isaac-Velocity-Rough-Unitree-Go2-v0 \
     --headless \
-    --num_envs 4096 
+    --num_envs 4096 \
+    --max_iterations 5000
