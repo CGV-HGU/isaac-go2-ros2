@@ -108,6 +108,8 @@ def make_keyboard_state():
         "yaw": 0.0,
         "reset": False,
         "spawn_obstacle": False,
+        "anim_bow": False,
+        "anim_heart": False,
     }
 
 
@@ -134,6 +136,10 @@ def update_keyboard_state(state, event):
         state["reset"] = True if pressed else False
     elif event.input == carb.input.KeyboardInput.T:
         state["spawn_obstacle"] = True if pressed else False
+    elif event.input == carb.input.KeyboardInput.KEY_1:
+        if pressed: state["anim_bow"] = True
+    elif event.input == carb.input.KeyboardInput.KEY_2:
+        if pressed: state["anim_heart"] = True
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -267,6 +273,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     dt = env.unwrapped.step_dt
 
+    # Animation state machine variables
+    anim_timer = 0.0
+    anim_state = 0
+
     # reset environment
     obs = env.get_observations()
     # simulate environment
@@ -344,6 +354,64 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
             # agent stepping
             actions = policy(obs)
+            
+            # check for animation triggers
+            if keyboard_state["anim_bow"]:
+                keyboard_state["anim_bow"] = False
+                anim_state = 1
+                anim_timer = 0.0
+                print("[INFO] 🎬 Starting Animation 1: Bow and Wave")
+                
+            if keyboard_state["anim_heart"]:
+                keyboard_state["anim_heart"] = False
+                anim_state = 2
+                anim_timer = 0.0
+                print("[INFO] 🎬 Starting Animation 2: Stand and Heart Love")
+                
+            # Animation State Machine
+            if anim_state != 0:
+                anim_timer += dt
+                # Get default positions to calculate the offset (12 joints)
+                default_pos = env.unwrapped.scene["robot"].data.default_joint_pos[0].clone()
+                target_pos = default_pos.clone()
+                
+                if anim_state == 1:
+                    # Animation 1: Bow and Wave (Duration: 4 seconds)
+                    # 엎드리기 자세 (모든 다리 굽히기)
+                    target_pos[:] = torch.tensor([0.0, 1.2, -2.5,  0.0, 1.2, -2.5,  0.0, 1.2, -2.5,  0.0, 1.2, -2.5], device=actions.device)
+                    # 1초 후, 오른쪽 앞발(FR: 인덱스 3,4,5)을 들고 흔들기
+                    if anim_timer > 1.0:
+                        wave_angle = torch.sin(torch.tensor(anim_timer * 10.0, device=actions.device)) * 0.5
+                        target_pos[3:6] = torch.tensor([0.0, -0.5, 0.0], device=actions.device) # 앞발 앞으로 뻗기
+                        target_pos[4] += wave_angle # Thigh 관절 흔들기
+                    if anim_timer > 4.0:
+                        anim_state = 0 # 애니메이션 종료
+                        print("[INFO] 🎬 Animation 1 Finished.")
+                        
+                elif anim_state == 2:
+                    # Animation 2: Stand and Heart (Duration: 6 seconds)
+                    # 두 발로 일어서기 (앞발 위로 뻗고, 뒷발로 버티기)
+                    target_pos[:] = torch.tensor([0.0, -1.0, 0.0,  0.0, -1.0, 0.0,  0.0, 0.8, -1.5,  0.0, 0.8, -1.5], device=actions.device)
+                    if anim_timer > 2.0:
+                        # 2초 후 안정화되면, 앞발(FL, FR)로 하트 그리기 시작
+                        t = torch.tensor((anim_timer - 2.0) * 3.0, device=actions.device) # 속도 조절
+                        heart_x = 0.5 * torch.sin(t)**3
+                        heart_y = 0.4 * torch.cos(t) - 0.15 * torch.cos(2*t) - 0.08 * torch.cos(3*t) - 0.03 * torch.cos(4*t)
+                        
+                        target_pos[1] += heart_y  # FL Thigh
+                        target_pos[2] += heart_x  # FL Calf
+                        target_pos[4] += heart_y  # FR Thigh
+                        target_pos[5] -= heart_x  # FR Calf (대칭)
+                    if anim_timer > 6.0:
+                        anim_state = 0 # 애니메이션 종료
+                        print("[INFO] 🎬 Animation 2 Finished.")
+                        
+                # 목표 관절 각도를 RL action space로 역산 (action = (target - default) / 0.25)
+                # Unitree Go2의 action scale은 기본적으로 0.25로 설정되어 있음
+                action_scale = 0.25
+                custom_actions = (target_pos - default_pos) / action_scale
+                actions = custom_actions.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
+
             # env stepping
             obs, _, dones, _ = env.step(actions)
             # reset recurrent states for episodes that have terminated
