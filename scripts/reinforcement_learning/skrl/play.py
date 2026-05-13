@@ -326,7 +326,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     from pxr import Gf
                     import numpy as np
                     import uuid
-                    import omni.usd
                     
                     stage = omni.usd.get_context().get_stage()
                     
