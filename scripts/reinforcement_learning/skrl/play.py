@@ -108,8 +108,6 @@ def make_keyboard_state():
         "yaw": 0.0,
         "reset": False,
         "spawn_obstacle": False,
-        "anim_bow": False,
-        "anim_heart": False,
     }
 
 
@@ -136,10 +134,6 @@ def update_keyboard_state(state, event):
         state["reset"] = True if pressed else False
     elif event.input == carb.input.KeyboardInput.T:
         state["spawn_obstacle"] = True if pressed else False
-    elif event.input == carb.input.KeyboardInput.KEY_1:
-        if pressed: state["anim_bow"] = True
-    elif event.input == carb.input.KeyboardInput.KEY_2:
-        if pressed: state["anim_heart"] = True
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -276,6 +270,20 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # Animation state machine variables
     anim_timer = 0.0
     anim_state = 0
+    
+    # [Pre-spawn] 미리 장애물을 지하(-100m)에 만들어 둠 (런타임 생성 시 프리징 방지)
+    try:
+        from omni.physx.scripts import physicsUtils
+        from pxr import Gf
+        stage = omni.usd.get_context().get_stage()
+        obstacle_path = "/World/InteractiveObstacle"
+        # 로봇 크기만한 직육면체 (길이 0.8m, 폭 0.4m, 높이 0.4m)
+        physicsUtils.add_rigid_box(
+            stage, obstacle_path, size=Gf.Vec3f(0.8, 0.4, 0.4), 
+            position=Gf.Vec3f(0.0, 0.0, -100.0), color=Gf.Vec3f(1.0, 0.2, 0.2), density=100.0
+        )
+    except Exception as e:
+        print(f"[Warning] Failed to pre-spawn obstacle: {e}")
 
     # reset environment
     obs = env.get_observations()
@@ -320,97 +328,54 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # spawn dynamic obstacle via 'T' key
             if keyboard_state["spawn_obstacle"]:
                 keyboard_state["spawn_obstacle"] = False
-                print("[INFO] 📦 Spawning dynamic obstacle (T key pressed)!")
+                print("[INFO] 📦 Teleporting dynamic obstacle to robot's front (T key pressed)!")
                 try:
-                    from omni.physx.scripts import physicsUtils
-                    from pxr import Gf
-                    import numpy as np
-                    import uuid
+                    import math
+                    from pxr import UsdGeom, UsdPhysics, Gf
                     
                     stage = omni.usd.get_context().get_stage()
                     
-                    # 로봇의 현재 위치(root_pos_w)를 가져옴
+                    # 로봇 위치와 회전(쿼터니언 w,x,y,z) 가져오기
                     robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].cpu().numpy()
+                    robot_quat = env.unwrapped.scene["robot"].data.root_quat_w[0].cpu().numpy()
                     
-                    # 로봇 크기만한 박스(50cm x 50cm x 50cm)를 로봇 정면 1.0m 앞, 0.5m 높이에 스폰
-                    drop_pos = Gf.Vec3f(float(robot_pos[0] + 1.0), float(robot_pos[1]), float(robot_pos[2] + 0.5))
-                    box_size = Gf.Vec3f(0.5, 0.5, 0.5) 
+                    # 쿼터니언(w,x,y,z)에서 Yaw(Z축 회전) 추출
+                    w, x, y, z = robot_quat
+                    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
                     
-                    obj_name = f"box_{uuid.uuid4().hex[:4]}"
-                    prim_path = f"/World/{obj_name}"
+                    # 로봇이 바라보는 정면 방향(Forward Vector) 계산
+                    forward_x = math.cos(yaw)
+                    forward_y = math.sin(yaw)
                     
-                    physicsUtils.add_rigid_box(
-                        stage,
-                        prim_path,
-                        size=box_size,
-                        position=drop_pos,
-                        color=Gf.Vec3f(1.0, 0.2, 0.2), # 빨간색
-                        density=100.0 # 묵직하게 떨어지도록 밀도 설정
+                    # 로봇 정면 1.0m 앞, 0.5m 높이에 위치 설정
+                    drop_pos = Gf.Vec3d(
+                        float(robot_pos[0] + forward_x * 1.0), 
+                        float(robot_pos[1] + forward_y * 1.0), 
+                        float(robot_pos[2] + 0.5)
                     )
-                    print(f"[INFO] Successfully spawned obstacle at: {drop_pos}")
+                    
+                    # 미리 만들어둔 장애물(Prim) 가져와서 위치 강제 이동 (Teleport)
+                    obstacle_prim = stage.GetPrimAtPath("/World/InteractiveObstacle")
+                    if obstacle_prim.IsValid():
+                        xform = UsdGeom.Xformable(obstacle_prim)
+                        xform.ClearXformOpOrder()
+                        xform.AddTranslateOp().Set(drop_pos)
+                        
+                        # 속도 초기화 (이전 관성 제거)
+                        rb_api = UsdPhysics.RigidBodyAPI(obstacle_prim)
+                        if rb_api:
+                            rb_api.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+                            rb_api.GetAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+                            
+                        print(f"[INFO] Obstacle dropped exactly in front of robot!")
+                    else:
+                        print(f"[ERROR] Pre-spawned obstacle not found!")
                 except Exception as e:
-                    print(f"[ERROR] Failed to spawn obstacle: {e}")
+                    print(f"[ERROR] Failed to teleport obstacle: {e}")
 
             # agent stepping
             actions = policy(obs)
             
-            # check for animation triggers
-            if keyboard_state["anim_bow"]:
-                keyboard_state["anim_bow"] = False
-                anim_state = 1
-                anim_timer = 0.0
-                print("[INFO] 🎬 Starting Animation 1: Bow and Wave")
-                
-            if keyboard_state["anim_heart"]:
-                keyboard_state["anim_heart"] = False
-                anim_state = 2
-                anim_timer = 0.0
-                print("[INFO] 🎬 Starting Animation 2: Stand and Heart Love")
-                
-            # Animation State Machine
-            if anim_state != 0:
-                anim_timer += dt
-                # Get default positions to calculate the offset (12 joints)
-                default_pos = env.unwrapped.scene["robot"].data.default_joint_pos[0].clone()
-                target_pos = default_pos.clone()
-                
-                if anim_state == 1:
-                    # Animation 1: Bow and Wave (Duration: 4 seconds)
-                    # 엎드리기 자세 (모든 다리 굽히기)
-                    target_pos[:] = torch.tensor([0.0, 1.2, -2.5,  0.0, 1.2, -2.5,  0.0, 1.2, -2.5,  0.0, 1.2, -2.5], device=actions.device)
-                    # 1초 후, 오른쪽 앞발(FR: 인덱스 3,4,5)을 들고 흔들기
-                    if anim_timer > 1.0:
-                        wave_angle = torch.sin(torch.tensor(anim_timer * 10.0, device=actions.device)) * 0.5
-                        target_pos[3:6] = torch.tensor([0.0, -0.5, 0.0], device=actions.device) # 앞발 앞으로 뻗기
-                        target_pos[4] += wave_angle # Thigh 관절 흔들기
-                    if anim_timer > 4.0:
-                        anim_state = 0 # 애니메이션 종료
-                        print("[INFO] 🎬 Animation 1 Finished.")
-                        
-                elif anim_state == 2:
-                    # Animation 2: Stand and Heart (Duration: 6 seconds)
-                    # 두 발로 일어서기 (앞발 위로 뻗고, 뒷발로 버티기)
-                    target_pos[:] = torch.tensor([0.0, -1.0, 0.0,  0.0, -1.0, 0.0,  0.0, 0.8, -1.5,  0.0, 0.8, -1.5], device=actions.device)
-                    if anim_timer > 2.0:
-                        # 2초 후 안정화되면, 앞발(FL, FR)로 하트 그리기 시작
-                        t = torch.tensor((anim_timer - 2.0) * 3.0, device=actions.device) # 속도 조절
-                        heart_x = 0.5 * torch.sin(t)**3
-                        heart_y = 0.4 * torch.cos(t) - 0.15 * torch.cos(2*t) - 0.08 * torch.cos(3*t) - 0.03 * torch.cos(4*t)
-                        
-                        target_pos[1] += heart_y  # FL Thigh
-                        target_pos[2] += heart_x  # FL Calf
-                        target_pos[4] += heart_y  # FR Thigh
-                        target_pos[5] -= heart_x  # FR Calf (대칭)
-                    if anim_timer > 6.0:
-                        anim_state = 0 # 애니메이션 종료
-                        print("[INFO] 🎬 Animation 2 Finished.")
-                        
-                # 목표 관절 각도를 RL action space로 역산 (action = (target - default) / 0.25)
-                # Unitree Go2의 action scale은 기본적으로 0.25로 설정되어 있음
-                action_scale = 0.25
-                custom_actions = (target_pos - default_pos) / action_scale
-                actions = custom_actions.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
-
             # env stepping
             obs, _, dones, _ = env.step(actions)
             # reset recurrent states for episodes that have terminated
