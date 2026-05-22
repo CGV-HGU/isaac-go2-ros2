@@ -280,7 +280,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         # 로봇 크기만한 직육면체 (길이 0.8m, 폭 0.4m, 높이 0.4m)
         physicsUtils.add_rigid_box(
             stage, obstacle_path, size=Gf.Vec3f(0.8, 0.4, 0.4), 
-            position=Gf.Vec3f(0.0, 0.0, -100.0), color=Gf.Vec3f(1.0, 0.2, 0.2), density=100.0
+            position=Gf.Vec3f(0.0, 0.0, -100.0), color=Gf.Vec3f(0.96, 0.96, 0.86), density=100.0
         )
     except Exception as e:
         print(f"[Warning] Failed to pre-spawn obstacle: {e}")
@@ -343,16 +343,64 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     w, x, y, z = robot_quat
                     yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
                     
-                    # 로봇이 바라보는 정면 방향(Forward Vector) 계산
-                    forward_x = math.cos(yaw)
-                    forward_y = math.sin(yaw)
+                    import random
+                    from pxr import Usd, UsdGeom
                     
-                    # 로봇 정면 1.0m 앞, 0.5m 높이에 위치 설정
-                    drop_pos = Gf.Vec3d(
-                        float(robot_pos[0] + forward_x * 1.0), 
-                        float(robot_pos[1] + forward_y * 1.0), 
-                        float(robot_pos[2] + 0.5)
-                    )
+                    # [메쉬 맵 기반 자동 범위 계산]
+                    # 로드된 캡스톤 메쉬의 실제 크기를 분석하여 스폰 범위를 자동 설정합니다.
+                    map_prim = stage.GetPrimAtPath("/World/fused_scene")
+                    if map_prim.IsValid():
+                        bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), ['default'])
+                        b_range = bbox_cache.ComputeWorldBound(map_prim).ComputeAlignedBox()
+                        min_pt = b_range.GetMin()
+                        max_pt = b_range.GetMax()
+                        
+                        margin = 0.5
+                        min_x = float(min_pt[0]) + margin
+                        max_x = float(max_pt[0]) - margin
+                        min_y = float(min_pt[1]) + margin
+                        max_y = float(max_pt[1]) - margin
+                    else:
+                        min_x, max_x = -3.0, 3.0
+                        min_y, max_y = -1.0, 1.0
+                    
+                    if min_x > max_x: min_x, max_x = max_x, min_x
+                    if min_y > max_y: min_y, max_y = max_y, min_y
+                    
+                    # [Raycast 기반 안전한 지형 판별]
+                    # 직사각형 바운딩 박스가 실제 메쉬 모양과 다를 때 허공에 떨어지는 것을 방지합니다.
+                    from omni.physx import get_physx_scene_query_interface
+                    
+                    valid_spawn_found = False
+                    max_attempts = 10  # 최대 10번 랜덤 위치 시도
+                    final_x, final_y, final_z = 0.0, 0.0, 0.5
+                    
+                    for _ in range(max_attempts):
+                        rand_x = random.uniform(min_x, max_x)
+                        rand_y = random.uniform(min_y, max_y)
+                        
+                        # 하늘(z=10.0m)에서 수직 아래로(0, 0, -1) Ray를 쏩니다.
+                        origin = carb.Float3(rand_x, rand_y, 10.0)
+                        ray_dir = carb.Float3(0.0, 0.0, -1.0)
+                        
+                        hit_info = get_physx_scene_query_interface().raycast_closest(origin, ray_dir, 15.0)
+                        
+                        # Ray가 무언가(메쉬 바닥)에 부딪혔다면 유효한 지형 위라고 판단!
+                        if hit_info["hit"]:
+                            final_x = rand_x
+                            final_y = rand_y
+                            final_z = hit_info["position"][2] + 0.5  # 바닥 높이보다 0.5m 위에서 스폰
+                            valid_spawn_found = True
+                            break
+                    
+                    if not valid_spawn_found:
+                        print("[Warning] Could not find valid ground within mesh bounds after 10 attempts. Spawning at random box location anyway.")
+                        final_x = random.uniform(min_x, max_x)
+                        final_y = random.uniform(min_y, max_y)
+                        final_z = 0.5
+
+                    # 결정된 안전한 위치로 스폰
+                    drop_pos = Gf.Vec3d(float(final_x), float(final_y), float(final_z))
                     
                     # 미리 만들어둔 장애물(Prim) 가져와서 위치 강제 이동 (Teleport)
                     obstacle_prim = stage.GetPrimAtPath("/World/InteractiveObstacle")
@@ -367,7 +415,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                             rb_api.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
                             rb_api.GetAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
                             
-                        print(f"[INFO] Obstacle dropped exactly in front of robot!")
+                        print(f"[INFO] Obstacle dropped randomly at ({rand_x:.2f}, {rand_y:.2f})!")
                     else:
                         print(f"[ERROR] Pre-spawned obstacle not found!")
                 except Exception as e:
