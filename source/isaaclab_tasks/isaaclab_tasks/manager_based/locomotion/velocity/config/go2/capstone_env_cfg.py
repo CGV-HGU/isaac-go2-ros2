@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from isaaclab.utils import configclass
-from isaaclab.assets import AssetBaseCfg
+from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
 from isaaclab.sim import UsdFileCfg
 import isaaclab.sim as sim_utils
 
@@ -84,3 +84,16 @@ class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
             pass
             
         self.terminations = EmptyTerminationsCfg()
+
+        # [동적 장애물 추가] IsaacLab 네이티브 방식으로 씬에 추가 (초기 위치: 지하 -100m 대기)
+        self.scene.interactive_obstacle = RigidObjectCfg(
+            prim_path="{ENV_REGEX_NS}/InteractiveObstacle",
+            spawn=sim_utils.CuboidCfg(
+                size=(0.8, 0.4, 0.4),
+                rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+                mass_props=sim_utils.MassPropertiesCfg(mass=5.0),
+                collision_props=sim_utils.CollisionPropertiesCfg(),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.96, 0.96, 0.86))
+            ),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, -100.0)),
+        )

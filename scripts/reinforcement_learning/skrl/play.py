@@ -273,20 +273,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # Animation state machine variables
     anim_timer = 0.0
     anim_state = 0
-    
-    # [Pre-spawn] 미리 장애물을 지하(-100m)에 만들어 둠 (런타임 생성 시 프리징 방지)
-    try:
-        from omni.physx.scripts import physicsUtils
-        from pxr import Gf
-        stage = omni.usd.get_context().get_stage()
-        obstacle_path = "/World/InteractiveObstacle"
-        # 로봇 크기만한 직육면체 (길이 0.8m, 폭 0.4m, 높이 0.4m)
-        physicsUtils.add_rigid_box(
-            stage, obstacle_path, size=Gf.Vec3f(0.8, 0.4, 0.4), 
-            position=Gf.Vec3f(0.0, 0.0, -100.0), color=Gf.Vec3f(0.96, 0.96, 0.86), density=100.0
-        )
-    except Exception as e:
-        print(f"[Warning] Failed to pre-spawn obstacle: {e}")
 
     # reset environment
     obs = env.get_observations()
@@ -334,26 +320,36 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 keyboard_state["respawn_in_place"] = False
                 print("[INFO] 🔄 Respawning robot in place (F key pressed)!")
                 try:
-                    # 현재 로봇의 X, Y 좌표 가져오기
+                    import math
+                    
+                    # 현재 로봇의 X, Y 좌표 및 방향 가져오기
                     robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].clone()
+                    robot_quat = env.unwrapped.scene["robot"].data.root_quat_w[0].clone()
                     
-                    # Z축만 살짝 위로 올리고(0.5m), 회전(Orientation)은 초기화(Roll, Pitch 0 / Yaw 유지 또는 0)
+                    # Z축만 살짝 위로 올리기(0.5m)
                     new_pos = robot_pos
-                    new_pos[2] = 0.5  # 공중에서 살짝 떨어지도록 설정
+                    new_pos[2] = 0.5  
                     
-                    # 쿼터니언을 (w, x, y, z) = (1, 0, 0, 0) 즉 회전 없게 똑바로 세움
-                    new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=env.unwrapped.device)
+                    # 현재 바라보는 방향(Yaw)은 유지하되, 기울어짐(Roll, Pitch)만 제거
+                    w, x, y, z = robot_quat.cpu().numpy()
+                    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+                    
+                    new_quat = torch.tensor(
+                        [math.cos(yaw / 2.0), 0.0, 0.0, math.sin(yaw / 2.0)], 
+                        device=env.unwrapped.device
+                    )
                     
                     # 속도 0으로 초기화
                     zero_vel = torch.zeros(3, device=env.unwrapped.device)
-                    zero_ang_vel = torch.zeros(3, device=env.unwrapped.device)
                     
                     # 로봇 상태 강제 설정 (root state)
                     env.unwrapped.scene["robot"].write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
-                    env.unwrapped.scene["robot"].write_root_velocity_to_sim(torch.cat([zero_vel, zero_ang_vel]).unsqueeze(0))
+                    env.unwrapped.scene["robot"].write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
                     
-                    # 환경 내부 상태 업데이트(리셋 효과)를 위해 step()에 필요한 obs 갱신 유도
-                    env.unwrapped.scene["robot"].reset()
+                    # 조인트 상태 초기화 (다리가 엉켜있을 수 있으므로 기본 서있는 자세로 복구)
+                    default_joint_pos = env.unwrapped.scene["robot"].data.default_joint_pos.clone()
+                    default_joint_vel = env.unwrapped.scene["robot"].data.default_joint_vel.clone() * 0.0
+                    env.unwrapped.scene["robot"].write_joint_state_to_sim(default_joint_pos, default_joint_vel)
                     
                 except Exception as e:
                     print(f"[ERROR] Failed to respawn in place: {e}")
@@ -364,45 +360,35 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 print("[INFO] 📦 Teleporting dynamic obstacle to robot's front (T key pressed)!")
                 try:
                     import math
-                    from pxr import UsdGeom, UsdPhysics, Gf
                     
-                    stage = omni.usd.get_context().get_stage()
+                    # 로봇 위치와 회전(쿼터니언) 가져오기
+                    robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].clone()
+                    robot_quat = env.unwrapped.scene["robot"].data.root_quat_w[0].clone()
                     
-                    # 로봇 위치와 회전(쿼터니언 w,x,y,z) 가져오기
-                    robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].cpu().numpy()
-                    robot_quat = env.unwrapped.scene["robot"].data.root_quat_w[0].cpu().numpy()
-                    
-                    # 쿼터니언(w,x,y,z)에서 Yaw(Z축 회전) 추출
-                    w, x, y, z = robot_quat
+                    w, x, y, z = robot_quat.cpu().numpy()
                     yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
                     
-                    # 로봇이 바라보는 정면 방향(Forward Vector) 계산
+                    # 로봇 정면 방향
                     forward_x = math.cos(yaw)
                     forward_y = math.sin(yaw)
                     
-                    # 로봇 정면 0.3m(30cm) 앞, 0.5m 높이에 위치 설정
-                    target_x = float(robot_pos[0] + forward_x * 0.3)
-                    target_y = float(robot_pos[1] + forward_y * 0.3)
-                    target_z = float(robot_pos[2] + 0.5)
+                    # 0.3m 앞, 0.5m 높이 설정
+                    target_x = robot_pos[0].item() + forward_x * 0.3
+                    target_y = robot_pos[1].item() + forward_y * 0.3
+                    target_z = robot_pos[2].item() + 0.5
                     
-                    drop_pos = Gf.Vec3d(target_x, target_y, target_z)
+                    new_pos = torch.tensor([target_x, target_y, target_z], device=env.unwrapped.device)
+                    new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=env.unwrapped.device)
+                    zero_vel = torch.zeros(3, device=env.unwrapped.device)
                     
-                    # 미리 만들어둔 장애물(Prim) 가져와서 위치 강제 이동 (Teleport)
-                    obstacle_prim = stage.GetPrimAtPath("/World/InteractiveObstacle")
-                    if obstacle_prim.IsValid():
-                        xform = UsdGeom.Xformable(obstacle_prim)
-                        xform.ClearXformOpOrder()
-                        xform.AddTranslateOp().Set(drop_pos)
-                        
-                        # 속도 초기화 (이전 관성 제거)
-                        rb_api = UsdPhysics.RigidBodyAPI(obstacle_prim)
-                        if rb_api:
-                            rb_api.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
-                            rb_api.GetAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
-                            
+                    # IsaacLab 네이티브 API로 물리엔진에 위치 즉시 기록
+                    if "interactive_obstacle" in env.unwrapped.scene:
+                        obstacle = env.unwrapped.scene["interactive_obstacle"]
+                        obstacle.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+                        obstacle.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
                         print(f"[INFO] Obstacle dropped exactly 0.3m in front of robot at ({target_x:.2f}, {target_y:.2f})!")
                     else:
-                        print(f"[ERROR] Pre-spawned obstacle not found!")
+                        print("[ERROR] interactive_obstacle not found in scene! Check capstone_env_cfg.py")
                 except Exception as e:
                     print(f"[ERROR] Failed to teleport obstacle: {e}")
 
