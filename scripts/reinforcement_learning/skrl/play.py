@@ -108,6 +108,7 @@ def make_keyboard_state():
         "yaw": 0.0,
         "reset": False,
         "spawn_obstacle": False,
+        "respawn_in_place": False,
     }
 
 
@@ -134,6 +135,8 @@ def update_keyboard_state(state, event):
         state["reset"] = True if pressed else False
     elif event.input == carb.input.KeyboardInput.T:
         state["spawn_obstacle"] = True if pressed else False
+    elif event.input == carb.input.KeyboardInput.F:
+        state["respawn_in_place"] = True if pressed else False
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -323,8 +326,38 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             if keyboard_state["reset"]:
                 obs, _ = env.reset()
                 keyboard_state["reset"] = False
-                print("[INFO] Manual reset triggered.")
+                print("[INFO] Manual reset triggered. (Origin)")
                 continue
+            
+            # [제자리 리스폰] 제자리에서 똑바로 세우기 via 'F' key
+            if keyboard_state["respawn_in_place"]:
+                keyboard_state["respawn_in_place"] = False
+                print("[INFO] 🔄 Respawning robot in place (F key pressed)!")
+                try:
+                    # 현재 로봇의 X, Y 좌표 가져오기
+                    robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].clone()
+                    
+                    # Z축만 살짝 위로 올리고(0.5m), 회전(Orientation)은 초기화(Roll, Pitch 0 / Yaw 유지 또는 0)
+                    new_pos = robot_pos
+                    new_pos[2] = 0.5  # 공중에서 살짝 떨어지도록 설정
+                    
+                    # 쿼터니언을 (w, x, y, z) = (1, 0, 0, 0) 즉 회전 없게 똑바로 세움
+                    new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=env.unwrapped.device)
+                    
+                    # 속도 0으로 초기화
+                    zero_vel = torch.zeros(3, device=env.unwrapped.device)
+                    zero_ang_vel = torch.zeros(3, device=env.unwrapped.device)
+                    
+                    # 로봇 상태 강제 설정 (root state)
+                    env.unwrapped.scene["robot"].write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+                    env.unwrapped.scene["robot"].write_root_velocity_to_sim(torch.cat([zero_vel, zero_ang_vel]).unsqueeze(0))
+                    
+                    # 환경 내부 상태 업데이트(리셋 효과)를 위해 step()에 필요한 obs 갱신 유도
+                    env.unwrapped.scene["robot"].reset()
+                    
+                except Exception as e:
+                    print(f"[ERROR] Failed to respawn in place: {e}")
+                    
             # spawn dynamic obstacle via 'T' key
             if keyboard_state["spawn_obstacle"]:
                 keyboard_state["spawn_obstacle"] = False
