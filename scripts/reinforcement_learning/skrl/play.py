@@ -329,31 +329,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 print("[INFO] Manual reset triggered. (Origin)")
                 continue
             
-            # [자동/수동 제자리 리스폰] 넘어짐 감지 및 F키 입력 처리
-            # 로봇의 현재 쿼터니언을 통해 Roll, Pitch를 구해서 넘어졌는지(Auto-recovery) 확인
-            try:
-                robot_pos_check = env.unwrapped.scene["robot"].data.root_pos_w[0]
-                robot_quat_check = env.unwrapped.scene["robot"].data.root_quat_w[0]
-                cw, cx, cy, cz = robot_quat_check.cpu().numpy()
-                # Pitch (y-axis rotation)
-                sinp = 2 * (cw * cy - cz * cx)
-                pitch = math.asin(sinp) if abs(sinp) <= 1 else math.copysign(math.pi / 2, sinp)
-                # Roll (x-axis rotation)
-                sinr_cosp = 2 * (cw * cx + cy * cz)
-                cosr_cosp = 1 - 2 * (cx * cx + cy * cy)
-                roll = math.atan2(sinr_cosp, cosr_cosp)
-                
-                # Roll이나 Pitch가 60도(약 1.05 라디안) 이상 크게 기울었거나 Z축이 너무 낮으면 자동 리스폰 트리거
-                is_fallen = abs(roll) > 1.05 or abs(pitch) > 1.05 or robot_pos_check[2] < 0.15
-            except:
-                is_fallen = False
-
-            if keyboard_state["respawn_in_place"] or is_fallen:
+            # [제자리 리스폰] 제자리에서 똑바로 세우기 via 'F' key
+            if keyboard_state["respawn_in_place"]:
                 keyboard_state["respawn_in_place"] = False
-                if is_fallen:
-                    print("[INFO] 🚨 Fall detected! Auto-respawning robot in place...")
-                else:
-                    print("[INFO] 🔄 Respawning robot in place (F key pressed)!")
+                print("[INFO] 🔄 Respawning robot in place (F key pressed)!")
                 
                 try:
                     import math
