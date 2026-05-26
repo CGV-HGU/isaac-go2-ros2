@@ -64,6 +64,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 몸체가 과도하게 흔들리는 것을 방지 (험지 안정성)
         self.rewards.dof_torques_l2.weight = -0.0001 # 토크 페널티를 살짝 줄여서 힘을 강하게 쓰도록 허용
         self.rewards.dof_acc_l2.weight = -1.5e-7 # 가속도 페널티 완화 (민첩한 움직임 허용)
+        self.rewards.undesired_contacts = None # 부모 클래스(ANYmal 등)의 엉뚱한 정규식(.*THIGH) 충돌 에러 방지
 
         # [NEW] 1. 발 끌림 방지 (미끄러짐 및 헛디딤 방지)
         self.rewards.feet_slide = RewardTermCfg(
