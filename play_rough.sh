@@ -5,4 +5,4 @@
 echo "🚀 Unitree Go2 험지(Rough) 시뮬레이션 테스트를 시작합니다..."
 
 # 학습된 험지 모델을 테스트하는 명령어
-./isaaclab.sh -p scripts/reinforcement_learning/skrl/play.py --task Isaac-Velocity-Rough-Unitree-Go2-Play-v0 --num_envs 1 +checkpoint="/home/hayoung/IsaacLab/logs/skrl/unitree_go2_rough/2026-05-13_21-54-33_ppo_torch/checkpoints/best_agent.pt"
+./isaaclab.sh -p scripts/reinforcement_learning/skrl/play.py --task Isaac-Velocity-Rough-Unitree-Go2-Play-v0 --num_envs 1 +checkpoint="logs/skrl/unitree_go2_flat/2026-04-1413-12-51_ppo_torch/checkpoints/best_agent.pt"
