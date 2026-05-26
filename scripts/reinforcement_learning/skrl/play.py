@@ -345,7 +345,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 
                 try:
                     import math
-                    import torch
                     
                     # 1. 카메라 튕김을 막기 위해, R키가 사용하는 공식 reset() 메커니즘을 가로챕니다.
                     robot = env.unwrapped.scene["robot"]
