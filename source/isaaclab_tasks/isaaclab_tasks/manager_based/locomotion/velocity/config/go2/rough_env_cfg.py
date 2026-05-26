@@ -5,7 +5,7 @@
 
 import math
 from isaaclab.utils import configclass
-from isaaclab.managers import RewardTermCfg
+from isaaclab.managers import RewardTermCfg, SceneEntityCfg
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp.rewards as custom_rewards
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
 
@@ -70,21 +70,21 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.feet_slide = RewardTermCfg(
             func=custom_rewards.feet_slide,
             weight=-0.25,
-            params={"sensor_cfg": self.scene.contact_forces, "asset_cfg": self.scene.robot}
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"), "asset_cfg": SceneEntityCfg("robot")}
         )
         
         # [NEW] 2. 중력 보정 속도 추종 (경사로나 계단에서도 똑바로 걷기)
         self.rewards.track_lin_vel_xy_yaw_frame_exp = RewardTermCfg(
             func=custom_rewards.track_lin_vel_xy_yaw_frame_exp,
             weight=2.0,
-            params={"command_name": "base_velocity", "std": math.sqrt(0.25), "asset_cfg": self.scene.robot}
+            params={"command_name": "base_velocity", "std": math.sqrt(0.25), "asset_cfg": SceneEntityCfg("robot")}
         )
         
         # [NEW] 3. 제자리 멈춤 안정성 (명령이 없을 때 덜덜 떨지 않고 차렷 자세 유지)
         self.rewards.stand_still_joint_deviation_l1 = RewardTermCfg(
             func=custom_rewards.stand_still_joint_deviation_l1,
             weight=-0.5,
-            params={"command_name": "base_velocity", "command_threshold": 0.1, "asset_cfg": self.scene.robot}
+            params={"command_name": "base_velocity", "command_threshold": 0.1, "asset_cfg": SceneEntityCfg("robot")}
         )
 
         # --- [명령 설정] 회전 및 달리기 속도 학습 범위 확장 ---
