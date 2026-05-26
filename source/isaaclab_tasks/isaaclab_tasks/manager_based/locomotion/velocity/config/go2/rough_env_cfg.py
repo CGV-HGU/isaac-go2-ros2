@@ -21,13 +21,16 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
-        # scale down the terrains because the robot is small
-        self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
+        
+        # --- [지형 난이도 상향] 험지와 계단을 더 잘 극복하도록 학습 ---
+        # 박스(단차)와 거친 지형의 폭을 넓혀 더 다이내믹한 지형에서 구르며 배우게 합니다.
+        self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.05, 0.15) # 단차 상향
+        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.02, 0.10) # 험지 상향
+        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.02
 
-        # reduce action scale
-        self.actions.joint_pos.scale = 0.25
+        # --- [유연한 관절] 로봇 다리가 더 크고 유연하게 움직이도록 ---
+        # Action Scale을 키워서, AI가 관절을 더 넓은 반경으로 힘차게 뻗을 수 있게 합니다.
+        self.actions.joint_pos.scale = 0.50 # 기존 0.25에서 두 배 상향 (민첩성 획득)
 
         # event
         self.events.push_robot = None
@@ -48,14 +51,17 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         }
         self.events.base_com = None
 
-        # rewards
+        # --- [보상 튜닝] 험지 안정성 및 보행 최적화 ---
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
-        self.rewards.feet_air_time.weight = 0.01
-        self.rewards.undesired_contacts = None
-        self.rewards.dof_torques_l2.weight = -0.0002
-        self.rewards.track_lin_vel_xy_exp.weight = 1.5
-        self.rewards.track_ang_vel_z_exp.weight = 2.0 # 원래 0.75 -> 빠른 회전을 위해 2.0으로 상향
-        self.rewards.dof_acc_l2.weight = -2.5e-7
+        self.rewards.feet_air_time.weight = 0.05 # 발을 더 높이 들고 오래 체공하게 유도 (계단 극복에 필수)
+        
+        # 험지에서 미끄러짐 방지를 위해 속도 추종 보상 강화
+        self.rewards.track_lin_vel_xy_exp.weight = 2.0 
+        self.rewards.track_ang_vel_z_exp.weight = 2.0 
+        
+        # 몸체가 과도하게 흔들리는 것을 방지 (험지 안정성)
+        self.rewards.dof_torques_l2.weight = -0.0001 # 토크 페널티를 살짝 줄여서 힘을 강하게 쓰도록 허용
+        self.rewards.dof_acc_l2.weight = -1.5e-7 # 가속도 페널티 완화 (민첩한 움직임 허용)
 
         # --- [명령 설정] 회전 속도 학습 범위 확장 ---
         if hasattr(self.commands, "base_velocity"):
