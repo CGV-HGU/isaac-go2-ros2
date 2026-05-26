@@ -109,6 +109,7 @@ def make_keyboard_state():
         "reset": False,
         "spawn_obstacle": False,
         "respawn_in_place": False,
+        "shift": False,
     }
 
 
@@ -131,6 +132,8 @@ def update_keyboard_state(state, event):
         state["yaw"] = 1.0 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.E:
         state["yaw"] = -1.0 if pressed else 0.0
+    elif event.input in [carb.input.KeyboardInput.LEFT_SHIFT, carb.input.KeyboardInput.RIGHT_SHIFT]:
+        state["shift"] = True if pressed else False
     elif event.input == carb.input.KeyboardInput.R:
         state["reset"] = True if pressed else False
     elif event.input == carb.input.KeyboardInput.T:
@@ -309,6 +312,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
             # keyboard -> base_velocity (Keyboard override Nav2)
             kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
+            
+            # [Shift 키 달리기 기능] Shift를 누르고 있으면 속도 2배 증가
+            speed_multiplier = 2.0 if keyboard_state.get("shift", False) else 1.0
+            kb_x *= speed_multiplier
+            kb_y *= speed_multiplier
+            kb_yaw *= speed_multiplier
             
             final_x = kb_x if kb_x != 0.0 else nav_x
             final_y = kb_y if kb_y != 0.0 else nav_y
