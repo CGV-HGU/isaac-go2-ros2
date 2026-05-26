@@ -336,39 +336,29 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 
                 try:
                     import math
-                    from pxr import UsdGeom, UsdPhysics, Gf
+                    import torch
                     
-                    stage = omni.usd.get_context().get_stage()
+                    # 1. 카메라 튕김을 막기 위해, R키가 사용하는 공식 reset() 메커니즘을 가로챕니다.
+                    robot = env.unwrapped.scene["robot"]
                     
-                    # 현재 로봇의 X, Y 좌표 및 방향 가져오기
-                    robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].clone()
-                    robot_quat = env.unwrapped.scene["robot"].data.root_quat_w[0].clone()
+                    # 2. 현재 로봇의 X, Y 좌표 및 Yaw(회전) 가져오기
+                    robot_pos = robot.data.root_pos_w[0].clone()
+                    robot_quat = robot.data.root_quat_w[0].clone()
                     
                     w, x, y, z = robot_quat.cpu().numpy()
                     yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
                     
-                    # 로봇 USD Prim을 직접 가져와서 강제로 똑바로 세우고(Yaw만 유지), 위로 0.5m 올림
-                    robot_prim_path = "/World/envs/env_0/Robot"  # 단일 환경 가정
-                    robot_prim = stage.GetPrimAtPath(robot_prim_path)
+                    # 3. 새로운 위치(Z=0.5m) 및 회전(Roll=0, Pitch=0) 생성
+                    new_pos = robot_pos
+                    new_pos[2] = 0.5
+                    new_quat = torch.tensor([math.cos(yaw/2.0), 0.0, 0.0, math.sin(yaw/2.0)], device=robot.device)
                     
-                    if robot_prim.IsValid():
-                        xform = UsdGeom.Xformable(robot_prim)
-                        xform.ClearXformOpOrder()
-                        # 정밀도 에러를 방지하기 위해 PrecisionDouble(Quatd) 사용
-                        xform.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble).Set(Gf.Vec3d(float(robot_pos[0]), float(robot_pos[1]), 0.5))
-                        xform.AddOrientOp(UsdGeom.XformOp.PrecisionDouble).Set(Gf.Quatd(math.cos(yaw/2), 0.0, 0.0, math.sin(yaw/2)))
-                        
-                        rb_api = UsdPhysics.RigidBodyAPI(robot_prim)
-                        if rb_api:
-                            rb_api.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
-                            rb_api.GetAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
-                            
-                        # 조인트 상태 초기화 (IsaacLab 물리엔진에 반영)
-                        default_joint_pos = env.unwrapped.scene["robot"].data.default_joint_pos.clone()
-                        default_joint_vel = env.unwrapped.scene["robot"].data.default_joint_vel.clone() * 0.0
-                        env.unwrapped.scene["robot"].write_joint_state_to_sim(default_joint_pos, default_joint_vel)
-                    else:
-                        print("[ERROR] Robot Prim not found for in-place reset.")
+                    # 4. 초기 상태 덮어쓰기 (IsaacLab 네이티브 버퍼 업데이트)
+                    robot.data.default_root_state[0, :3] = new_pos
+                    robot.data.default_root_state[0, 3:7] = new_quat
+                    
+                    # 5. R키와 동일하게 env.reset() 호출 -> 카메라가 절대 튕기지 않고 제자리 리스폰됨!
+                    obs, _ = env.reset()
                         
                 except Exception as e:
                     print(f"[ERROR] Failed to respawn in place: {e}")
@@ -379,7 +369,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 print("[INFO] 📦 Teleporting dynamic obstacle to robot's front (T key pressed)!")
                 try:
                     import math
-                    from pxr import UsdGeom, UsdPhysics, Gf
+                    import numpy as np
+                    from omni.isaac.core.prims import XFormPrim
+                    from pxr import UsdPhysics, Gf
                     
                     stage = omni.usd.get_context().get_stage()
                     
@@ -400,7 +392,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     target_y = float(robot_pos[1] + forward_y * 0.3)
                     target_z = float(robot_pos[2] + 0.5)
                     
-                    drop_pos = Gf.Vec3d(target_x, target_y, target_z)
+                    target_position = np.array([target_x, target_y, target_z])
+                    target_orientation = np.array([1.0, 0.0, 0.0, 0.0]) # w, x, y, z
                     
                     obstacle_path = "/World/InteractiveObstacle"
                     obstacle_prim = stage.GetPrimAtPath(obstacle_path)
@@ -415,12 +408,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                         )
                         obstacle_prim = stage.GetPrimAtPath(obstacle_path)
                     
-                    # USD 레벨에서 물리엔진 강제 텔레포트 적용
+                    # XFormPrim을 통한 안전한 장애물 텔레포트
                     if obstacle_prim.IsValid():
-                        xform = UsdGeom.Xformable(obstacle_prim)
-                        xform.ClearXformOpOrder()
-                        xform.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble).Set(drop_pos)
-                        xform.AddOrientOp(UsdGeom.XformOp.PrecisionDouble).Set(Gf.Quatd(1.0, 0.0, 0.0, 0.0))
+                        obs_xform = XFormPrim(prim_path=obstacle_path)
+                        obs_xform.set_world_pose(position=target_position, orientation=target_orientation)
                         
                         rb_api = UsdPhysics.RigidBodyAPI(obstacle_prim)
                         if rb_api:
