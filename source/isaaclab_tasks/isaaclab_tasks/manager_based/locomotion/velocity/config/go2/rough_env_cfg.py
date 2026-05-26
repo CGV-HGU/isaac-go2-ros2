@@ -70,7 +70,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.feet_slide = RewardTermCfg(
             func=custom_rewards.feet_slide,
             weight=-0.25,
-            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"), "asset_cfg": SceneEntityCfg("robot")}
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"), "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")}
         )
         
         # [NEW] 2. 중력 보정 속도 추종 (경사로나 계단에서도 똑바로 걷기)
