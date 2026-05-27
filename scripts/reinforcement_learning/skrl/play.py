@@ -247,7 +247,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # 메쉬의 X, Y 정중앙 및 가장 높은 곳(Z) 계산
             center_x = (min_pt[0] + max_pt[0]) / 2.0
             center_y = (min_pt[1] + max_pt[1]) / 2.0
-            spawn_z = max_pt[2] + 0.5  # 메쉬의 가장 높은 점보다 0.5m 위에서 소환
+            spawn_z = max_pt[2] + 1.0  # 메쉬의 가장 높은 점보다 1.0m 위에서 소환
             
             print(f"[INFO] 🎯 Auto-centering robot at mesh center: ({center_x:.2f}, {center_y:.2f}, {spawn_z:.2f})")
             
@@ -256,6 +256,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             new_pos = torch.tensor([center_x, center_y, spawn_z], device=robot.device)
             new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
             zero_vel = torch.zeros(3, device=robot.device)
+            
+            # IsaacLab의 초기화 버퍼(default_root_state)를 이 중앙 좌표로 업데이트하여 env.reset()이 여기를 기준으로 작동하게 함
+            robot.data.default_root_state[0, :3] = new_pos
+            robot.data.default_root_state[0, 3:7] = new_quat
             
             robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
             robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
