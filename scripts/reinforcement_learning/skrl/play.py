@@ -375,8 +375,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # agent stepping (SKRL format)
             actions, _, _ = policy(obs, timestep=0, timesteps=0)
             
-            # env stepping
-            obs, _, dones, _ = env.step(actions)
+            # env stepping (Gymnasium API returns 5 values: obs, reward, terminated, truncated, info)
+            obs, _, _, _, _ = env.step(actions)
 
         # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
