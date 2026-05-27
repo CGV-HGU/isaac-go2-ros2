@@ -3,10 +3,13 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+import math
 from isaaclab.utils import configclass
 from isaaclab.assets import AssetBaseCfg
 from isaaclab.sim import UsdFileCfg
+from isaaclab.managers import RewardTermCfg, SceneEntityCfg
 import isaaclab.sim as sim_utils
+import isaaclab_tasks.manager_based.locomotion.velocity.mdp.rewards as custom_rewards
 
 from .rough_env_cfg import UnitreeGo2RoughEnvCfg
 from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG
@@ -18,13 +21,32 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         # 1. 험지 주행 클래스(RoughEnv)의 설정 먼저 불러오기 (512 신경망 호환)
         super().__post_init__()
 
-        # --- [보상 설정] ---
-        # 어제 학습한 뇌(May 26)에서 3가지 고급 옵션을 "비활성화" 하여 테스트
-        self.rewards.feet_slide = None
-        self.rewards.track_lin_vel_xy_yaw_frame_exp = None
-        self.rewards.stand_still_joint_deviation_l1 = None
+        # --- [고급 보상 설정: 자연스러운 보행의 핵심] ---
+        # 1. 발 끌림 방지 (미끄러짐 및 헛디딤 방지)
+        self.rewards.feet_slide = RewardTermCfg(
+            func=custom_rewards.feet_slide,
+            weight=-0.25,
+            params={
+                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
+                "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")
+            }
+        )
         
-        # 기본 보상 가중치 조정
+        # 2. 중력 보정 속도 추종 (경사로나 계단에서도 똑바로 걷기)
+        self.rewards.track_lin_vel_xy_yaw_frame_exp = RewardTermCfg(
+            func=custom_rewards.track_lin_vel_xy_yaw_frame_exp,
+            weight=2.0,
+            params={"command_name": "base_velocity", "std": math.sqrt(0.25), "asset_cfg": SceneEntityCfg("robot")}
+        )
+        
+        # 3. 제자리 멈춤 안정성 (명령이 없을 때 덜덜 떨지 않고 차렷 자세 유지)
+        self.rewards.stand_still_joint_deviation_l1 = RewardTermCfg(
+            func=custom_rewards.stand_still_joint_deviation_l1,
+            weight=-0.5,
+            params={"command_name": "base_velocity", "command_threshold": 0.1, "asset_cfg": SceneEntityCfg("robot")}
+        )
+        
+        # 기본 보상 가중치 미세 조정
         self.rewards.flat_orientation_l2.weight = -2.5
         self.rewards.feet_air_time.weight = 0.25
 
@@ -52,11 +74,11 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         # 4. 로봇 시작 위치 설정 (공중 5cm 위)
         self.scene.robot.init_state.pos = (-1.0, 0.0, -0.95) 
 
-        # 5. 불필요한 센서 및 커리큘럼 끄기 (4/14 평지 모델 호환용)
-        # 평지 모델은 발밑 레이저 데이터(187개)를 처리할 수 없으므로 센서를 완전히 끕니다.
-        self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
+        # 5. 지형 스캔 센서 활성화 (May 26 험지 모델은 235개 데이터를 꼭 필요로 함)
+        # 단, 커리큘럼은 꺼서 난이도가 변하지 않게 함
         self.curriculum.terrain_levels = None
+        # 레이저 스캐너가 캡스톤 메쉬를 쏘도록 설정
+        self.scene.height_scanner.mesh_prim_paths = ["/World/fused_scene"]
 
 
 class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
