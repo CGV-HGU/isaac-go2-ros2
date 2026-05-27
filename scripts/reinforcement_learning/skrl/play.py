@@ -233,38 +233,23 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print(f"[Warning] Failed to pre-spawn obstacle: {e}")
 
     # reset environment
-    # [시작 위치 자동 보정] 맵의 크기를 계산하여 로봇을 중앙의 공중으로 순간이동 시킵니다.
+    # [시작 위치 고정] 하드코딩된 X, Y 좌표(-1.0, 0.0)를 사용하고 높이만 이전보다 1미터 높인 Z=0.0으로 설정합니다.
     try:
-        from pxr import UsdGeom, Usd
-        stage = omni.usd.get_context().get_stage()
-        map_prim = stage.GetPrimAtPath("/World/fused_scene")
-        if map_prim.IsValid():
-            bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), ['default'])
-            b_range = bbox_cache.ComputeWorldBound(map_prim).ComputeAlignedBox()
-            min_pt = b_range.GetMin()
-            max_pt = b_range.GetMax()
-            
-            # 메쉬의 X, Y 정중앙 및 가장 높은 곳(Z) 계산
-            center_x = (min_pt[0] + max_pt[0]) / 2.0
-            center_y = (min_pt[1] + max_pt[1]) / 2.0
-            spawn_z = max_pt[2] + 2.0  # 메쉬의 가장 높은 점보다 2.0m 위에서 소환 (요청대로 1m 추가)
-            
-            print(f"[INFO] 🎯 Auto-centering robot at mesh center: ({center_x:.2f}, {center_y:.2f}, {spawn_z:.2f})")
-            
-            # 로봇 상태 강제 설정 (root state)
-            robot = env.unwrapped.scene["robot"]
-            new_pos = torch.tensor([center_x, center_y, spawn_z], device=robot.device)
-            new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
-            zero_vel = torch.zeros(3, device=robot.device)
-            
-            # IsaacLab의 초기화 버퍼(default_root_state)를 이 중앙 좌표로 업데이트하여 env.reset() 및 R키가 여기를 기준으로 작동하게 함
-            robot.data.default_root_state[0, :3] = new_pos
-            robot.data.default_root_state[0, 3:7] = new_quat
-            
-            robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
-            robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
+        robot = env.unwrapped.scene["robot"]
+        # 요청하신 대로 X, Y는 예전 위치 그대로(-1.0, 0.0), 높이는 이전(-1.0)보다 1m 높은 0.0으로 설정
+        new_pos = torch.tensor([-1.0, 0.0, 0.0], device=robot.device)
+        new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
+        zero_vel = torch.zeros(3, device=robot.device)
+        
+        # IsaacLab의 초기화 버퍼(default_root_state)를 이 좌표로 고정하여 R키 리셋 시에도 여기로 오게 함
+        robot.data.default_root_state[0, :3] = new_pos
+        robot.data.default_root_state[0, 3:7] = new_quat
+        
+        robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+        robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
+        print(f"[INFO] 🎯 Robot position set to fixed origin: x=-1.0, y=0.0, z=0.0 (1m higher)")
     except Exception as e:
-        print(f"[Warning] Failed to auto-center robot: {e}")
+        print(f"[Warning] Failed to set initial robot position: {e}")
 
     obs, _ = env.reset()
     # simulate environment
@@ -316,12 +301,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 keyboard_state["reset"] = False
                 robot = env.unwrapped.scene["robot"]
                 
-                # 계산된 중앙 소환 지점으로 강제 복구 (하드코딩된 좌표 대신 default_root_state 사용)
+                # 고정된 중앙 소환 지점으로 강제 복구
                 new_pos = robot.data.default_root_state[0, :3]
                 new_quat = robot.data.default_root_state[0, 3:7]
                 zero_vel = torch.zeros(3, device=robot.device)
                 
-                print(f"[INFO] Manual reset triggered to dynamic origin: ({new_pos[0]:.2f}, {new_pos[1]:.2f}, {new_pos[2]:.2f})")
+                print(f"[INFO] Manual reset triggered to: ({new_pos[0]:.2f}, {new_pos[1]:.2f}, {new_pos[2]:.2f})")
                 
                 # 물리 엔진 상태 강제 덮어쓰기 (카메라 튕김 완벽 방지)
                 robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
