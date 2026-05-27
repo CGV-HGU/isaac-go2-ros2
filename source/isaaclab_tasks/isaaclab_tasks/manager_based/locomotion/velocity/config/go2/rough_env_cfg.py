@@ -27,7 +27,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
         # reduce action scale
-        self.actions.joint_pos.scale = 0.25
+        self.actions.joint_pos.scale = 0.5 # 0.25에서 0.5로 대폭 강화 (근력 상향)
 
         # event
         self.events.push_robot = None

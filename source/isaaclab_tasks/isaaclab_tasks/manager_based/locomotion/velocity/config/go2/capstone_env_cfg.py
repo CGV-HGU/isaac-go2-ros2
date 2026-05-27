@@ -39,12 +39,8 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
             params={"command_name": "base_velocity", "std": math.sqrt(0.25), "asset_cfg": SceneEntityCfg("robot")}
         )
         
-        # 3. 제자리 멈춤 안정성 (명령이 없을 때 덜덜 떨지 않고 차렷 자세 유지)
-        self.rewards.stand_still_joint_deviation_l1 = RewardTermCfg(
-            func=custom_rewards.stand_still_joint_deviation_l1,
-            weight=-0.5,
-            params={"command_name": "base_velocity", "command_threshold": 0.1, "asset_cfg": SceneEntityCfg("robot")}
-        )
+        # 3. 제자리 멈춤 안정성 (임시 비활성화: 움직임 방해 요소 제거)
+        self.rewards.stand_still_joint_deviation_l1 = None
         
         # 기본 보상 가중치 미세 조정
         self.rewards.flat_orientation_l2.weight = -2.5
