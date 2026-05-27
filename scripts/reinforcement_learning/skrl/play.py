@@ -274,9 +274,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
             # manual reset via 'R' key
             if keyboard_state["reset"]:
+                import torch
+                robot = env.unwrapped.scene["robot"]
+                # F키로 인해 덮어씌워졌던 스폰 좌표를 원래 캡스톤 맵 시작점(-1.0, 0.0, -0.95)으로 강제 복구
+                robot.data.default_root_state[0, 0:3] = torch.tensor([-1.0, 0.0, -0.95], device=robot.device)
+                robot.data.default_root_state[0, 3:7] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
+                
                 obs, _ = env.reset()
                 keyboard_state["reset"] = False
-                print("[INFO] Manual reset triggered. (Origin)")
+                print("[INFO] Manual reset triggered. (Origin: -1.0, 0.0, -0.95)")
                 continue
             
             # [제자리 리스폰] 제자리에서 똑바로 세우기 via 'F' key
