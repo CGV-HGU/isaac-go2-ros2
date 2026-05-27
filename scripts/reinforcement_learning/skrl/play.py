@@ -271,10 +271,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             )
             cmd = cmd.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
             env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
-
             # manual reset via 'R' key
             if keyboard_state["reset"]:
-                import torch
                 robot = env.unwrapped.scene["robot"]
                 # F키로 인해 덮어씌워졌던 스폰 좌표를 원래 캡스톤 맵 시작점(-1.0, 0.0, -0.95)으로 강제 복구
                 robot.data.default_root_state[0, 0:3] = torch.tensor([-1.0, 0.0, -0.95], device=robot.device)
@@ -284,15 +282,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 keyboard_state["reset"] = False
                 print("[INFO] Manual reset triggered. (Origin: -1.0, 0.0, -0.95)")
                 continue
-            
             # [제자리 리스폰] 제자리에서 똑바로 세우기 via 'F' key
             if keyboard_state["respawn_in_place"]:
                 keyboard_state["respawn_in_place"] = False
                 print("[INFO] 🔄 Respawning robot in place (F key pressed)!")
-                
+
                 try:
                     import math
-                    
+
                     # 1. 카메라 튕김을 막기 위해, R키가 사용하는 공식 reset() 메커니즘을 가로챕니다.
                     robot = env.unwrapped.scene["robot"]
                     
