@@ -48,7 +48,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         }
         self.events.base_com = None
 
-        # rewards
+        # rewards (optimized for Unitree Go2)
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
         self.rewards.feet_air_time.weight = 0.01
         self.rewards.undesired_contacts = None
