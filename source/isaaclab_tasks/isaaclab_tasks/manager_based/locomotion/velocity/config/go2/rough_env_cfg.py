@@ -31,8 +31,8 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.02
 
         # --- [유연한 관절] 로봇 다리가 더 크고 유연하게 움직이도록 ---
-        # Action Scale을 키워서, AI가 관절을 더 넓은 반경으로 힘차게 뻗을 수 있게 합니다.
-        self.actions.joint_pos.scale = 0.50 # 기존 0.25에서 두 배 상향 (민첩성 획득)
+        # 어제 학습된 뇌(Checkpoint)는 scale 0.25로 학습되었으므로, 강제로 0.50을 쓰면 다리가 미친듯이 튀어서 걷지 못합니다. 0.25로 원상복구!
+        self.actions.joint_pos.scale = 0.25
 
         # event
         self.events.push_robot = None
