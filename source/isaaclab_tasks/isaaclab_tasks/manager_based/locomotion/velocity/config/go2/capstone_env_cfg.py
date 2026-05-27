@@ -40,7 +40,7 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         self.scene.custom_environment = AssetBaseCfg(
             prim_path="/World/fused_scene",
             spawn=UsdFileCfg(
-                usd_path="/home/hayoung/workspaces/05_08.usd",
+                usd_path="/home/hayoung/workspaces/05_08_real.usd",
                 scale=(1.0, 1.0, 1.0),
             ),
             init_state=AssetBaseCfg.InitialStateCfg(
