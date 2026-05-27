@@ -272,7 +272,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             cmd = cmd.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
             
             # 명령어 강제 주입
-            if "base_velocity" in env.unwrapped.command_manager.command_names:
+            if "base_velocity" in env.unwrapped.command_manager.active_terms:
                 env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
                 # 디버그: 0이 아닐 때만 출력 (W/A/S/D 입력 확인용)
                 if torch.norm(cmd) > 0:
@@ -311,7 +311,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     import math
 
                     robot = env.unwrapped.scene["robot"]
-                    
                     # 현재 로봇의 X, Y 좌표 및 Yaw(회전) 가져오기
                     robot_pos = robot.data.root_pos_w[0].clone()
                     robot_quat = robot.data.root_quat_w[0].clone()
