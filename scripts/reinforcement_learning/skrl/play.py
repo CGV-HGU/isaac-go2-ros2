@@ -233,7 +233,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print(f"[Warning] Failed to pre-spawn obstacle: {e}")
 
     # reset environment
-    obs = env.get_observations()
+    obs, _ = env.reset()
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
