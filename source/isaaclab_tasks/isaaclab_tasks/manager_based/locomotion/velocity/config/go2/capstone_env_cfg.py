@@ -52,11 +52,11 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         # 4. 로봇 시작 위치 설정 (공중 5cm 위)
         self.scene.robot.init_state.pos = (-1.0, 0.0, -0.95) 
 
-        # 5. 지형 스캔 센서 활성화 (May 26 험지 모델은 235개 데이터를 꼭 필요로 함)
-        # 단, 커리큘럼은 꺼서 난이도가 변하지 않게 함
+        # 5. 불필요한 센서 및 커리큘럼 끄기 (4/14 평지 모델 호환용)
+        # 평지 모델은 발밑 레이저 데이터(187개)를 처리할 수 없으므로 센서를 완전히 끕니다.
+        self.scene.height_scanner = None
+        self.observations.policy.height_scan = None
         self.curriculum.terrain_levels = None
-        # 레이저 스캐너가 캡스톤 메쉬를 쏘도록 설정
-        self.scene.height_scanner.mesh_prim_paths = ["/World/fused_scene"]
 
 
 class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
