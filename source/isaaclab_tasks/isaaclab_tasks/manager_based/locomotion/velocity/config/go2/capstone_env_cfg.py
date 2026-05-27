@@ -54,9 +54,7 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         # 복도 메쉬의 원점(0,0,0)에서 로봇이 안전하게 착지하도록 Z축만 -1.0m 설정
         self.scene.robot.init_state.pos = (0.0, 0.0, -1.0) 
 
-        # 지형 스캔 관련 불필요한 기능 끄기
-        self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
+        # 지형 스캔 관련 커리큘럼 끄기 (센서는 유지해야 험지 뇌가 작동함)
         self.curriculum.terrain_levels = None
 
 
