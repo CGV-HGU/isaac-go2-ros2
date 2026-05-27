@@ -270,7 +270,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 dtype=torch.float32,
             )
             cmd = cmd.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
-            env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
+            
+            # 명령어 강제 주입
+            if "base_velocity" in env.unwrapped.command_manager.command_names:
+                env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
+                # 디버그: 0이 아닐 때만 출력 (W/A/S/D 입력 확인용)
+                if torch.norm(cmd) > 0:
+                    print(f"[DEBUG] Sending Command: x={final_x:.2f}, y={final_y:.2f}, yaw={final_yaw:.2f}")
+            
             # manual reset via 'R' key
             if keyboard_state["reset"]:
                 keyboard_state["reset"] = False
