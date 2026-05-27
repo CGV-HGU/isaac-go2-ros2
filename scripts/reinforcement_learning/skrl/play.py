@@ -12,30 +12,24 @@ import sys
 
 from isaaclab.app import AppLauncher
 
-# local imports
-import cli_args  # isort: skip
-
 # add argparse arguments
-parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
+parser = argparse.ArgumentParser(description="Play an RL agent with skrl.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
-parser.add_argument(
-    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
-)
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument(
-    "--agent", type=str, default="rsl_rl_cfg_entry_point", help="Name of the RL agent configuration entry point."
+    "--agent", type=str, default=None, help="Name of the RL agent configuration entry point."
 )
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
+parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint to resume training.")
 parser.add_argument(
-    "--use_pretrained_checkpoint",
-    action="store_true",
-    help="Use the pre-trained checkpoint from Nucleus.",
+    "--ml_framework", type=str, default="torch", choices=["torch", "jax", "jax-numpy"], help="The ML framework."
+)
+parser.add_argument(
+    "--algorithm", type=str, default="PPO", choices=["AMP", "PPO", "IPPO", "MAPPO"], help="The RL algorithm."
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
-# append RSL-RL cli arguments
-cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -51,16 +45,6 @@ sys.argv = [sys.argv[0]] + hydra_args
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-"""Check for installed RSL-RL version."""
-
-import importlib.metadata as metadata
-
-from packaging import version
-
-installed_version = metadata.version("rsl-rl-lib")
-
-"""Rest everything follows."""
-
 import os
 import time
 
@@ -73,7 +57,13 @@ import omni.graph.core as og
 import omni.usd
 from pxr import UsdGeom, Gf
 import torch
-from rsl_rl.runners import DistillationRunner, OnPolicyRunner
+
+import skrl
+from packaging import version
+if args_cli.ml_framework.startswith("torch"):
+    from skrl.utils.runner.torch import Runner
+elif args_cli.ml_framework.startswith("jax"):
+    from skrl.utils.runner.jax import Runner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -85,18 +75,18 @@ from isaaclab.envs import (
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 
-from isaaclab_rl.rsl_rl import (
-    RslRlBaseRunnerCfg,
-    RslRlVecEnvWrapper,
-    export_policy_as_jit,
-    export_policy_as_onnx,
-    handle_deprecated_rsl_rl_cfg,
-)
-from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
+from isaaclab_rl.skrl import SkrlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
+
+# config shortcuts
+if args_cli.agent is None:
+    algorithm = args_cli.algorithm.lower()
+    agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
+else:
+    agent_cfg_entry_point = args_cli.agent
+    algorithm = agent_cfg_entry_point.split("_cfg")[0].split("skrl_")[-1].lower()
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
@@ -142,41 +132,22 @@ def update_keyboard_state(state, event):
         state["respawn_in_place"] = True if pressed else False
 
 
-@hydra_task_config(args_cli.task, args_cli.agent)
-def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
-    """Play with RSL-RL agent."""
-    # grab task name for checkpoint path
-    task_name = args_cli.task.split(":")[-1]
-    train_task_name = task_name.replace("-Play", "")
-
+@hydra_task_config(args_cli.task, agent_cfg_entry_point)
+def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+    """Play with skrl agent."""
     # override configurations with non-hydra CLI arguments
-    agent_cfg: RslRlBaseRunnerCfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
-
-    # handle deprecated configurations
-    agent_cfg = handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)
-
-    # set the environment seed
-    env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
 
-    # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
-    log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Loading experiment from directory: {log_root_path}")
-    if args_cli.use_pretrained_checkpoint:
-        resume_path = get_published_pretrained_checkpoint("rsl_rl", train_task_name)
-        if not resume_path:
-            print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
-            return
-    elif args_cli.checkpoint:
-        resume_path = retrieve_file_path(args_cli.checkpoint)
-    else:
-        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+    agent_cfg["trainer"]["close_environment_at_exit"] = False
 
-    log_dir = os.path.dirname(resume_path)
+    # set the agent and environment seed from command line
+    agent_cfg["seed"] = args_cli.seed if args_cli.seed is not None else agent_cfg["seed"]
+    env_cfg.seed = agent_cfg["seed"]
 
-    # set the log directory for the environment (works for all environment types)
+    resume_path = retrieve_file_path(args_cli.checkpoint) if args_cli.checkpoint else None
+    
+    log_dir = os.path.dirname(resume_path) if resume_path else os.getcwd()
     env_cfg.log_dir = log_dir
 
     # create isaac environment
@@ -210,8 +181,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+    # wrap around environment for skrl
+    env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)
 
     # ==========================================
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
@@ -224,45 +195,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # ==========================================
     # ==========================================
 
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-    # load previously trained model
-    if agent_cfg.class_name == "OnPolicyRunner":
-        runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    elif agent_cfg.class_name == "DistillationRunner":
-        runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    else:
-        raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
-    runner.load(resume_path)
+    # configure and instantiate the skrl runner
+    runner = Runner(env, agent_cfg)
+
+    if resume_path:
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+        runner.agent.load(resume_path)
 
     # obtain the trained policy for inference
-    policy = runner.get_inference_policy(device=env.unwrapped.device)
-
-    # export the trained policy to JIT and ONNX formats
-    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-
-    if version.parse(installed_version) >= version.parse("4.0.0"):
-        # use the new export functions for rsl-rl >= 4.0.0
-        runner.export_policy_to_jit(path=export_model_dir, filename="policy.pt")
-        runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
-        policy_nn = None
-    else:
-        # extract the neural network for rsl-rl < 4.0.0
-        if version.parse(installed_version) >= version.parse("2.3.0"):
-            policy_nn = runner.alg.policy
-        else:
-            policy_nn = runner.alg.actor_critic
-
-        # extract the normalizer
-        if hasattr(policy_nn, "actor_obs_normalizer"):
-            normalizer = policy_nn.actor_obs_normalizer
-        elif hasattr(policy_nn, "student_obs_normalizer"):
-            normalizer = policy_nn.student_obs_normalizer
-        else:
-            normalizer = None
-
-        # export to JIT and ONNX
-        export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
-        export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+    policy = runner.agent.act
 
     print("\n================ Keyboard Control ================")
     print("Click the 3D viewport once, then use:")
