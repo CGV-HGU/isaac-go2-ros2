@@ -377,9 +377,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 print("[INFO] 📦 Teleporting dynamic obstacle to robot's front (T key pressed)!")
                 try:
                     import math
-                    import numpy as np
-                    from omni.isaac.core.prims import XFormPrim
-                    from pxr import UsdPhysics, Gf
+                    from pxr import UsdGeom, UsdPhysics, Gf
                     
                     stage = omni.usd.get_context().get_stage()
                     
@@ -400,8 +398,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     target_y = float(robot_pos[1] + forward_y * 0.3)
                     target_z = float(robot_pos[2] + 0.5)
                     
-                    target_position = np.array([target_x, target_y, target_z])
-                    target_orientation = np.array([1.0, 0.0, 0.0, 0.0]) # w, x, y, z
+                    drop_pos = Gf.Vec3d(target_x, target_y, target_z)
                     
                     obstacle_path = "/World/InteractiveObstacle"
                     obstacle_prim = stage.GetPrimAtPath(obstacle_path)
@@ -416,10 +413,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                         )
                         obstacle_prim = stage.GetPrimAtPath(obstacle_path)
                     
-                    # XFormPrim을 통한 안전한 장애물 텔레포트
+                    # UsdGeom.Xformable을 통한 안전한 장애물 텔레포트
                     if obstacle_prim.IsValid():
-                        obs_xform = XFormPrim(prim_path=obstacle_path)
-                        obs_xform.set_world_pose(position=target_position, orientation=target_orientation)
+                        xform = UsdGeom.Xformable(obstacle_prim)
+                        xform.ClearXformOpOrder()
+                        xform.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble).Set(drop_pos)
+                        xform.AddOrientOp(UsdGeom.XformOp.PrecisionDouble).Set(Gf.Quatd(1.0, 0.0, 0.0, 0.0))
                         
                         rb_api = UsdPhysics.RigidBodyAPI(obstacle_prim)
                         if rb_api:
