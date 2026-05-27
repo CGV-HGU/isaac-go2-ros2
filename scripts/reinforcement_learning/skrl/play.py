@@ -276,7 +276,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 keyboard_state["reset"] = False
                 print("[INFO] Manual reset triggered. (Origin: -1.0, 0.0, -0.95)")
                 try:
-                    import torch
                     robot = env.unwrapped.scene["robot"]
                     
                     # 캡스톤 맵 시작점(-1.0, 0.0, -0.95)으로 강제 복구
@@ -303,7 +302,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
                 try:
                     import math
-                    import torch
 
                     robot = env.unwrapped.scene["robot"]
                     
