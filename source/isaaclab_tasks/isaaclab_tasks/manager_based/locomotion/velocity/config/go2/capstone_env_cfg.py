@@ -4,40 +4,30 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from isaaclab.utils import configclass
-from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
+from isaaclab.assets import AssetBaseCfg
 from isaaclab.sim import UsdFileCfg
 import isaaclab.sim as sim_utils
 
-from .rough_env_cfg import UnitreeGo2RoughEnvCfg
+from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
+from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG
 
 
 @configclass
-class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
+class UnitreeGo2CapstoneEnvCfg(LocomotionVelocityRoughEnvCfg):
     def __post_init__(self):
-        # 1. 부모 클래스(RoughEnv)의 설정 먼저 불러오기
+        # 1. IsaacLab 순정 지형 주행 클래스(LocomotionVelocityRoughEnvCfg) 설정 불러오기
         super().__post_init__()
 
-        # --- [보상 설정] 키보드 주행 및 회전(QE) 최적화 ---
-        if hasattr(self.rewards, "track_ang_vel_yaw_exp"):
-            self.rewards.track_ang_vel_yaw_exp.weight = 1.0
-        
-        self.rewards.flat_orientation_l2.weight = -2.5
-        self.rewards.feet_air_time.weight = 0.25
+        # 2. 로봇 설정 (Go2 순정 설정 사용)
+        self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
 
-        # --- [명령 설정] 회전 범위 확장 ---
-        if hasattr(self.commands, "base_velocity"):
-            self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
-            self.commands.base_velocity.heading_command = False
-
-        # --- [환경 설정: 기본 바닥 삭제 및 메쉬 전용 환경] ---
-        
-        # 2. 기존 검은색 격자 바닥(Plane) 생성을 완전히 제거
+        # 3. 환경 설정: 기본 바닥 삭제 및 캡스톤 메쉬 전용 환경
         self.scene.terrain = AssetBaseCfg(
             prim_path="/World/ground",
-            spawn=None,  # 이 설정으로 인해 기본 바닥이 깔리지 않습니다.
+            spawn=None,
         )
         
-        # 3. 캡스톤 맵 (가우시안 복도 등) 메쉬를 유일한 지형으로 등록
         self.scene.custom_environment = AssetBaseCfg(
             prim_path="/World/fused_scene",
             spawn=UsdFileCfg(
@@ -45,16 +35,15 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
                 scale=(1.0, 1.0, 1.0),
             ),
             init_state=AssetBaseCfg.InitialStateCfg(
-                pos=(0.0, 0.0, 0.0), # 시작 좌표
+                pos=(0.0, 0.0, 0.0),
                 rot=(1.0, 0.0, 0.0, 0.0)
             ),
         )
 
-        # --- [로봇 시작 위치 설정] ---
-        # 복도 메쉬의 원점에서 로봇이 안전하게 착지하도록 약간 뒤로(-X) 배치하고 Z축은 -0.7m (기존 -0.95m에서 대폭 위로) 설정
-        self.scene.robot.init_state.pos = (-1.0, 0.0, -0.7) 
+        # 4. 로봇 시작 위치 설정 (공중 5cm 위에서 낙하)
+        self.scene.robot.init_state.pos = (-1.0, 0.0, -0.95) 
 
-        # 지형 스캔 관련 불필요한 기능 끄기 (Flat 모델은 센서 데이터 187개를 처리 못 함)
+        # 5. 불필요한 센서 및 커리큘럼 끄기 (4/14 평지 모델 호환)
         self.scene.height_scanner = None
         self.observations.policy.height_scan = None
         self.curriculum.terrain_levels = None
@@ -73,14 +62,13 @@ class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
         self.events.base_external_force_torque = None
         self.events.push_robot = None
 
-        # [수동 리스폰 구현] 로봇이 넘어지거나 시간이 지나도 자동으로 리스폰되지 않게 끔
-        # 1. 타임아웃 시간 무제한 (약 2.7시간)
+        # [수동 리스폰 구현]
         self.episode_length_s = 10000.0 
         
-        # 2. 모든 자동 종료 조건(base_contact, time_out 등) 완전 삭제
         from isaaclab.utils import configclass
         @configclass
         class EmptyTerminationsCfg:
             pass
             
         self.terminations = EmptyTerminationsCfg()
+
