@@ -233,6 +233,35 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print(f"[Warning] Failed to pre-spawn obstacle: {e}")
 
     # reset environment
+    # [시작 위치 자동 보정] 맵의 크기를 계산하여 로봇을 중앙의 공중으로 순간이동 시킵니다.
+    try:
+        from pxr import UsdGeom, Usd
+        stage = omni.usd.get_context().get_stage()
+        map_prim = stage.GetPrimAtPath("/World/fused_scene")
+        if map_prim.IsValid():
+            bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), ['default'])
+            b_range = bbox_cache.ComputeWorldBound(map_prim).ComputeAlignedBox()
+            min_pt = b_range.GetMin()
+            max_pt = b_range.GetMax()
+            
+            # 메쉬의 X, Y 정중앙 및 가장 높은 곳(Z) 계산
+            center_x = (min_pt[0] + max_pt[0]) / 2.0
+            center_y = (min_pt[1] + max_pt[1]) / 2.0
+            spawn_z = max_pt[2] + 0.5  # 메쉬의 가장 높은 점보다 0.5m 위에서 소환
+            
+            print(f"[INFO] 🎯 Auto-centering robot at mesh center: ({center_x:.2f}, {center_y:.2f}, {spawn_z:.2f})")
+            
+            # 로봇 상태 강제 설정 (root state)
+            robot = env.unwrapped.scene["robot"]
+            new_pos = torch.tensor([center_x, center_y, spawn_z], device=robot.device)
+            new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
+            zero_vel = torch.zeros(3, device=robot.device)
+            
+            robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+            robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
+    except Exception as e:
+        print(f"[Warning] Failed to auto-center robot: {e}")
+
     obs, _ = env.reset()
     # simulate environment
     while simulation_app.is_running():
