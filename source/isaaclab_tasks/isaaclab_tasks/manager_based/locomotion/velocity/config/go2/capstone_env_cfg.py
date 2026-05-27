@@ -54,11 +54,10 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         # 복도 메쉬의 원점에서 로봇이 안전하게 착지하도록 약간 뒤로(-X) 배치하고 Z축은 -0.95m (기존 -1.0m에서 5cm 위로) 설정
         self.scene.robot.init_state.pos = (-1.0, 0.0, -0.95) 
 
-        # 지형 스캔 관련 커리큘럼 끄기 (센서는 유지해야 험지 뇌가 작동함)
+        # 지형 스캔 관련 불필요한 기능 끄기 (Flat 모델은 센서 데이터 187개를 처리 못 함)
+        self.scene.height_scanner = None
+        self.observations.policy.height_scan = None
         self.curriculum.terrain_levels = None
-        
-        # [중요] 기본 바닥(/World/ground)을 삭제했으므로, 레이저 스캐너가 캡스톤 메쉬를 스캔하도록 경로 변경
-        self.scene.height_scanner.mesh_prim_paths = ["/World/fused_scene"]
 
 
 class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
