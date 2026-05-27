@@ -372,16 +372,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 except Exception as e:
                     print(f"[ERROR] Failed to teleport obstacle: {e}")
 
-            # agent stepping
-            actions = policy(obs)
+            # agent stepping (SKRL format)
+            actions, _, _ = policy(obs, timestep=0, timesteps=0)
             
             # env stepping
             obs, _, dones, _ = env.step(actions)
-            # reset recurrent states for episodes that have terminated
-            if version.parse(installed_version) >= version.parse("4.0.0"):
-                policy.reset(dones)
-            else:
-                policy_nn.reset(dones)
 
         # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
