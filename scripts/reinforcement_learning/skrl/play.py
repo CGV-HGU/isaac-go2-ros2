@@ -273,14 +273,28 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
             # manual reset via 'R' key
             if keyboard_state["reset"]:
-                robot = env.unwrapped.scene["robot"]
-                # F키로 인해 덮어씌워졌던 스폰 좌표를 원래 캡스톤 맵 시작점(-1.0, 0.0, -0.95)으로 강제 복구
-                robot.data.default_root_state[0, 0:3] = torch.tensor([-1.0, 0.0, -0.95], device=robot.device)
-                robot.data.default_root_state[0, 3:7] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
-                
-                obs, _ = env.reset()
                 keyboard_state["reset"] = False
                 print("[INFO] Manual reset triggered. (Origin: -1.0, 0.0, -0.95)")
+                try:
+                    import torch
+                    robot = env.unwrapped.scene["robot"]
+                    
+                    # 캡스톤 맵 시작점(-1.0, 0.0, -0.95)으로 강제 복구
+                    new_pos = torch.tensor([-1.0, 0.0, -0.95], device=robot.device)
+                    new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
+                    zero_vel = torch.zeros(3, device=robot.device)
+                    
+                    # 물리 엔진 상태 강제 덮어쓰기 (카메라 튕김 완벽 방지)
+                    robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+                    robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
+                    
+                    # 조인트 초기화
+                    default_joint_pos = robot.data.default_joint_pos.clone()
+                    default_joint_vel = robot.data.default_joint_vel.clone() * 0.0
+                    robot.write_joint_state_to_sim(default_joint_pos, default_joint_vel)
+                    
+                except Exception as e:
+                    print(f"[ERROR] Failed to reset to origin: {e}")
                 continue
             # [제자리 리스폰] 제자리에서 똑바로 세우기 via 'F' key
             if keyboard_state["respawn_in_place"]:
@@ -289,28 +303,31 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
                 try:
                     import math
+                    import torch
 
-                    # 1. 카메라 튕김을 막기 위해, R키가 사용하는 공식 reset() 메커니즘을 가로챕니다.
                     robot = env.unwrapped.scene["robot"]
                     
-                    # 2. 현재 로봇의 X, Y 좌표 및 Yaw(회전) 가져오기
+                    # 현재 로봇의 X, Y 좌표 및 Yaw(회전) 가져오기
                     robot_pos = robot.data.root_pos_w[0].clone()
                     robot_quat = robot.data.root_quat_w[0].clone()
                     
                     w, x, y, z = robot_quat.cpu().numpy()
                     yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
                     
-                    # 3. 새로운 위치(Z=0.5m) 및 회전(Roll=0, Pitch=0) 생성
+                    # 새로운 위치(Z=0.5m) 및 회전(Roll=0, Pitch=0) 생성
                     new_pos = robot_pos
                     new_pos[2] = 0.5
                     new_quat = torch.tensor([math.cos(yaw/2.0), 0.0, 0.0, math.sin(yaw/2.0)], device=robot.device)
+                    zero_vel = torch.zeros(3, device=robot.device)
                     
-                    # 4. 초기 상태 덮어쓰기 (IsaacLab 네이티브 버퍼 업데이트)
-                    robot.data.default_root_state[0, :3] = new_pos
-                    robot.data.default_root_state[0, 3:7] = new_quat
+                    # 물리 엔진 상태 강제 덮어쓰기
+                    robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+                    robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
                     
-                    # 5. R키와 동일하게 env.reset() 호출 -> 카메라가 절대 튕기지 않고 제자리 리스폰됨!
-                    obs, _ = env.reset()
+                    # 조인트 초기화
+                    default_joint_pos = robot.data.default_joint_pos.clone()
+                    default_joint_vel = robot.data.default_joint_vel.clone() * 0.0
+                    robot.write_joint_state_to_sim(default_joint_pos, default_joint_vel)
                         
                 except Exception as e:
                     print(f"[ERROR] Failed to respawn in place: {e}")
