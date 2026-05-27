@@ -89,7 +89,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # --- [명령 설정] 회전 및 달리기 속도 학습 범위 확장 ---
         if hasattr(self.commands, "base_velocity"):
-            self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 2.0) # 전진 달리기(Sprint) 속도를 2.0m/s까지 명시적으로 학습
+            self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0) # 옛날 모델(4월 14일) 호환을 위해 1.0으로 복구
             self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5) # 회전 학습 범위를 -1.5 ~ 1.5 rad/s로 확장
             self.commands.base_velocity.heading_command = False
 

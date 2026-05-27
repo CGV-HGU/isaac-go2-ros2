@@ -51,8 +51,8 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         )
 
         # --- [로봇 시작 위치 설정] ---
-        # 복도 메쉬의 원점에서 로봇이 안전하게 착지하도록 약간 뒤로(-X) 배치하고 Z축은 -0.95m (기존 -1.0m에서 5cm 위로) 설정
-        self.scene.robot.init_state.pos = (-1.0, 0.0, -0.95) 
+        # 복도 메쉬의 원점에서 로봇이 안전하게 착지하도록 약간 뒤로(-X) 배치하고 Z축은 -0.7m (기존 -0.95m에서 대폭 위로) 설정
+        self.scene.robot.init_state.pos = (-1.0, 0.0, -0.7) 
 
         # 지형 스캔 관련 불필요한 기능 끄기 (Flat 모델은 센서 데이터 187개를 처리 못 함)
         self.scene.height_scanner = None
