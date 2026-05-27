@@ -247,7 +247,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # 메쉬의 X, Y 정중앙 및 가장 높은 곳(Z) 계산
             center_x = (min_pt[0] + max_pt[0]) / 2.0
             center_y = (min_pt[1] + max_pt[1]) / 2.0
-            spawn_z = max_pt[2] + 1.0  # 메쉬의 가장 높은 점보다 1.0m 위에서 소환
+            spawn_z = max_pt[2] + 2.0  # 메쉬의 가장 높은 점보다 2.0m 위에서 소환 (요청대로 1m 추가)
             
             print(f"[INFO] 🎯 Auto-centering robot at mesh center: ({center_x:.2f}, {center_y:.2f}, {spawn_z:.2f})")
             
@@ -257,7 +257,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
             zero_vel = torch.zeros(3, device=robot.device)
             
-            # IsaacLab의 초기화 버퍼(default_root_state)를 이 중앙 좌표로 업데이트하여 env.reset()이 여기를 기준으로 작동하게 함
+            # IsaacLab의 초기화 버퍼(default_root_state)를 이 중앙 좌표로 업데이트하여 env.reset() 및 R키가 여기를 기준으로 작동하게 함
             robot.data.default_root_state[0, :3] = new_pos
             robot.data.default_root_state[0, 3:7] = new_quat
             
@@ -314,26 +314,23 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # manual reset via 'R' key
             if keyboard_state["reset"]:
                 keyboard_state["reset"] = False
-                print("[INFO] Manual reset triggered. (Origin: -1.0, 0.0, -0.95)")
-                try:
-                    robot = env.unwrapped.scene["robot"]
-                    
-                    # 캡스톤 맵 시작점(-1.0, 0.0, -0.95)으로 강제 복구
-                    new_pos = torch.tensor([-1.0, 0.0, -0.95], device=robot.device)
-                    new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
-                    zero_vel = torch.zeros(3, device=robot.device)
-                    
-                    # 물리 엔진 상태 강제 덮어쓰기 (카메라 튕김 완벽 방지)
-                    robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
-                    robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
-                    
-                    # 조인트 초기화
-                    default_joint_pos = robot.data.default_joint_pos.clone()
-                    default_joint_vel = robot.data.default_joint_vel.clone() * 0.0
-                    robot.write_joint_state_to_sim(default_joint_pos, default_joint_vel)
-                    
-                except Exception as e:
-                    print(f"[ERROR] Failed to reset to origin: {e}")
+                robot = env.unwrapped.scene["robot"]
+                
+                # 계산된 중앙 소환 지점으로 강제 복구 (하드코딩된 좌표 대신 default_root_state 사용)
+                new_pos = robot.data.default_root_state[0, :3]
+                new_quat = robot.data.default_root_state[0, 3:7]
+                zero_vel = torch.zeros(3, device=robot.device)
+                
+                print(f"[INFO] Manual reset triggered to dynamic origin: ({new_pos[0]:.2f}, {new_pos[1]:.2f}, {new_pos[2]:.2f})")
+                
+                # 물리 엔진 상태 강제 덮어쓰기 (카메라 튕김 완벽 방지)
+                robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+                robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
+                
+                # 조인트 초기화
+                default_joint_pos = robot.data.default_joint_pos.clone()
+                default_joint_vel = robot.data.default_joint_vel.clone() * 0.0
+                robot.write_joint_state_to_sim(default_joint_pos, default_joint_vel)
                 continue
             # [제자리 리스폰] 제자리에서 똑바로 세우기 via 'F' key
             if keyboard_state["respawn_in_place"]:
