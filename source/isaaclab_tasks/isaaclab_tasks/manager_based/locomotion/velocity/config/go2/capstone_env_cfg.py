@@ -56,6 +56,9 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
 
         # 지형 스캔 관련 커리큘럼 끄기 (센서는 유지해야 험지 뇌가 작동함)
         self.curriculum.terrain_levels = None
+        
+        # [중요] 기본 바닥(/World/ground)을 삭제했으므로, 레이저 스캐너가 캡스톤 메쉬를 스캔하도록 경로 변경
+        self.scene.height_scanner.mesh_prim_paths = ["/World/fused_scene"]
 
 
 class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
