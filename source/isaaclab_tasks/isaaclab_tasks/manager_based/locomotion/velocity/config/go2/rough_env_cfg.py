@@ -23,22 +23,18 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
-        
-        # --- [지형 난이도 상향] 험지와 계단을 더 잘 극복하도록 학습 ---
-        # 박스(단차)와 거친 지형의 폭을 넓혀 더 다이내믹한 지형에서 구르며 배우게 합니다.
-        self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.05, 0.15) # 단차 상향
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.02, 0.10) # 험지 상향
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.02
+        # scale down the terrains because the robot is small
+        self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
+        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
+        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
-        # --- [유연한 관절] 로봇 다리가 더 크고 유연하게 움직이도록 ---
-        # 어제 학습된 뇌(Checkpoint)는 scale 0.25로 학습되었으므로, 강제로 0.50을 쓰면 다리가 미친듯이 튀어서 걷지 못합니다. 0.25로 원상복구!
+        # reduce action scale
         self.actions.joint_pos.scale = 0.25
 
         # event
         self.events.push_robot = None
-        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
-        self.events.add_base_mass.params["asset_cfg"].body_names = "base"
-        self.events.base_external_force_torque.params["asset_cfg"].body_names = "base"
+        self.events.add_base_mass = None # 추가된 무게 제거 (기어가는 현상 방지)
+        self.events.base_external_force_torque = None
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         self.events.reset_base.params = {
             "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
@@ -53,44 +49,19 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         }
         self.events.base_com = None
 
-        # --- [보상 튜닝] 험지 안정성 및 보행 최적화 ---
+        # rewards
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
-        self.rewards.feet_air_time.weight = 0.05 # 발을 더 높이 들고 오래 체공하게 유도 (계단 극복에 필수)
-        
-        # 험지에서 미끄러짐 방지를 위해 속도 추종 보상 강화 (기존 방식 삭제 후 고급 방식으로 대체)
-        self.rewards.track_lin_vel_xy_exp = None
-        self.rewards.track_ang_vel_z_exp.weight = 2.0 
-        
-        # 몸체가 과도하게 흔들리는 것을 방지 (험지 안정성)
-        self.rewards.dof_torques_l2.weight = -0.0001 # 토크 페널티를 살짝 줄여서 힘을 강하게 쓰도록 허용
-        self.rewards.dof_acc_l2.weight = -1.5e-7 # 가속도 페널티 완화 (민첩한 움직임 허용)
-        self.rewards.undesired_contacts = None # 부모 클래스(ANYmal 등)의 엉뚱한 정규식(.*THIGH) 충돌 에러 방지
+        self.rewards.feet_air_time.weight = 0.01
+        self.rewards.undesired_contacts = None
+        self.rewards.dof_torques_l2.weight = -0.0002
+        self.rewards.track_lin_vel_xy_exp.weight = 1.5
+        self.rewards.track_ang_vel_z_exp.weight = 2.0
+        self.rewards.dof_acc_l2.weight = -2.5e-7
 
-        # [NEW] 1. 발 끌림 방지 (미끄러짐 및 헛디딤 방지)
-        self.rewards.feet_slide = RewardTermCfg(
-            func=custom_rewards.feet_slide,
-            weight=-0.25,
-            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"), "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")}
-        )
-        
-        # [NEW] 2. 중력 보정 속도 추종 (경사로나 계단에서도 똑바로 걷기)
-        self.rewards.track_lin_vel_xy_yaw_frame_exp = RewardTermCfg(
-            func=custom_rewards.track_lin_vel_xy_yaw_frame_exp,
-            weight=2.0,
-            params={"command_name": "base_velocity", "std": math.sqrt(0.25), "asset_cfg": SceneEntityCfg("robot")}
-        )
-        
-        # [NEW] 3. 제자리 멈춤 안정성 (명령이 없을 때 덜덜 떨지 않고 차렷 자세 유지)
-        self.rewards.stand_still_joint_deviation_l1 = RewardTermCfg(
-            func=custom_rewards.stand_still_joint_deviation_l1,
-            weight=-0.5,
-            params={"command_name": "base_velocity", "command_threshold": 0.1, "asset_cfg": SceneEntityCfg("robot")}
-        )
-
-        # --- [명령 설정] 회전 및 달리기 속도 학습 범위 확장 ---
+        # --- [명령 설정] ---
         if hasattr(self.commands, "base_velocity"):
-            self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0) # 옛날 모델(4월 14일) 호환을 위해 1.0으로 복구
-            self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5) # 회전 학습 범위를 -1.5 ~ 1.5 rad/s로 확장
+            self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0)
+            self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
             self.commands.base_velocity.heading_command = False
 
         # terminations
