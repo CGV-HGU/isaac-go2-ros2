@@ -31,9 +31,8 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # event
         self.events.push_robot = None
-        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
-        self.events.add_base_mass.params["asset_cfg"].body_names = "base"
-        self.events.base_external_force_torque.params["asset_cfg"].body_names = "base"
+        self.events.add_base_mass = None # 추가된 무게 제거 (기어가는 현상 방지)
+        self.events.base_external_force_torque = None
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         self.events.reset_base.params = {
             "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},

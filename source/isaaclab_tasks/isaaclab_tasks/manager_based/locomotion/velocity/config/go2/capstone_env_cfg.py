@@ -41,7 +41,7 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         self.scene.custom_environment = AssetBaseCfg(
             prim_path="/World/fused_scene",
             spawn=UsdFileCfg(
-                usd_path="/home/hayoung/workspaces/05_08.usd",
+                usd_path="/home/hayoung/workspaces/05_08_real.usd",
                 scale=(1.0, 1.0, 1.0),
             ),
             init_state=AssetBaseCfg.InitialStateCfg(
@@ -51,8 +51,8 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         )
 
         # --- [로봇 시작 위치 설정] ---
-        # 복도 메쉬의 원점(0,0,0)에서 로봇이 안전하게 착지하도록 Z축만 -1.0m 설정
-        self.scene.robot.init_state.pos = (0.0, 0.0, -1.0) 
+        # 요청하신 대로 X, Y는 (-1.0, 0.0), 높이는 안전하게 0.0m 설정
+        self.scene.robot.init_state.pos = (-1.0, 0.0, 0.0) 
 
         # 지형 스캔 관련 불필요한 기능 끄기
         self.scene.height_scanner = None
@@ -68,9 +68,12 @@ class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
         
+        # [거미 보행 방지] 무게 추가 이벤트 확실히 끄기
+        self.events.add_base_mass = None
+        self.events.base_external_force_torque = None
+        
         # 테스트 시 불필요한 노이즈 및 랜덤 충격 제거
         self.observations.policy.enable_corruption = False
-        self.events.base_external_force_torque = None
         self.events.push_robot = None
 
         # [수동 리스폰 구현] 로봇이 넘어지거나 시간이 지나도 자동으로 리스폰되지 않게 끔
