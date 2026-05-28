@@ -59,6 +59,12 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
 
+        # --- [명령 설정 추가] ---
+        if hasattr(self.commands, "base_velocity"):
+            self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0)
+            self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+            self.commands.base_velocity.heading_command = False
+
 
 @configclass
 class UnitreeGo2RoughEnvCfg_PLAY(UnitreeGo2RoughEnvCfg):

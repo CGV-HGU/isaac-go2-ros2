@@ -21,30 +21,23 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         # 1. 험지 주행 클래스(RoughEnv)의 설정 먼저 불러오기 (512 신경망 호환)
         super().__post_init__()
 
-        # --- [고급 보상 설정: 자연스러운 보행의 핵심] ---
-        # 1. 발 끌림 방지 (미끄러짐 및 헛디딤 방지)
-        self.rewards.feet_slide = RewardTermCfg(
-            func=custom_rewards.feet_slide,
-            weight=-0.25,
-            params={
-                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
-                "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")
-            }
-        )
-        
-        # 2. 중력 보정 속도 추종 (경사로나 계단에서도 똑바로 걷기)
-        self.rewards.track_lin_vel_xy_yaw_frame_exp = RewardTermCfg(
-            func=custom_rewards.track_lin_vel_xy_yaw_frame_exp,
-            weight=2.0,
-            params={"command_name": "base_velocity", "std": math.sqrt(0.25), "asset_cfg": SceneEntityCfg("robot")}
-        )
-        
-        # 3. 제자리 멈춤 안정성 (임시 비활성화: 움직임 방해 요소 제거)
+        # --- [보상 설정 최적화] ---
+        # 어제 학습한 모델이 혼란을 느끼지 않도록, 검증되지 않은 실험적 보상 제거
+        self.rewards.feet_slide = None
+        self.rewards.track_lin_vel_xy_yaw_frame_exp = None
         self.rewards.stand_still_joint_deviation_l1 = None
         
-        # 기본 보상 가중치 미세 조정
+        # 기본 보상 가중치를 4/14 당시 잘 걷던 수준으로 원복
         self.rewards.flat_orientation_l2.weight = -2.5
-        self.rewards.feet_air_time.weight = 0.25
+        self.rewards.feet_air_time.weight = 0.01 
+
+        # --- [모터 힘 강화] ---
+        # 관절이 꺾이지 않도록 모터의 강성(Stiffness)을 높여서 로봇을 더 단단하게 지지합니다.
+        # (주의: action_scale은 0.25로 유지하여 안전 확보)
+        for actuator_cfg in self.scene.robot.actuators.values():
+            if hasattr(actuator_cfg, "stiffness"):
+                actuator_cfg.stiffness = 30.0 # 기본보다 약간 높게 설정
+                actuator_cfg.damping = 1.0
 
         # --- [환경 설정: 기본 바닥 삭제 및 메쉬 전용 환경] ---
         
