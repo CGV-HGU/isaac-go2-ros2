@@ -203,7 +203,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # [시작 위치 고정]
     try:
         robot = env.unwrapped.scene["robot"]
-        new_pos = torch.tensor([-1.0, 0.0, 0.0], device=robot.device)
+        # 높이를 안전하게 0.5m로 설정 (0.0은 바닥에 끼어서 거미처럼 걷게 됨)
+        new_pos = torch.tensor([-1.0, 0.0, 0.5], device=robot.device)
         new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
         zero_vel = torch.zeros(3, device=robot.device)
         robot.data.default_root_state[0, :3] = new_pos
