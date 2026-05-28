@@ -3,7 +3,12 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Script to play a checkpoint if an RL agent from RSL-RL."""
+"""
+Script to play a checkpoint of an RL agent from skrl.
+
+Visit the skrl documentation (https://skrl.readthedocs.io) to see the examples structured in
+a more user-friendly way.
+"""
 
 """Launch Isaac Sim Simulator first."""
 
@@ -13,23 +18,46 @@ import sys
 from isaaclab.app import AppLauncher
 
 # add argparse arguments
-parser = argparse.ArgumentParser(description="Play an RL agent with skrl.")
+parser = argparse.ArgumentParser(description="Play a checkpoint of an RL agent from skrl.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
+parser.add_argument(
+    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
+)
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument(
-    "--agent", type=str, default=None, help="Name of the RL agent configuration entry point."
+    "--agent",
+    type=str,
+    default=None,
+    help=(
+        "Name of the RL agent configuration entry point. Defaults to None, in which case the argument "
+        "--algorithm is used to determine the default agent configuration entry point."
+    ),
 )
+parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint to resume training.")
 parser.add_argument(
-    "--ml_framework", type=str, default="torch", choices=["torch", "jax", "jax-numpy"], help="The ML framework."
+    "--use_pretrained_checkpoint",
+    action="store_true",
+    help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument(
-    "--algorithm", type=str, default="PPO", choices=["AMP", "PPO", "IPPO", "MAPPO"], help="The RL algorithm."
+    "--ml_framework",
+    type=str,
+    default="torch",
+    choices=["torch", "jax", "jax-numpy"],
+    help="The ML framework used for training the skrl agent.",
+)
+parser.add_argument(
+    "--algorithm",
+    type=str,
+    default="PPO",
+    choices=["AMP", "PPO", "IPPO", "MAPPO"],
+    help="The RL algorithm used for training the skrl agent.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -40,26 +68,30 @@ if args_cli.video:
 
 # clear out sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
-
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
+"""Rest everything follows."""
+
 import os
+import random
 import time
 
-import carb
-import carb.input
 import gymnasium as gym
-import omni
-import omni.appwindow
-import omni.graph.core as og
-import omni.usd
-from pxr import UsdGeom, Gf
-import torch
-
 import skrl
+import torch
 from packaging import version
+
+# check for minimum supported skrl version
+SKRL_VERSION = "1.4.3"
+if version.parse(skrl.__version__) < version.parse(SKRL_VERSION):
+    skrl.logger.error(
+        f"Unsupported skrl version: {skrl.__version__}. "
+        f"Install supported version using 'pip install skrl>={SKRL_VERSION}'"
+    )
+    exit()
+
 if args_cli.ml_framework.startswith("torch"):
     from skrl.utils.runner.torch import Runner
 elif args_cli.ml_framework.startswith("jax"):
@@ -72,13 +104,16 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
     multi_agent_to_single_agent,
 )
-from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
+from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
 import isaaclab_tasks  # noqa: F401
+from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
+
+# PLACEHOLDER: Extension template (do not remove this comment)
 
 # config shortcuts
 if args_cli.agent is None:
@@ -88,86 +123,64 @@ else:
     agent_cfg_entry_point = args_cli.agent
     algorithm = agent_cfg_entry_point.split("_cfg")[0].split("skrl_")[-1].lower()
 
-# PLACEHOLDER: Extension template (do not remove this comment)
-
-
-def make_keyboard_state():
-    return {
-        "forward": 0.0,
-        "side": 0.0,
-        "yaw": 0.0,
-        "reset": False,
-        "spawn_obstacle": False,
-        "respawn_in_place": False,
-        "shift": False,
-    }
-
-
-def update_keyboard_state(state, event):
-    pressed = event.type == carb.input.KeyboardEventType.KEY_PRESS
-    released = event.type == carb.input.KeyboardEventType.KEY_RELEASE
-
-    if not (pressed or released):
-        return
-
-    if event.input == carb.input.KeyboardInput.W:
-        state["forward"] = 1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.S:
-        state["forward"] = -1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.A:
-        state["side"] = 1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.D:
-        state["side"] = -1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.Q:
-        state["yaw"] = 1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.E:
-        state["yaw"] = -1.0 if pressed else 0.0
-    elif event.input in [carb.input.KeyboardInput.LEFT_SHIFT, carb.input.KeyboardInput.RIGHT_SHIFT]:
-        state["shift"] = True if pressed else False
-    elif event.input == carb.input.KeyboardInput.R:
-        state["reset"] = True if pressed else False
-    elif event.input == carb.input.KeyboardInput.T:
-        state["spawn_obstacle"] = True if pressed else False
-    elif event.input == carb.input.KeyboardInput.F:
-        state["respawn_in_place"] = True if pressed else False
-
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
-def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, experiment_cfg: dict):
     """Play with skrl agent."""
+    # grab task name for checkpoint path
+    task_name = args_cli.task.split(":")[-1]
+    train_task_name = task_name.replace("-Play", "")
+
     # override configurations with non-hydra CLI arguments
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
 
-    agent_cfg["trainer"]["close_environment_at_exit"] = False
+    # configure the ML framework into the global skrl variable
+    if args_cli.ml_framework.startswith("jax"):
+        skrl.config.jax.backend = "jax" if args_cli.ml_framework == "jax" else "numpy"
+
+        # randomly sample a seed if seed = -1
+    if args_cli.seed == -1:
+        args_cli.seed = random.randint(0, 10000)
 
     # set the agent and environment seed from command line
-    agent_cfg["seed"] = args_cli.seed if args_cli.seed is not None else agent_cfg["seed"]
-    env_cfg.seed = agent_cfg["seed"]
+    # note: certain randomization occur in the environment initialization so we set the seed here
+    experiment_cfg["seed"] = args_cli.seed if args_cli.seed is not None else experiment_cfg["seed"]
+    env_cfg.seed = experiment_cfg["seed"]
 
-    resume_path = retrieve_file_path(args_cli.checkpoint) if args_cli.checkpoint else None
-    
-    log_dir = os.path.dirname(resume_path) if resume_path else os.getcwd()
+    # specify directory for logging experiments (load checkpoint)
+    log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
+    log_root_path = os.path.abspath(log_root_path)
+    print(f"[INFO] Loading experiment from directory: {log_root_path}")
+    # get checkpoint path
+    if args_cli.use_pretrained_checkpoint:
+        resume_path = get_published_pretrained_checkpoint("skrl", train_task_name)
+        if not resume_path:
+            print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
+            return
+    elif args_cli.checkpoint:
+        resume_path = os.path.abspath(args_cli.checkpoint)
+    else:
+        resume_path = get_checkpoint_path(
+            log_root_path, run_dir=f".*_{algorithm}_{args_cli.ml_framework}", other_dirs=["checkpoints"]
+        )
+    log_dir = os.path.dirname(os.path.dirname(resume_path))
+
+    # set the log directory for the environment (works for all environment types)
     env_cfg.log_dir = log_dir
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
-    # keyboard subscription
-    keyboard_state = make_keyboard_state()
-    app_window = omni.appwindow.get_default_app_window()
-    keyboard = app_window.get_keyboard()
-    input_interface = carb.input.acquire_input_interface()
-
-    def on_keyboard_event(event, *args, **kwargs):
-        update_keyboard_state(keyboard_state, event)
-        return True
-
-    keyboard_sub = input_interface.subscribe_to_keyboard_events(keyboard, on_keyboard_event)
-
     # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
+    if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
         env = multi_agent_to_single_agent(env)
+
+    # get environment (step) dt for real-time evaluation
+    try:
+        dt = env.step_dt
+    except AttributeError:
+        dt = env.unwrapped.step_dt
 
     # wrap for video recording
     if args_cli.video:
@@ -182,250 +195,49 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     # wrap around environment for skrl
-    env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)
-
-    # ==========================================
-    # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
-    # ==========================================
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    import ros2_sensor_setup
-    
-    stage = omni.usd.get_context().get_stage()
-    ros2_sensor_setup.setup_ros2_sensors(stage)
-    # ==========================================
-    # ==========================================
+    env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)  # same as: `wrap_env(env, wrapper="auto")`
 
     # configure and instantiate the skrl runner
-    runner = Runner(env, agent_cfg)
+    # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
+    experiment_cfg["trainer"]["close_environment_at_exit"] = False
+    experiment_cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
+    experiment_cfg["agent"]["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
+    runner = Runner(env, experiment_cfg)
 
-    if resume_path:
-        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-        runner.agent.load(resume_path)
-
-    # Set SKRL agent to evaluation mode to disable exploration noise!
+    print(f"[INFO] Loading model checkpoint from: {resume_path}")
+    runner.agent.load(resume_path)
+    # set agent to evaluation mode
     runner.agent.set_running_mode("eval")
-    
-    # obtain the trained policy for inference
-    policy = runner.agent.act
-
-    print("\n================ Keyboard Control ================")
-    print("Click the 3D viewport once, then use:")
-    print("W / S : forward / backward")
-    print("A / D : left / right")
-    print("Q / E : yaw left / yaw right")
-    print("=================================================\n")
-
-    dt = env.unwrapped.step_dt
-
-    # Animation state machine variables
-    anim_timer = 0.0
-    anim_state = 0
-    
-    # [Pre-spawn] 미리 장애물을 지하(-100m)에 만들어 둠 (런타임 생성 시 프리징 방지)
-    try:
-        from omni.physx.scripts import physicsUtils
-        from pxr import Gf
-        stage = omni.usd.get_context().get_stage()
-        obstacle_path = "/World/InteractiveObstacle"
-        # 로봇 크기만한 직육면체 (길이 0.8m, 폭 0.4m, 높이 0.4m)
-        physicsUtils.add_rigid_box(
-            stage, obstacle_path, size=Gf.Vec3f(0.8, 0.4, 0.4), 
-            position=Gf.Vec3f(0.0, 0.0, -100.0), color=Gf.Vec3f(0.96, 0.96, 0.86), density=100.0
-        )
-    except Exception as e:
-        print(f"[Warning] Failed to pre-spawn obstacle: {e}")
 
     # reset environment
-    # [시작 위치 고정] 하드코딩된 X, Y 좌표(-1.0, 0.0)를 사용하고 높이만 이전보다 1미터 높인 Z=0.0으로 설정합니다.
-    try:
-        robot = env.unwrapped.scene["robot"]
-        # 요청하신 대로 X, Y는 예전 위치 그대로(-1.0, 0.0), 높이는 이전(-1.0)보다 1m 높은 0.0으로 설정
-        new_pos = torch.tensor([-1.0, 0.0, 0.15], device=robot.device)
-        new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
-        zero_vel = torch.zeros(3, device=robot.device)
-
-        # IsaacLab의 초기화 버퍼(default_root_state)를 이 좌표로 고정하여 R키 리셋 시에도 여기로 오게 함
-        robot.data.default_root_state[0, :3] = new_pos
-        robot.data.default_root_state[0, 3:7] = new_quat
-
-        robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
-        robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
-        print(f"[INFO] 🎯 Robot position set to fixed origin: x=-1.0, y=0.0, z=0.15 (Stable Height)")
-    except Exception as e:
-        print(f"[Warning] Failed to set initial robot position: {e}")
-
     obs, _ = env.reset()
+    timestep = 0
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
+
         # run everything in inference mode
         with torch.inference_mode():
-            # Get velocity from ROS 2 Twist Subscriber node (Nav2)
-            nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
-            try:
-                cmd_node = og.Controller.node("/World/ROS2_Camera_Graph/ROS2CmdVel")
-                if cmd_node.is_valid():
-                    lin_vel = og.Controller.get(og.Controller.attribute("outputs:linearVelocity", cmd_node))
-                    ang_vel = og.Controller.get(og.Controller.attribute("outputs:angularVelocity", cmd_node))
-                    if lin_vel is not None and ang_vel is not None:
-                        nav_x, nav_y, nav_yaw = float(lin_vel[0]), float(lin_vel[1]), float(ang_vel[2])
-            except Exception:
-                pass
-
-            # keyboard -> base_velocity (Keyboard override Nav2)
-            kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
-            
-            # [Shift 키 달리기 기능] 예전 모델 호환을 위해 배율을 1.2배로 대폭 낮춤 (높으면 기어감)
-            speed_multiplier = 1.2 if keyboard_state.get("shift", False) else 1.0
-            kb_x *= speed_multiplier
-            kb_y *= speed_multiplier
-            kb_yaw *= speed_multiplier
-            
-            final_x = kb_x if kb_x != 0.0 else nav_x
-            final_y = kb_y if kb_y != 0.0 else nav_y
-            final_yaw = kb_yaw if kb_yaw != 0.0 else nav_yaw
-
-            cmd = torch.tensor(
-                [final_x, final_y, final_yaw],
-                device=env.unwrapped.device,
-                dtype=torch.float32,
-            )
-            cmd = cmd.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
-            
-            # 명령어 강제 주입
-            if "base_velocity" in env.unwrapped.command_manager.active_terms:
-                env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
-                # 디버그: 0이 아닐 때만 출력 (W/A/S/D 입력 확인용)
-                if torch.norm(cmd) > 0:
-                    print(f"[DEBUG] Sending Command: x={final_x:.2f}, y={final_y:.2f}, yaw={final_yaw:.2f}")
-            
-            # manual reset via 'R' key
-            if keyboard_state["reset"]:
-                keyboard_state["reset"] = False
-                robot = env.unwrapped.scene["robot"]
-                
-                # 고정된 중앙 소환 지점으로 강제 복구
-                new_pos = robot.data.default_root_state[0, :3]
-                new_quat = robot.data.default_root_state[0, 3:7]
-                zero_vel = torch.zeros(3, device=robot.device)
-                
-                print(f"[INFO] Manual reset triggered to: ({new_pos[0]:.2f}, {new_pos[1]:.2f}, {new_pos[2]:.2f})")
-                
-                # 물리 엔진 상태 강제 덮어쓰기 (카메라 튕김 완벽 방지)
-                robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
-                robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
-                
-                # 조인트 초기화
-                default_joint_pos = robot.data.default_joint_pos.clone()
-                default_joint_vel = robot.data.default_joint_vel.clone() * 0.0
-                robot.write_joint_state_to_sim(default_joint_pos, default_joint_vel)
-                continue
-            # [제자리 리스폰] 제자리에서 똑바로 세우기 via 'F' key
-            if keyboard_state["respawn_in_place"]:
-                keyboard_state["respawn_in_place"] = False
-                print("[INFO] 🔄 Respawning robot in place (F key pressed)!")
-
-                try:
-                    import math
-
-                    robot = env.unwrapped.scene["robot"]
-                    # 현재 로봇의 X, Y 좌표 및 Yaw(회전) 가져오기
-                    robot_pos = robot.data.root_pos_w[0].clone()
-                    robot_quat = robot.data.root_quat_w[0].clone()
-                    
-                    w, x, y, z = robot_quat.cpu().numpy()
-                    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
-                    
-                    # 새로운 위치(Z=0.5m) 및 회전(Roll=0, Pitch=0) 생성
-                    new_pos = robot_pos
-                    new_pos[2] = 0.5
-                    new_quat = torch.tensor([math.cos(yaw/2.0), 0.0, 0.0, math.sin(yaw/2.0)], device=robot.device)
-                    zero_vel = torch.zeros(3, device=robot.device)
-                    
-                    # 물리 엔진 상태 강제 덮어쓰기
-                    robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
-                    robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
-                    
-                    # 조인트 초기화
-                    default_joint_pos = robot.data.default_joint_pos.clone()
-                    default_joint_vel = robot.data.default_joint_vel.clone() * 0.0
-                    robot.write_joint_state_to_sim(default_joint_pos, default_joint_vel)
-                        
-                except Exception as e:
-                    print(f"[ERROR] Failed to respawn in place: {e}")
-                    
-            # spawn dynamic obstacle via 'T' key
-            if keyboard_state["spawn_obstacle"]:
-                keyboard_state["spawn_obstacle"] = False
-                print("[INFO] 📦 Teleporting dynamic obstacle to robot's front (T key pressed)!")
-                try:
-                    import math
-                    from pxr import UsdGeom, UsdPhysics, Gf
-                    
-                    stage = omni.usd.get_context().get_stage()
-                    
-                    # 로봇 위치와 회전(쿼터니언 w,x,y,z) 가져오기
-                    robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].cpu().numpy()
-                    robot_quat = env.unwrapped.scene["robot"].data.root_quat_w[0].cpu().numpy()
-                    
-                    # 쿼터니언(w,x,y,z)에서 Yaw(Z축 회전) 추출
-                    w, x, y, z = robot_quat
-                    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
-                    
-                    # 로봇 정면 방향 계산
-                    forward_x = math.cos(yaw)
-                    forward_y = math.sin(yaw)
-                    
-                    # 0.3m 앞, 0.5m 높이
-                    target_x = float(robot_pos[0] + forward_x * 0.3)
-                    target_y = float(robot_pos[1] + forward_y * 0.3)
-                    target_z = float(robot_pos[2] + 0.5)
-                    
-                    drop_pos = Gf.Vec3d(target_x, target_y, target_z)
-                    
-                    obstacle_path = "/World/InteractiveObstacle"
-                    obstacle_prim = stage.GetPrimAtPath(obstacle_path)
-                    
-                    # 상자가 아직 없으면 런타임에 즉시 생성!
-                    if not obstacle_prim.IsValid():
-                        from omni.physx.scripts import physicsUtils
-                        physicsUtils.add_rigid_box(
-                            stage, obstacle_path, size=Gf.Vec3f(0.8, 0.4, 0.4), 
-                            position=Gf.Vec3f(float(target_x), float(target_y), float(target_z)), 
-                            color=Gf.Vec3f(0.96, 0.96, 0.86), density=100.0
-                        )
-                        obstacle_prim = stage.GetPrimAtPath(obstacle_path)
-                    
-                    # UsdGeom.Xformable을 통한 안전한 장애물 텔레포트
-                    if obstacle_prim.IsValid():
-                        xform = UsdGeom.Xformable(obstacle_prim)
-                        xform.ClearXformOpOrder()
-                        xform.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble).Set(drop_pos)
-                        xform.AddOrientOp(UsdGeom.XformOp.PrecisionDouble).Set(Gf.Quatd(1.0, 0.0, 0.0, 0.0))
-                        
-                        rb_api = UsdPhysics.RigidBodyAPI(obstacle_prim)
-                        if rb_api:
-                            rb_api.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
-                            rb_api.GetAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
-                            
-                        print(f"[INFO] Obstacle dropped exactly 0.3m in front of robot at ({target_x:.2f}, {target_y:.2f})!")
-                    else:
-                        print(f"[ERROR] Failed to create or find obstacle prim!")
-                except Exception as e:
-                    print(f"[ERROR] Failed to teleport obstacle: {e}")
-
-            # agent stepping (SKRL format)
-            actions, _, _ = policy(obs, timestep=0, timesteps=0)
-            
-            # env stepping (Gymnasium API returns 5 values: obs, reward, terminated, truncated, info)
+            # agent stepping
+            outputs = runner.agent.act(obs, timestep=0, timesteps=0)
+            # - multi-agent (deterministic) actions
+            if hasattr(env, "possible_agents"):
+                actions = {a: outputs[-1][a].get("mean_actions", outputs[0][a]) for a in env.possible_agents}
+            # - single-agent (deterministic) actions
+            else:
+                actions = outputs[-1].get("mean_actions", outputs[0])
+            # env stepping
             obs, _, _, _, _ = env.step(actions)
+        if args_cli.video:
+            timestep += 1
+            # exit the play loop after recording one video
+            if timestep == args_cli.video_length:
+                break
 
         # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
-
-    input_interface.unsubscribe_to_keyboard_events(keyboard, keyboard_sub)
 
     # close the simulator
     env.close()
