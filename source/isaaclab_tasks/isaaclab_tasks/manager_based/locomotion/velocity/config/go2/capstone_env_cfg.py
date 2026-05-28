@@ -3,51 +3,28 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-import math
 from isaaclab.utils import configclass
 from isaaclab.assets import AssetBaseCfg
 from isaaclab.sim import UsdFileCfg
-from isaaclab.managers import RewardTermCfg, SceneEntityCfg
 import isaaclab.sim as sim_utils
-import isaaclab_tasks.manager_based.locomotion.velocity.mdp.rewards as custom_rewards
 
-from .rough_env_cfg import UnitreeGo2RoughEnvCfg
-from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG
+from .flat_env_cfg import UnitreeGo2FlatEnvCfg
 
 
 @configclass
-class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
+class UnitreeGo2CapstoneEnvCfg(UnitreeGo2FlatEnvCfg):
     def __post_init__(self):
-        # 1. 험지 주행 클래스(RoughEnv)의 설정 먼저 불러오기 (512 신경망 호환)
+        # 1. 방금 우리가 학습시킨 "완벽한 평면 환경(UnitreeGo2FlatEnvCfg)" 설정을 그대로 물려받습니다.
+        # 이렇게 하면 뇌(Model)와 몸(Config)이 100% 일치하여 거미처럼 걷는 현상이 사라집니다.
         super().__post_init__()
 
-        # --- [보상 설정 최적화] ---
-        # 어제 학습한 모델이 혼란을 느끼지 않도록, 검증되지 않은 실험적 보상 제거
-        self.rewards.feet_slide = None
-        self.rewards.track_lin_vel_xy_yaw_frame_exp = None
-        self.rewards.stand_still_joint_deviation_l1 = None
-        
-        # 기본 보상 가중치를 4/14 당시 잘 걷던 수준으로 원복
-        self.rewards.flat_orientation_l2.weight = -2.5
-        self.rewards.feet_air_time.weight = 0.01 
-
-        # --- [모터 힘 강화] ---
-        # 관절이 꺾이지 않도록 모터의 강성(Stiffness)을 높여서 로봇을 더 단단하게 지지합니다.
-        # (주의: action_scale은 0.25로 유지하여 안전 확보)
-        for actuator_cfg in self.scene.robot.actuators.values():
-            if hasattr(actuator_cfg, "stiffness"):
-                actuator_cfg.stiffness = 30.0 # 기본보다 약간 높게 설정
-                actuator_cfg.damping = 1.0
-
-        # --- [환경 설정: 기본 바닥 삭제 및 메쉬 전용 환경] ---
-        
-        # 2. 기존 검은색 격자 바닥(Plane) 생성을 완전히 제거
+        # --- [오직 맵 설정만 추가] ---
+        # 기존 평면 바닥을 끄고 캡스톤 메쉬만 로드합니다.
         self.scene.terrain = AssetBaseCfg(
             prim_path="/World/ground",
             spawn=None,
         )
         
-        # 3. 캡스톤 맵 (가우시안 복도 등) 메쉬를 유일한 지형으로 등록
         self.scene.custom_environment = AssetBaseCfg(
             prim_path="/World/fused_scene",
             spawn=UsdFileCfg(
@@ -60,14 +37,10 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
             ),
         )
 
-        # 4. 로봇 시작 위치 설정 (공중 5cm 위)
+        # 로봇 시작 위치 (공중 5cm 위)
         self.scene.robot.init_state.pos = (-1.0, 0.0, -0.95) 
 
-        # 5. 불필요한 센서 및 커리큘럼 끄기 (May 28 평지 모델 호환용)
-        # 평지 모델은 발밑 레이저 데이터(187개)를 처리할 수 없으므로 센서를 완전히 끕니다.
-        self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
-        self.curriculum.terrain_levels = None
+        # 험지용 센서는 평지 모델에서 필요 없으므로 부모 클래스 설정을 따라 자동으로 꺼진 상태를 유지합니다.
 
 
 class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
@@ -92,4 +65,3 @@ class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
             pass
             
         self.terminations = EmptyTerminationsCfg()
-
