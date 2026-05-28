@@ -88,8 +88,6 @@ else:
     agent_cfg_entry_point = args_cli.agent
     algorithm = agent_cfg_entry_point.split("_cfg")[0].split("skrl_")[-1].lower()
 
-# PLACEHOLDER: Extension template (do not remove this comment)
-
 
 def make_keyboard_state():
     return {
@@ -165,22 +163,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     keyboard_sub = input_interface.subscribe_to_keyboard_events(keyboard, on_keyboard_event)
 
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
-        env = multi_agent_to_single_agent(env)
-
-    # wrap for video recording
-    if args_cli.video:
-        video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
-            "step_trigger": lambda step: step == 0,
-            "video_length": args_cli.video_length,
-            "disable_logger": True,
-        }
-        print("[INFO] Recording videos during training.")
-        print_dict(video_kwargs, nesting=4)
-        env = gym.wrappers.RecordVideo(env, **video_kwargs)
-
     # wrap around environment for skrl
     env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)
 
@@ -195,29 +177,39 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     policy = runner.agent.act
 
     print("\n================ Keyboard Control ================")
-    print("Click the 3D viewport once, then use:")
     print("W / S : forward / backward")
     print("A / D : left / right")
     print("Q / E : yaw left / yaw right")
+    print("R : Reset to Origin")
+    print("F : Respawn in Place")
+    print("T : Spawn Obstacle")
     print("=================================================\n")
 
     dt = env.unwrapped.step_dt
+    
+    # [Pre-spawn] 미리 장애물을 지하(-100m)에 만들어 둠
+    try:
+        from omni.physx.scripts import physicsUtils
+        from pxr import Gf
+        stage = omni.usd.get_context().get_stage()
+        obstacle_path = "/World/InteractiveObstacle"
+        physicsUtils.add_rigid_box(
+            stage, obstacle_path, size=Gf.Vec3f(0.8, 0.4, 0.4), 
+            position=Gf.Vec3f(0.0, 0.0, -100.0), color=Gf.Vec3f(0.96, 0.96, 0.86), density=100.0
+        )
+    except Exception as e:
+        print(f"[Warning] Failed to pre-spawn obstacle: {e}")
 
-    # reset environment
-    # [시작 위치 고정] 하드코딩된 X, Y 좌표(-1.0, 0.0)를 사용하고 높이는 안전하게 0.0m 설정
+    # [시작 위치 고정]
     try:
         robot = env.unwrapped.scene["robot"]
         new_pos = torch.tensor([-1.0, 0.0, 0.0], device=robot.device)
         new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
         zero_vel = torch.zeros(3, device=robot.device)
-        
-        # IsaacLab의 초기화 버퍼(default_root_state)를 이 좌표로 고정하여 R키 리셋 시에도 여기로 오게 함
         robot.data.default_root_state[0, :3] = new_pos
         robot.data.default_root_state[0, 3:7] = new_quat
-        
         robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
         robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
-        print(f"[INFO] 🎯 Robot position set to fixed origin: x=-1.0, y=0.0, z=0.0")
     except Exception as e:
         print(f"[Warning] Failed to set initial robot position: {e}")
 
@@ -225,25 +217,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
-        # run everything in inference mode
         with torch.inference_mode():
             # keyboard -> base_velocity
             kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
-            
-            # [Shift 키 달리기 기능] 배율 1.2배
             speed_multiplier = 1.2 if keyboard_state.get("shift", False) else 1.0
             kb_x *= speed_multiplier
             kb_y *= speed_multiplier
             kb_yaw *= speed_multiplier
             
-            cmd = torch.tensor(
-                [kb_x, kb_y, kb_yaw],
-                device=env.unwrapped.device,
-                dtype=torch.float32,
-            )
+            cmd = torch.tensor([kb_x, kb_y, kb_yaw], device=env.unwrapped.device, dtype=torch.float32)
             cmd = cmd.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
             
-            # 명령어 강제 주입
             if "base_velocity" in env.unwrapped.command_manager.active_terms:
                 env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
             
@@ -253,36 +237,66 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 robot = env.unwrapped.scene["robot"]
                 new_pos = robot.data.default_root_state[0, :3]
                 new_quat = robot.data.default_root_state[0, 3:7]
-                zero_vel = torch.zeros(3, device=robot.device)
-                
                 robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
-                robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
-                
-                # 조인트 초기화
-                default_joint_pos = robot.data.default_joint_pos.clone()
-                default_joint_vel = robot.data.default_joint_vel.clone() * 0.0
-                robot.write_joint_state_to_sim(default_joint_pos, default_joint_vel)
+                robot.write_root_velocity_to_sim(torch.zeros((1, 6), device=robot.device))
+                robot.write_joint_state_to_sim(robot.data.default_joint_pos, robot.data.default_joint_vel * 0.0)
                 continue
 
-            # agent stepping (SKRL format)
+            # [제자리 리스폰] via 'F' key
+            if keyboard_state["respawn_in_place"]:
+                keyboard_state["respawn_in_place"] = False
+                try:
+                    import math
+                    robot = env.unwrapped.scene["robot"]
+                    robot_pos = robot.data.root_pos_w[0].clone()
+                    robot_quat = robot.data.root_quat_w[0].clone()
+                    w, x, y, z = robot_quat.cpu().numpy()
+                    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+                    new_pos = robot_pos
+                    new_pos[2] = 0.5
+                    new_quat = torch.tensor([math.cos(yaw/2.0), 0.0, 0.0, math.sin(yaw/2.0)], device=robot.device)
+                    robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
+                    robot.write_root_velocity_to_sim(torch.zeros((1, 6), device=robot.device))
+                    robot.write_joint_state_to_sim(robot.data.default_joint_pos, robot.data.default_joint_vel * 0.0)
+                except Exception as e:
+                    print(f"[ERROR] Failed to respawn in place: {e}")
+
+            # spawn dynamic obstacle via 'T' key
+            if keyboard_state["spawn_obstacle"]:
+                keyboard_state["spawn_obstacle"] = False
+                try:
+                    import math
+                    from pxr import UsdGeom, UsdPhysics, Gf
+                    robot_pos = env.unwrapped.scene["robot"].data.root_pos_w[0].cpu().numpy()
+                    robot_quat = env.unwrapped.scene["robot"].data.root_quat_w[0].cpu().numpy()
+                    w, x, y, z = robot_quat
+                    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+                    forward_x, forward_y = math.cos(yaw), math.sin(yaw)
+                    target_x, target_y, target_z = robot_pos[0] + forward_x * 0.3, robot_pos[1] + forward_y * 0.3, robot_pos[2] + 0.5
+                    
+                    obstacle_prim = omni.usd.get_context().get_stage().GetPrimAtPath("/World/InteractiveObstacle")
+                    if obstacle_prim.IsValid():
+                        xform = UsdGeom.Xformable(obstacle_prim)
+                        xform.ClearXformOpOrder()
+                        xform.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble).Set(Gf.Vec3d(float(target_x), float(target_y), float(target_z)))
+                        rb_api = UsdPhysics.RigidBodyAPI(obstacle_prim)
+                        if rb_api:
+                            rb_api.GetVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+                            rb_api.GetAngularVelocityAttr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+                        print(f"[INFO] Obstacle dropped front of robot!")
+                except Exception as e:
+                    print(f"[ERROR] Failed to teleport obstacle: {e}")
+
             actions, _, _ = policy(obs, timestep=0, timesteps=0)
-            
-            # env stepping
             obs, _, _, _, _ = env.step(actions)
 
-        # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
 
     input_interface.unsubscribe_to_keyboard_events(keyboard, keyboard_sub)
-
-    # close the simulator
     env.close()
 
-
 if __name__ == "__main__":
-    # run the main function
     main()
-    # close sim app
     simulation_app.close()
