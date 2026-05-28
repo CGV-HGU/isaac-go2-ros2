@@ -27,8 +27,8 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
-        # reduce action scale (Standard 0.5)
-        self.actions.joint_pos.scale = 0.5
+        # reduce action scale (Standard 0.25)
+        self.actions.joint_pos.scale = 0.25
 
         # event
         self.events.push_robot = None

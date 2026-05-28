@@ -54,8 +54,8 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2RoughEnvCfg):
         # 요청하신 대로 X, Y는 (-1.0, 0.0), 높이는 안전하게 0.15m 설정
         self.scene.robot.init_state.pos = (-1.0, 0.0, 0.15) 
         
-        # Action Scale 명시적 설정 (거미 보행 방지)
-        self.actions.joint_pos.scale = 0.5
+        # Action Scale 명시적 설정 (원래의 안정적인 0.25)
+        self.actions.joint_pos.scale = 0.25
 
         # 지형 스캔 관련 불필요한 기능 끄기
         self.scene.height_scanner = None
