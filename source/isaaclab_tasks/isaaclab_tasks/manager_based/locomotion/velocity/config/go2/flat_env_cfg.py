@@ -5,7 +5,6 @@
 
 from isaaclab.utils import configclass
 from isaaclab.assets import AssetBaseCfg
-from isaaclab.sim import UsdFileCfg
 import isaaclab.sim as sim_utils
 
 from .rough_env_cfg import UnitreeGo2RoughEnvCfg
@@ -17,44 +16,44 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         # 1. 부모 클래스(RoughEnv)의 설정 먼저 불러오기
         super().__post_init__()
 
-        # --- [보상 설정] 키보드 주행 및 회전(QE) 최적화 ---
-        if hasattr(self.rewards, "track_ang_vel_yaw_exp"):
-            self.rewards.track_ang_vel_yaw_exp.weight = 1.0
+        # --- [새로운 평지 학습 전략: 회전 및 안정성 극대화] ---
         
-        self.rewards.flat_orientation_l2.weight = -2.5
-        self.rewards.feet_air_time.weight = 0.25
+        # 회전(Yaw) 성능 강화: 회전 명령 추종 가중치 상향
+        self.rewards.track_ang_vel_z_exp.weight = 1.5
+        
+        # 몸체 수평 유지 강화: 넘어지지 않도록 벌점 대폭 강화
+        self.rewards.flat_orientation_l2.weight = -5.0
+        
+        # 관절 동작의 부드러움: 경련 방지를 위해 가속도 벌점 강화
+        self.rewards.dof_acc_l2.weight = -5.0e-7
+        
+        # 발 체공 시간 최적화: 너무 높게 뛰지 않고 안정적으로 걷게 함
+        self.rewards.feet_air_time.weight = 0.5
 
-        # --- [명령 설정] 회전 범위 확장 ---
+        # --- [명령 설정: 더 넓은 범위의 조작 학습] ---
         if hasattr(self.commands, "base_velocity"):
-            self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+            # 전진/후진 및 좌우 이동 범위 (-1.0 ~ 1.0 m/s)
+            self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0)
+            self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+            # 회전(Yaw) 범위 대폭 확장: 제자리에서 아주 빠르게 돌 수 있게 함
+            self.commands.base_velocity.ranges.ang_vel_z = (-2.0, 2.0) 
             self.commands.base_velocity.heading_command = False
 
-        # --- [환경 설정: 기본 바닥 삭제 및 메쉬 전용 환경] ---
-        
-        # 2. 기존 검은색 격자 바닥(Plane) 생성을 완전히 제거
+        # --- [환경 설정: 순수 평지(Flat Plane)] ---
+        # 복잡한 메쉬를 제거하고, 학습에 최적화된 무한 평면으로 교체
         self.scene.terrain = AssetBaseCfg(
             prim_path="/World/ground",
-            spawn=None,  # 이 설정으로 인해 기본 바닥이 깔리지 않습니다.
+            spawn=sim_utils.GroundPlaneCfg(),
         )
         
-        # 3. 가우시안 복도 메쉬를 유일한 지형으로 등록
-        self.scene.custom_environment = AssetBaseCfg(
-            prim_path="/World/fused_scene",
-            spawn=UsdFileCfg(
-                usd_path="/home/hayoung/workspaces/Go2.usd",
-                scale=(1.0, 1.0, 1.0),
-            ),
-            init_state=AssetBaseCfg.InitialStateCfg(
-                pos=(0.0, 0.0, 0.0), # Nova_Carter가 있던 월드 중심 좌표
-                rot=(1.0, 0.0, 0.0, 0.0)
-            ),
-        )
+        # 가우시안 메쉬 등 불필요한 에셋 삭제
+        if hasattr(self.scene, "custom_environment"):
+            self.scene.custom_environment = None
 
-        # --- [로봇 시작 위치 설정] ---
-        # 복도 메쉬의 원점(0,0,0)에서 로봇이 안전하게 착지하도록 Z축만 0.4m 설정
-        self.scene.robot.init_state.pos = (0.0, 0.0, -1.0) 
+        # 로봇 시작 위치 (원점)
+        self.scene.robot.init_state.pos = (0.0, 0.0, 0.4) 
 
-        # 지형 스캔 관련 불필요한 기능 끄기
+        # 지형 스캔 끄기 (평지 모델은 눈이 필요 없음)
         self.scene.height_scanner = None
         self.observations.policy.height_scan = None
         self.curriculum.terrain_levels = None
@@ -73,11 +72,9 @@ class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
         self.events.base_external_force_torque = None
         self.events.push_robot = None
 
-        # [수동 리스폰 구현] 로봇이 넘어지거나 시간이 지나도 자동으로 리스폰되지 않게 끔
-        # 1. 타임아웃 시간 무제한 (약 2.7시간)
+        # [수동 리스폰 구현]
         self.episode_length_s = 10000.0 
         
-        # 2. 모든 자동 종료 조건(base_contact, time_out 등) 완전 삭제
         from isaaclab.utils import configclass
         @configclass
         class EmptyTerminationsCfg:
