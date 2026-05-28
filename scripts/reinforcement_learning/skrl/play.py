@@ -237,17 +237,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     try:
         robot = env.unwrapped.scene["robot"]
         # 요청하신 대로 X, Y는 예전 위치 그대로(-1.0, 0.0), 높이는 이전(-1.0)보다 1m 높은 0.0으로 설정
-        new_pos = torch.tensor([-1.0, 0.0, 0.5], device=robot.device)
+        new_pos = torch.tensor([-1.0, 0.0, 0.15], device=robot.device)
         new_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device=robot.device)
         zero_vel = torch.zeros(3, device=robot.device)
-        
+
         # IsaacLab의 초기화 버퍼(default_root_state)를 이 좌표로 고정하여 R키 리셋 시에도 여기로 오게 함
         robot.data.default_root_state[0, :3] = new_pos
         robot.data.default_root_state[0, 3:7] = new_quat
-        
+
         robot.write_root_pose_to_sim(torch.cat([new_pos, new_quat]).unsqueeze(0))
         robot.write_root_velocity_to_sim(torch.cat([zero_vel, zero_vel]).unsqueeze(0))
-        print(f"[INFO] 🎯 Robot position set to fixed origin: x=-1.0, y=0.0, z=0.5 (Safety Height)")
+        print(f"[INFO] 🎯 Robot position set to fixed origin: x=-1.0, y=0.0, z=0.15 (Stable Height)")
     except Exception as e:
         print(f"[Warning] Failed to set initial robot position: {e}")
 
