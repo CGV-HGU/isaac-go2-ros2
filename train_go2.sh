@@ -10,7 +10,7 @@ echo "========================================="
 
 # --num_envs 16384: Blackwell의 96GB VRAM을 활용해 대규모 병렬 학습 수행
 # --headless: 서버 환경 최적화
-python scripts/reinforcement_learning/rsl_rl/train.py \
+./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py \
     --task Isaac-Velocity-Flat-Unitree-Go2-v0 \
     --num_envs 16384 \
     --headless
