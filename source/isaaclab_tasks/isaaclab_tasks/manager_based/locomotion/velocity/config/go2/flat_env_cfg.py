@@ -21,8 +21,15 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         if hasattr(self.rewards, "track_ang_vel_yaw_exp"):
             self.rewards.track_ang_vel_yaw_exp.weight = 1.0
         
-        self.rewards.flat_orientation_l2.weight = -2.5
-        self.rewards.feet_air_time.weight = 0.25
+        # 정자세 유지를 위한 관절 포즈 보상 추가 (명령어 없을 때 매우 중요)
+        self.rewards.joint_pos_l2 = {
+            "func": "isaaclab.envs.mdp.joint_pos_l2",
+            "weight": -0.1, # 너무 크면 걷기를 방해하므로 적당히 설정
+        }
+
+        self.rewards.flat_orientation_l2.weight = -5.0 # 부모보다 더 강하게 수평 유지
+        self.rewards.base_height_l2.weight = -15.0 # 더 엄격하게 높이 유지 (0.32m)
+        self.rewards.feet_air_time.weight = 0.5 # 명확하게 발을 떼고 걷도록
 
         # --- [명령 설정] 회전 범위 확장 ---
         if hasattr(self.commands, "base_velocity"):
