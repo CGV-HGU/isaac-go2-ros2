@@ -30,15 +30,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.actions.joint_pos.scale = 0.25
 
         # event
-        self.events.push_robot = {
-            "func": self.events.push_robot.func,
-            "params": {
-                "velocity_range": {"x": (-1.0, 1.0), "y": (-1.0, 1.0)},
-                "asset_cfg": self.events.push_robot.params["asset_cfg"],
-            },
-            "mode": "interval",
-            "interval_range_s": (10.0, 15.0),
-        }
+        self.events.push_robot.params["velocity_range"] = {"x": (-1.0, 1.0), "y": (-1.0, 1.0)}
         self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 1.0) # 범위를 조금 좁혀서 현실성 확보
         self.events.add_base_mass.params["asset_cfg"].body_names = "base"
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "base"
