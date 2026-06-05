@@ -14,7 +14,16 @@ from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 
 
 import isaaclab.envs.mdp as mdp
-from isaaclab.envs.mdp import RewardTermCfg
+from isaaclab.envs.mdp import RewardTermCfg, SceneEntityCfg
+from isaaclab.utils import configclass
+
+from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
+
+##
+# Pre-defined configs
+##
+from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
+
 
 @configclass
 class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
@@ -34,7 +43,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # event
         self.events.push_robot.params["velocity_range"] = {"x": (-1.0, 1.0), "y": (-1.0, 1.0)}
-        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 1.0) # 범위를 조금 좁혀서 현실성 확보
+        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 1.0)
         self.events.add_base_mass.params["asset_cfg"].body_names = "base"
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "base"
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
@@ -49,7 +58,8 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "yaw": (0.0, 0.0),
             },
         }
-        self.events.base_com = None
+        if hasattr(self.events, "base_com"):
+            self.events.base_com = None
 
         # rewards
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
@@ -60,26 +70,25 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.track_ang_vel_z_exp.weight = 0.75
         self.rewards.dof_acc_l2.weight = -2.5e-7
 
-        # --- [궁극의 에이전트를 위한 추가 보상] ---
-        # 1. 정자세 유지: 명령어가 없을 때 기본 포즈 유도
-        self.rewards.joint_pos_limits = None # 관절 한계 벌점 (필요시 활성화)
-        self.rewards.action_rate_l2 = RewardTermCfg( # 부드러운 움직임을 위해 급격한 액션 변화 방지
+        # --- [추가 보상: 3.0 API 호환 방식] ---
+        self.rewards.action_rate_l2 = RewardTermCfg(
             func=mdp.action_rate_l2,
             weight=-0.01
         )
         
-        # 2. 수평 유지 강화 (넘어짐 방지)
         self.rewards.flat_orientation_l2 = RewardTermCfg(
             func=mdp.flat_orientation_l2,
             weight=-5.0
         )
 
-        # 3. 일정한 높이 유지 (기어다님 방지)
         self.rewards.base_height_l2 = RewardTermCfg(
             func=mdp.base_height_l2,
             weight=-10.0,
             params={"target_height": 0.32}
         )
+
+        # terminations
+        self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"

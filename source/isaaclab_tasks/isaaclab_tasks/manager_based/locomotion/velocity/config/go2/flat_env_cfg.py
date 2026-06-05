@@ -5,7 +5,6 @@
 
 from isaaclab.utils import configclass
 from isaaclab.assets import AssetBaseCfg
-from isaaclab.sim import UsdFileCfg
 import isaaclab.sim as sim_utils
 
 import isaaclab.envs.mdp as mdp
@@ -19,62 +18,43 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         # 1. 부모 클래스(RoughEnv)의 설정 먼저 불러오기
         super().__post_init__()
 
-        # --- [보상 설정] 키보드 주행 및 회전(QE) 최적화 ---
+        # --- [보상 설정] ---
         if hasattr(self.rewards, "track_ang_vel_yaw_exp"):
             self.rewards.track_ang_vel_yaw_exp.weight = 1.0
         
-        # (임시 주석 처리) 정자세 유지를 위한 보상 - 현재 버전에서 함수명 불일치 에러 발생
-        # self.rewards.joint_pos_l2 = RewardTermCfg(
-        #     func=mdp.joint_pos_l2,
-        #     weight=-0.1,
-        # )
+        # 3.0에서는 flat_orientation_l2 등이 이미 부모에 RewardTermCfg로 정의되어 있음
+        self.rewards.flat_orientation_l2.weight = -5.0
+        self.rewards.base_height_l2.weight = -15.0
+        self.rewards.feet_air_time.weight = 0.5
 
-        self.rewards.flat_orientation_l2.weight = -5.0 # 부모보다 더 강하게 수평 유지
-        self.rewards.base_height_l2.weight = -15.0 # 더 엄격하게 높이 유지 (0.32m)
-        self.rewards.feet_air_time.weight = 0.5 # 명확하게 발을 떼고 걷도록
-
-        # --- [명령 설정] 회전 범위 확장 ---
+        # --- [명령 설정] ---
         if hasattr(self.commands, "base_velocity"):
             self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
             self.commands.base_velocity.heading_command = False
 
-        # --- [환경 설정: 기본 바닥 복구] ---
-        
-        # 2. 기본 바닥(Plane) 생성을 다시 활성화 (서버 학습용)
-        import isaaclab.sim as sim_utils
+        # --- [환경 설정: 기본 바닥] ---
         self.scene.terrain = AssetBaseCfg(
             prim_path="/World/ground",
             spawn=sim_utils.GroundPlaneCfg(),
         )
-        
-        # 3. (임시 주석 처리) 가우시안 복도 메쉬 - 파일이 서버에 없을 때 에러 방지
-        # self.scene.custom_environment = AssetBaseCfg(
-        #     prim_path="/World/fused_scene",
-        #     spawn=UsdFileCfg(
-        #         usd_path="/home/hayoung/workspaces/Go2.usd",
-        #         scale=(1.0, 1.0, 1.0),
-        #     ),
-        #     init_state=AssetBaseCfg.InitialStateCfg(
-        #         pos=(0.0, 0.0, 0.0),
-        #         rot=(1.0, 0.0, 0.0, 0.0)
-        #     ),
-        # )
 
         # --- [로봇 시작 위치 설정] ---
-        # 평지이므로 안전하게 0.4m 위에서 시작
         self.scene.robot.init_state.pos = (0.0, 0.0, 0.4) 
 
-        # 지형 스캔 관련 불필요한 기능 끄기
+        # 지형 스캔 관련 불필요한 기능 끄기 (평지이므로)
         self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
-        self.curriculum.terrain_levels = None
+        if hasattr(self.observations.policy, "height_scan"):
+            self.observations.policy.height_scan = None
+        if hasattr(self.curriculum, "terrain_levels"):
+            self.curriculum.terrain_levels = None
 
 
+@configclass
 class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        # 테스트용 환경 설정 (1개 로봇)
+        # 테스트용 환경 설정
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
         
