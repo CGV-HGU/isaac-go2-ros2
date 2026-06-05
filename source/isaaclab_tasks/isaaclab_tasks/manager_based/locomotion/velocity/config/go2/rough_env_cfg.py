@@ -13,7 +13,7 @@ from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import Lo
 from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 
 
-from isaaclab.envs.mdp import RewardTermCfg
+import isaaclab.envs.mdp as mdp
 
 @configclass
 class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
@@ -63,19 +63,19 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 1. 정자세 유지: 명령어가 없을 때 기본 포즈 유도
         self.rewards.joint_pos_limits = None # 관절 한계 벌점 (필요시 활성화)
         self.rewards.action_rate_l2 = RewardTermCfg( # 부드러운 움직임을 위해 급격한 액션 변화 방지
-            func="isaaclab.envs.mdp.action_rate_l2",
+            func=mdp.action_rate_l2,
             weight=-0.01
         )
         
         # 2. 수평 유지 강화 (넘어짐 방지)
         self.rewards.flat_orientation_l2 = RewardTermCfg(
-            func="isaaclab.envs.mdp.flat_orientation_l2",
+            func=mdp.flat_orientation_l2,
             weight=-5.0
         )
 
         # 3. 일정한 높이 유지 (기어다님 방지)
         self.rewards.base_height_l2 = RewardTermCfg(
-            func="isaaclab.envs.mdp.base_height_l2",
+            func=mdp.base_height_l2,
             weight=-10.0,
             params={"target_height": 0.32}
         )

@@ -8,6 +8,7 @@ from isaaclab.assets import AssetBaseCfg
 from isaaclab.sim import UsdFileCfg
 import isaaclab.sim as sim_utils
 
+import isaaclab.envs.mdp as mdp
 from isaaclab.envs.mdp import RewardTermCfg
 from .rough_env_cfg import UnitreeGo2RoughEnvCfg
 
@@ -24,7 +25,7 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         
         # 정자세 유지를 위한 관절 포즈 보상 추가 (명령어 없을 때 매우 중요)
         self.rewards.joint_pos_l2 = RewardTermCfg(
-            func="isaaclab.envs.mdp.joint_pos_l2",
+            func=mdp.joint_pos_l2,
             weight=-0.1, # 너무 크면 걷기를 방해하므로 적당히 설정
         )
 
