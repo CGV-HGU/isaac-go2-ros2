@@ -14,6 +14,7 @@ from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 
 
 import isaaclab.envs.mdp as mdp
+from isaaclab.envs.mdp import RewardTermCfg
 
 @configclass
 class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
