@@ -37,30 +37,31 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
             self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
             self.commands.base_velocity.heading_command = False
 
-        # --- [환경 설정: 기본 바닥 삭제 및 메쉬 전용 환경] ---
+        # --- [환경 설정: 기본 바닥 복구] ---
         
-        # 2. 기존 검은색 격자 바닥(Plane) 생성을 완전히 제거
+        # 2. 기본 바닥(Plane) 생성을 다시 활성화 (서버 학습용)
+        import isaaclab.sim as sim_utils
         self.scene.terrain = AssetBaseCfg(
             prim_path="/World/ground",
-            spawn=None,  # 이 설정으로 인해 기본 바닥이 깔리지 않습니다.
+            spawn=sim_utils.GroundPlaneCfg(),
         )
         
-        # 3. 가우시안 복도 메쉬를 유일한 지형으로 등록
-        self.scene.custom_environment = AssetBaseCfg(
-            prim_path="/World/fused_scene",
-            spawn=UsdFileCfg(
-                usd_path="/home/hayoung/workspaces/Go2.usd",
-                scale=(1.0, 1.0, 1.0),
-            ),
-            init_state=AssetBaseCfg.InitialStateCfg(
-                pos=(0.0, 0.0, 0.0), # Nova_Carter가 있던 월드 중심 좌표
-                rot=(1.0, 0.0, 0.0, 0.0)
-            ),
-        )
+        # 3. (임시 주석 처리) 가우시안 복도 메쉬 - 파일이 서버에 없을 때 에러 방지
+        # self.scene.custom_environment = AssetBaseCfg(
+        #     prim_path="/World/fused_scene",
+        #     spawn=UsdFileCfg(
+        #         usd_path="/home/hayoung/workspaces/Go2.usd",
+        #         scale=(1.0, 1.0, 1.0),
+        #     ),
+        #     init_state=AssetBaseCfg.InitialStateCfg(
+        #         pos=(0.0, 0.0, 0.0),
+        #         rot=(1.0, 0.0, 0.0, 0.0)
+        #     ),
+        # )
 
         # --- [로봇 시작 위치 설정] ---
-        # 복도 메쉬의 원점(0,0,0)에서 로봇이 안전하게 착지하도록 Z축만 0.4m 설정
-        self.scene.robot.init_state.pos = (0.0, 0.0, -1.0) 
+        # 평지이므로 안전하게 0.4m 위에서 시작
+        self.scene.robot.init_state.pos = (0.0, 0.0, 0.4) 
 
         # 지형 스캔 관련 불필요한 기능 끄기
         self.scene.height_scanner = None
