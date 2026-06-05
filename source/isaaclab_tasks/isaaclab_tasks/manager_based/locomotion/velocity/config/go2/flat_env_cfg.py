@@ -31,7 +31,8 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         if hasattr(self.commands, "base_velocity"):
             self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
             self.commands.base_velocity.heading_command = False
-            # 3.0.0 Shader 에러 방지를 위해 시각화 화살표 비활성화
+            # 3.0.0 Shader 및 NoneType 에러 방지를 위해 시각화 완전히 비활성화
+            self.commands.base_velocity.debug_vis = False
             self.commands.base_velocity.goal_vel_visualizer_cfg = None
             self.commands.base_velocity.current_vel_visualizer_cfg = None
 
