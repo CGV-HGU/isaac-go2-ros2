@@ -2,7 +2,7 @@ import omni
 import omni.graph.core as og
 from pxr import UsdGeom, Gf
 
-def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", camera_path="/World/envs/env_0/Robot/base/front_cam"):
+def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", camera_path="/World/envs/env_0/Robot/base/front_camera"):
     """
     Sets up all necessary OmniGraph nodes for ROS 2 communication (Cameras, Odom, TF, Clock).
     This function isolates the ROS 2 setup logic from the main reinforcement learning loop.
@@ -63,16 +63,16 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 # RGB & Depth Image
                 ("ROS2CameraRGB.inputs:type", "rgb"),
                 ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb/image_raw"),
-                ("ROS2CameraRGB.inputs:frameId", "front_cam"),
+                ("ROS2CameraRGB.inputs:frameId", "front_camera"),
                 ("ROS2CameraDepth.inputs:type", "depth"),
                 ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth/image_raw"),
-                ("ROS2CameraDepth.inputs:frameId", "front_cam"),
+                ("ROS2CameraDepth.inputs:frameId", "front_camera"),
 
                 # Camera Info
                 ("ROS2CameraInfoRGB.inputs:topicName", "/go2_camera/rgb/camera_info"),
-                ("ROS2CameraInfoRGB.inputs:frameId", "front_cam"),
+                ("ROS2CameraInfoRGB.inputs:frameId", "front_camera"),
                 ("ROS2CameraInfoDepth.inputs:topicName", "/go2_camera/depth/camera_info"),
-                ("ROS2CameraInfoDepth.inputs:frameId", "front_cam"),
+                ("ROS2CameraInfoDepth.inputs:frameId", "front_camera"),
 
                 # Odometry
                 ("ComputeOdometry.inputs:chassisPrim", robot_base_path),
@@ -85,7 +85,7 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2TF_World.inputs:targetPrims", [robot_base_path]),
                 ("ROS2TF_World.inputs:topicName", "/tf"),
 
-                # TF Tree 2 (base -> front_cam)
+                # TF Tree 2 (base -> front_camera)
                 ("ROS2TF_Base.inputs:parentPrim", robot_base_path),
                 ("ROS2TF_Base.inputs:targetPrims", [camera_path]),
                 ("ROS2TF_Base.inputs:topicName", "/tf"),

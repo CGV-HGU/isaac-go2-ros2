@@ -106,6 +106,37 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
 
     print("\n[INFO] Play 모드 시작: Nav2로 목표를 주면 자동으로 성공 여부를 기록합니다.")
 
+    # keyboard subscription
+    def make_keyboard_state():
+        return {"forward": 0.0, "side": 0.0, "yaw": 0.0}
+
+    def update_keyboard_state(state, event):
+        pressed = event.type == carb.input.KeyboardEventType.KEY_PRESS
+        released = event.type == carb.input.KeyboardEventType.KEY_RELEASE
+        if not (pressed or released): return
+        if event.input == carb.input.KeyboardInput.W: state["forward"] = 1.0 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.S: state["forward"] = -1.0 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.A: state["side"] = 1.0 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.D: state["side"] = -1.0 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.Q: state["yaw"] = 1.0 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.E: state["yaw"] = -1.0 if pressed else 0.0
+
+    keyboard_state = make_keyboard_state()
+    app_window = omni.appwindow.get_default_app_window()
+    keyboard = app_window.get_keyboard()
+    input_interface = carb.input.acquire_input_interface()
+    def on_keyboard_event(event, *args, **kwargs):
+        update_keyboard_state(keyboard_state, event)
+        return True
+    keyboard_sub = input_interface.subscribe_to_keyboard_events(keyboard, on_keyboard_event)
+
+    print("\n================ Keyboard Control ================")
+    print("Click the 3D viewport once, then use:")
+    print("W / S : forward / backward")
+    print("A / D : left / right")
+    print("Q / E : yaw left / yaw right")
+    print("=================================================\n")
+
     ep_count = 0
     with torch.inference_mode():
         while simulation_app.is_running():
@@ -142,8 +173,15 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
                         nav_x, nav_y, nav_yaw = float(lin_vel[0]), float(lin_vel[1]), float(ang_vel[2])
                 except: pass
 
+                # keyboard -> base_velocity (Keyboard override Nav2)
+                kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
+                
+                final_x = kb_x if kb_x != 0.0 else nav_x
+                final_y = kb_y if kb_y != 0.0 else nav_y
+                final_yaw = kb_yaw if kb_yaw != 0.0 else nav_yaw
+
                 # 명령 전달 및 환경 스텝
-                cmd = torch.tensor([nav_x, nav_y, nav_yaw], device=env.unwrapped.device).unsqueeze(0)
+                cmd = torch.tensor([final_x, final_y, final_yaw], device=env.unwrapped.device).unsqueeze(0)
                 env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
 
                 actions = policy(obs)
