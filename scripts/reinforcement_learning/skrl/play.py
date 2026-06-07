@@ -116,12 +116,16 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
         pressed = event.type == carb.input.KeyboardEventType.KEY_PRESS
         released = event.type == carb.input.KeyboardEventType.KEY_RELEASE
         if not (pressed or released): return
+        
+        # [디버그] 키보드 입력 확인
+        # print(f"[Key Event] {event.input} {'Pressed' if pressed else 'Released'}")
+        
         if event.input == carb.input.KeyboardInput.W: state["forward"] = 1.0 if pressed else 0.0
         elif event.input == carb.input.KeyboardInput.S: state["forward"] = -1.0 if pressed else 0.0
-        elif event.input == carb.input.KeyboardInput.A: state["side"] = 1.0 if pressed else 0.0
-        elif event.input == carb.input.KeyboardInput.D: state["side"] = -1.0 if pressed else 0.0
-        elif event.input == carb.input.KeyboardInput.Q: state["yaw"] = 1.0 if pressed else 0.0
-        elif event.input == carb.input.KeyboardInput.E: state["yaw"] = -1.0 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.A: state["side"] = 0.5 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.D: state["side"] = -0.5 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.Q: state["yaw"] = 0.8 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.E: state["yaw"] = -0.8 if pressed else 0.0
         elif event.input == carb.input.KeyboardInput.R: state["reset"] = True if pressed else False
 
     keyboard_state = make_keyboard_state()
@@ -147,8 +151,8 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
             # 1️⃣ 에피소드 시작 시 환경 리셋
             env.reset()
             
-            # [추가] 리셋 직후 로봇이 안정적으로 지면에 내려올 때까지 대기
-            for _ in range(20):
+            # [수정] 리셋 직후 로봇이 안정적으로 지면에 내려올 때까지 충분히 대기 (60스텝)
+            for _ in range(60):
                 simulation_app.update()
             
             # 2️⃣ 장애물 랜덤 배치
@@ -164,17 +168,18 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
             obs_dict = env.unwrapped.observation_manager.compute()
             obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
 
+            step_count = 0
             while simulation_app.is_running():
                 start_time = time.time()
+                step_count += 1
 
                 # [수동 리셋 (R키)] 
                 if keyboard_state["reset"]:
                     print("🔄 [수동 리셋] R키가 입력되어 에피소드를 재시작합니다.")
-                    time.sleep(0.5)
                     keyboard_state["reset"] = False
-                    break # 내부 루프 탈출 -> 외부 루프에서 리셋됨
+                    break 
                 
-                # Nav2 명령 수신
+                # 1. Nav2 명령 수신
                 nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
                 try:
                     cmd_node = og.Controller.node("/World/ROS2_Camera_Graph/ROS2CmdVel")
@@ -184,36 +189,43 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
                         nav_x, nav_y, nav_yaw = float(lin_vel[0]), float(lin_vel[1]), float(ang_vel[2])
                 except: pass
 
-                # keyboard -> base_velocity (Keyboard override Nav2)
-                kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
+                # 2. 키보드 입력 처리 (Keyboard override Nav2)
+                kb_x = keyboard_state["forward"]
+                kb_y = keyboard_state["side"]
+                kb_yaw = keyboard_state["yaw"]
                 
-                final_x = kb_x if kb_x != 0.0 else nav_x
-                final_y = kb_y if kb_y != 0.0 else nav_y
-                final_yaw = kb_yaw if kb_yaw != 0.0 else nav_yaw
+                # 키보드 입력이 있으면 키보드 값을, 없으면 Nav2 값을 사용
+                final_x = kb_x if abs(kb_x) > 0.01 else nav_x
+                final_y = kb_y if abs(kb_y) > 0.01 else nav_y
+                final_yaw = kb_yaw if abs(kb_yaw) > 0.01 else nav_yaw
 
-                # 명령 전달 및 환경 스텝
+                # 3. 로봇에게 명령 전달
                 cmd = torch.tensor([final_x, final_y, final_yaw], device=env.unwrapped.device).unsqueeze(0)
                 env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
 
+                # 4. 정책 실행 및 시뮬레이션 스텝
                 actions = policy(obs)
                 obs_dict, _, terminated, truncated, _ = env.step(actions)
                 obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
+
+                # [디버그] 명령 상태 출력 (0.5초 간격)
+                if int(time.time() * 2) % 2 == 0:
+                    print(f"\r[Control] Vel X: {final_x:.2f}, Y: {final_y:.2f}, Yaw: {final_yaw:.2f} | Dist: {math.dist(robot_asset.data.root_pos_w[0][:2].tolist(), [GOAL_X, GOAL_Y]):.2f}m", end="")
 
                 # 성공 여부 체크
                 curr_pos = robot_asset.data.root_pos_w[0]
                 dist = math.dist((curr_pos[0].item(), curr_pos[1].item()), (GOAL_X, GOAL_Y))
                 
                 if dist < 0.5:
-                    print(f"🚩 [목적지 도달] 성공 기록 저장!")
+                    print(f"\n🚩 [목적지 도달] 성공 기록 저장!")
                     with open(result_file, 'a', newline='') as f:
                         csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), True, round(dist, 2)])
                     time.sleep(1.0); break
 
-                # 자동 실패(terminated/truncated) 시 즉시 리셋 방지, 로그만 남김
-                if (terminated | truncated)[0]:
-                    # 원래는 여기서 바로 break되어 새 에피소드로 넘어갔으나, 빈번한 자동 리셋을 막기 위해 로그만 찍고 유지
-                    # 너무 자주 리셋되는 것을 막고, 사용자가 R키로 제어하도록 유도
-                    pass
+                # 넘어짐 또는 시간 초과 시 리셋 (초기 50스텝 동안은 무시하여 안정화 유도)
+                if (terminated | truncated)[0] and step_count > 50:
+                    print(f"\n💥 [리셋] 로봇이 넘어졌거나 제한 시간을 초과했습니다.")
+                    break
 
                 if args_cli.real_time:
                     time.sleep(max(0, 0.02 - (time.time() - start_time)))
