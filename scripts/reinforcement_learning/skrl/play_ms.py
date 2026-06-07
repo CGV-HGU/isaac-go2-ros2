@@ -105,6 +105,7 @@ def make_keyboard_state():
         "forward": 0.0,
         "side": 0.0,
         "yaw": 0.0,
+        "reset": False
     }
 
 
@@ -115,18 +116,23 @@ def update_keyboard_state(state, event):
     if not (pressed or released):
         return
 
+    # [디버그] 키보드 입력 확인
+    # print(f"[Key Event] {event.input} {'Pressed' if pressed else 'Released'}")
+
     if event.input == carb.input.KeyboardInput.W:
         state["forward"] = 1.0 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.S:
         state["forward"] = -1.0 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.A:
-        state["side"] = 1.0 if pressed else 0.0
+        state["side"] = 0.5 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.D:
-        state["side"] = -1.0 if pressed else 0.0
+        state["side"] = -0.5 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.Q:
-        state["yaw"] = 1.0 if pressed else 0.0
+        state["yaw"] = 0.8 if pressed else 0.0
     elif event.input == carb.input.KeyboardInput.E:
-        state["yaw"] = -1.0 if pressed else 0.0
+        state["yaw"] = -0.8 if pressed else 0.0
+    elif event.input == carb.input.KeyboardInput.R:
+        state["reset"] = True if pressed else False
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -252,6 +258,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
         export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
 
+    # 3. 평가 및 장애물 설정
+    GOAL_X, GOAL_Y = 5.0, 0.0
+    drawer_path = "/World/fused_scene/Moveable_Objects/Drawer"
+    result_file = "./play_eval_results_ms.csv"
+    import csv
+    if not os.path.exists(result_file):
+        with open(result_file, 'w', newline='') as f:
+            csv.writer(f).writerow(["Timestamp", "Success", "Distance_to_Goal"])
+
     print("\n================ Keyboard Control ================")
     print("Click the 3D viewport once, then use:")
     print("W / S : forward / backward")
@@ -263,12 +278,32 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     dt = env.unwrapped.step_dt
 
     # simulate environment
+    ep_count = 0
     while simulation_app.is_running():
         # reset environment (수동/자동 리셋 시 여기로 돌아옴)
         obs, _ = env.reset()
         
+        # [추가] 리셋 직후 로봇이 안정적으로 지면에 내려올 때까지 대기
+        for _ in range(20):
+            simulation_app.update()
+        
+        # [추가] 장애물 랜덤 배치
+        drawer_prim = stage.GetPrimAtPath(drawer_path)
+        if drawer_prim.IsValid():
+            x_rand = random.uniform(-1.0, 3.0)
+            y_rand = random.uniform(-0.76, 0.76)
+            mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.01))
+            UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
+
+        # 물리 업데이트 및 깨끗한 관측치 추출
+        simulation_app.update()
+        obs_dict = env.unwrapped.observation_manager.compute()
+        obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
+
+        step_count = 0
         while simulation_app.is_running():
             start_time = time.time()
+            step_count += 1
             
             # [수동 리셋 (R키)]
             if keyboard_state["reset"]:
@@ -310,6 +345,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 # env stepping
                 obs, _, dones, _ = env.step(actions)
                 
+                # [추가] 성공 여부 체크
+                robot_asset = env.unwrapped.scene["robot"]
+                curr_pos = robot_asset.data.root_pos_w[0]
+                dist = math.dist((curr_pos[0].item(), curr_pos[1].item()), (GOAL_X, GOAL_Y))
+                
+                if dist < 0.5:
+                    print(f"\n🚩 [목적지 도달] 성공 기록 저장!")
+                    with open(result_file, 'a', newline='') as f:
+                        csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), True, round(dist, 2)])
+                    time.sleep(1.0); break
+
                 # reset recurrent states for episodes that have terminated
                 if version.parse(installed_version) >= version.parse("4.0.0"):
                     policy.reset(dones)
@@ -317,14 +363,20 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     policy_nn.reset(dones)
                 
                 # 로봇이 넘어져서 자동 리셋(dones)이 발생한 경우 로그 출력 및 내부 루프 탈출
-                if dones.any():
+                # 초기 안정화 기간 50스텝 동안은 무시
+                if dones.any() and step_count > 50:
                     print("\n💥 [리셋] 물리 엔진에 의해 로봇이 넘어지거나 조건이 완료되어 자동 리셋됩니다.")
+                    with open(result_file, 'a', newline='') as f:
+                        csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), False, round(dist, 2)])
                     break
 
             # time delay for real-time evaluation
             sleep_time = dt - (time.time() - start_time)
             if args_cli.real_time and sleep_time > 0:
                 time.sleep(sleep_time)
+
+        ep_count += 1
+        print(f"🔄 에피소드 {ep_count} 종료.")
 
     input_interface.unsubscribe_to_keyboard_events(keyboard, keyboard_sub)
 
