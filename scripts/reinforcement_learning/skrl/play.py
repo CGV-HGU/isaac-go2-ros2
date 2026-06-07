@@ -74,7 +74,7 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
     else:
         robot_base_path = f"{robot_prim_path}/base"
 
-    camera_path = f"{robot_base_path}/front_cam"
+    camera_path = f"{robot_base_path}/front_camera"
 
     
     stage = omni.usd.get_context().get_stage()
