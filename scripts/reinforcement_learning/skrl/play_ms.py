@@ -298,8 +298,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
         # 물리 업데이트 및 깨끗한 관측치 추출
         simulation_app.update()
-        obs_dict = env.unwrapped.observation_manager.compute()
-        obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
+        obs = env.get_observations()
 
         step_count = 0
         while simulation_app.is_running():
