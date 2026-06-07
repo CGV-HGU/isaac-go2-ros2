@@ -223,15 +223,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # [중요] ROS2 Bridge 확장 기능 활성화 및 로딩 대기
     ext_manager = omni.kit.app.get_app().get_extension_manager()
     
-    ros2_bridge_prefix = "isaacsim.ros2.bridge"
-    try:
-        ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
-    except:
+    ros2_bridge_prefix = None
+    if ext_manager.is_extension_enabled("isaacsim.ros2.bridge"):
+        ros2_bridge_prefix = "isaacsim.ros2.bridge"
+    elif ext_manager.is_extension_enabled("omni.isaac.ros2_bridge"):
+        ros2_bridge_prefix = "omni.isaac.ros2_bridge"
+    else:
         try:
-            ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
-            ros2_bridge_prefix = "omni.isaac.ros2_bridge"
+            ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
+            ros2_bridge_prefix = "isaacsim.ros2.bridge"
         except:
-            print("[ERROR] ROS2 Bridge 확장 기능을 로드할 수 없습니다.")
+            try:
+                ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
+                ros2_bridge_prefix = "omni.isaac.ros2_bridge"
+            except:
+                print("[ERROR] ROS2 Bridge 확장 기능을 로드할 수 없습니다.")
 
     # 확장 기능 로딩 대기
     print(f"[INFO] ROS2 Bridge ({ros2_bridge_prefix}) 로딩 대기 중...")
@@ -239,7 +245,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         simulation_app.update()
 
     # [중요] 기존 그래프가 있으면 확실하게 삭제
-    graph_path = "/World/ROS2_Nav_Eval_Graph" # 중복 피하기 위해 이름 변경
+    graph_path = "/World/ROS2_Nav_Eval_Graph"
     if stage.GetPrimAtPath(graph_path).IsValid():
         omni.kit.commands.execute("DeletePrims", paths=[graph_path])
         for _ in range(50): simulation_app.update()
@@ -252,9 +258,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         "omni.isaac.ros2_bridge.ROS2PublishPose"
     ]
     
-    NODE_TWIST_SUB = f"{ros2_bridge_prefix}.ROS2SubscribeTwist"
-    if not ros2_bridge_prefix == "isaacsim.ros2.bridge":
-        NODE_TWIST_SUB = "omni.isaac.ros2_bridge.ROS2SubscribeTwist"
+    cmd_twist_type = f"{ros2_bridge_prefix}.ROS2SubscribeTwist" if ros2_bridge_prefix else "omni.isaac.ros2_bridge.ROS2SubscribeTwist"
 
     success_graph = False
     for pose_node_type in possible_pose_nodes:
@@ -266,7 +270,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 {
                     og.Controller.Keys.CREATE_NODES: [
                         ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                        ("ROSTwistSub", NODE_TWIST_SUB),
+                        ("ROSTwistSub", cmd_twist_type),
                         ("ROSGoalPub", pose_node_type),
                     ],
                     og.Controller.Keys.SET_VALUES: [
@@ -276,8 +280,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                         ("ROSGoalPub.inputs:targetPrim", goal_prim_path),
                     ],
                     og.Controller.Keys.CONNECT: [
-                        ("OnTick.outputs:tick", f"ROSTwistSub.inputs:execIn"),
-                        ("OnTick.outputs:tick", f"ROSGoalPub.inputs:execIn"),
+                        ("OnTick.outputs:tick", "ROSTwistSub.inputs:execIn"),
+                        ("OnTick.outputs:tick", "ROSGoalPub.inputs:execIn"),
                     ],
                 },
             )
@@ -387,12 +391,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     break
 
                 # [4] OmniGraph로부터 ROS 2 /cmd_vel 속도 명령 실시간 패치
-                lin_vel = og.Controller.get(linear_attr)
-                ang_vel = og.Controller.get(angular_attr)
-                
-                v_forward = lin_vel[0] if lin_vel is not None else 0.0
-                v_lateral = lin_vel[1] if lin_vel is not None else 0.0
-                v_yaw = ang_vel[2] if ang_vel is not None else 0.0
+                # 그래프 생성이 성공했을 때만 값을 가져오도록 시도
+                v_forward, v_lateral, v_yaw = 0.0, 0.0, 0.0
+                if success_graph:
+                    try:
+                        lin_vel = og.Controller.get(linear_attr)
+                        ang_vel = og.Controller.get(angular_attr)
+                        if lin_vel is not None: v_forward, v_lateral = lin_vel[0], lin_vel[1]
+                        if ang_vel is not None: v_yaw = ang_vel[2]
+                    except: pass
                 
                 current_pos = env.unwrapped.scene["robot"].data.root_pos_w[0]
                 curr_x = current_pos[0].item()
