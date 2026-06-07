@@ -222,21 +222,35 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # [중요] ROS2 Bridge 확장 기능 활성화 및 로딩 대기
     ext_manager = omni.kit.app.get_app().get_extension_manager()
-    ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
     
-    # 노드 이름 정의 (5.1 버전 표준)
-    NODE_TWIST_SUB = "isaacsim.ros2.bridge.ROS2SubscribeTwist"
-    NODE_POSE_PUB = "isaacsim.ros2.bridge.ROS2PublishPoseStamped"
+    ros2_bridge_prefix = "isaacsim.ros2.bridge"
+    try:
+        ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
+    except:
+        try:
+            ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
+            ros2_bridge_prefix = "omni.isaac.ros2_bridge"
+        except:
+            print("[ERROR] ROS2 Bridge 확장 기능을 로드할 수 없습니다.")
 
     # 확장 기능 로딩 대기
-    print("[INFO] ROS2 노드 타입 로딩 대기 중...")
-    for _ in range(100):
+    print(f"[INFO] ROS2 Bridge ({ros2_bridge_prefix}) 로딩 대기 중...")
+    for _ in range(150):
         simulation_app.update()
 
-    # [중요] 기존 그래프가 있으면 삭제
+    # [중요] 기존 그래프가 있으면 확실하게 삭제
     graph_path = "/World/ROS2_Nav_Graph"
     if stage.GetPrimAtPath(graph_path).IsValid():
-        omni.kit.commands.execute("DeletePrims", paths=[graph_path])
+        try:
+            og.Controller.delete_graph(graph_path)
+            for _ in range(10): simulation_app.update()
+        except:
+            omni.kit.commands.execute("DeletePrims", paths=[graph_path])
+            for _ in range(10): simulation_app.update()
+
+    # 노드 타입 설정 (Stamped 명칭이 5.1.0에서 가끔 문제를 일으켜서 체크)
+    NODE_TWIST_SUB = f"{ros2_bridge_prefix}.ROS2SubscribeTwist"
+    NODE_POSE_PUB = f"{ros2_bridge_prefix}.ROS2PublishPoseStamped"
 
     try:
         og.Controller.edit(
@@ -260,28 +274,32 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             },
         )
     except Exception as e:
-        print(f"[WARNING] isaacsim 명칭 실패, 구버전 명칭 시도... ({e})")
-        # 구버전(omni.isaac) 명칭으로 재시도
-        og.Controller.edit(
-            {"graph_path": graph_path, "evaluator_name": "execution"},
-            {
-                og.Controller.Keys.CREATE_NODES: [
-                    ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                    ("ROSTwistSub", "omni.isaac.ros2_bridge.ROS2SubscribeTwist"),
-                    ("ROSGoalPub", "omni.isaac.ros2_bridge.ROS2PublishPoseStamped"),
-                ],
-                og.Controller.Keys.SET_VALUES: [
-                    ("ROSTwistSub.inputs:topicName", "/cmd_vel"),
-                    ("ROSGoalPub.inputs:topicName", "/goal_pose"),
-                    ("ROSGoalPub.inputs:frameId", "map"),
-                    ("ROSGoalPub.inputs:targetPrim", goal_prim_path),
-                ],
-                og.Controller.Keys.CONNECT: [
-                    ("OnTick.outputs:tick", "ROSTwistSub.inputs:execIn"),
-                    ("OnTick.outputs:tick", "ROSGoalPub.inputs:execIn"),
-                ],
-            },
-        )
+        print(f"[WARNING] 1차 OmniGraph 생성 실패, 다른 명칭 시도... ({e})")
+        # Stamped 명칭이 안될 경우 일반 Pose 명칭 시도
+        NODE_POSE_PUB_ALT = f"{ros2_bridge_prefix}.ROS2PublishPose"
+        try:
+            og.Controller.edit(
+                {"graph_path": graph_path, "evaluator_name": "execution"},
+                {
+                    og.Controller.Keys.CREATE_NODES: [
+                        ("OnTick", "omni.graph.action.OnPlaybackTick"),
+                        ("ROSTwistSub", NODE_TWIST_SUB),
+                        ("ROSGoalPub", NODE_POSE_PUB_ALT),
+                    ],
+                    og.Controller.Keys.SET_VALUES: [
+                        ("ROSTwistSub.inputs:topicName", "/cmd_vel"),
+                        ("ROSGoalPub.inputs:topicName", "/goal_pose"),
+                        ("ROSGoalPub.inputs:frameId", "map"),
+                        ("ROSGoalPub.inputs:targetPrim", goal_prim_path),
+                    ],
+                    og.Controller.Keys.CONNECT: [
+                        ("OnTick.outputs:tick", f"ROSTwistSub.inputs:execIn"),
+                        ("OnTick.outputs:tick", f"ROSGoalPub.inputs:execIn"),
+                    ],
+                },
+            )
+        except Exception as e2:
+            print(f"[ERROR] OmniGraph 생성 최종 실패: {e2}")
 
     linear_attr = og.Controller.attribute("/World/ROS2_Nav_Graph/ROSTwistSub.outputs:linearVelocity")
     angular_attr = og.Controller.attribute("/World/ROS2_Nav_Graph/ROSTwistSub.outputs:angularVelocity")
