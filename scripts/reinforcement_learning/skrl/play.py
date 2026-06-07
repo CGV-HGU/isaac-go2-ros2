@@ -33,6 +33,8 @@ simulation_app = app_launcher.app
 
 # 앱 부팅 후 임포트
 import omni
+import carb
+import omni.appwindow
 from pxr import Gf, UsdGeom
 import omni.graph.core as og
 import isaaclab_tasks
