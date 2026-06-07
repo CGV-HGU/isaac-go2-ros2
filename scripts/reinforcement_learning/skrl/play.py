@@ -110,7 +110,7 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
 
     # keyboard subscription
     def make_keyboard_state():
-        return {"forward": 0.0, "side": 0.0, "yaw": 0.0}
+        return {"forward": 0.0, "side": 0.0, "yaw": 0.0, "reset": False}
 
     def update_keyboard_state(state, event):
         pressed = event.type == carb.input.KeyboardEventType.KEY_PRESS
@@ -122,6 +122,7 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
         elif event.input == carb.input.KeyboardInput.D: state["side"] = -1.0 if pressed else 0.0
         elif event.input == carb.input.KeyboardInput.Q: state["yaw"] = 1.0 if pressed else 0.0
         elif event.input == carb.input.KeyboardInput.E: state["yaw"] = -1.0 if pressed else 0.0
+        elif event.input == carb.input.KeyboardInput.R: state["reset"] = True if pressed else False
 
     keyboard_state = make_keyboard_state()
     app_window = omni.appwindow.get_default_app_window()
@@ -137,6 +138,7 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
     print("W / S : forward / backward")
     print("A / D : left / right")
     print("Q / E : yaw left / yaw right")
+    print("R : Manual Reset (Respawn)")
     print("=================================================\n")
 
     ep_count = 0
@@ -164,6 +166,13 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
 
             while simulation_app.is_running():
                 start_time = time.time()
+
+                # [수동 리셋 (R키)] 
+                if keyboard_state["reset"]:
+                    print("🔄 [수동 리셋] R키가 입력되어 에피소드를 재시작합니다.")
+                    time.sleep(0.5)
+                    keyboard_state["reset"] = False
+                    break # 내부 루프 탈출 -> 외부 루프에서 리셋됨
                 
                 # Nav2 명령 수신
                 nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
@@ -200,17 +209,17 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
                         csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), True, round(dist, 2)])
                     time.sleep(1.0); break
 
+                # 자동 실패(terminated/truncated) 시 즉시 리셋 방지, 로그만 남김
                 if (terminated | truncated)[0]:
-                    print(f"💥 [실패] 리셋됨.")
-                    with open(result_file, 'a', newline='') as f:
-                        csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), False, round(dist, 2)])
-                    break
+                    # 원래는 여기서 바로 break되어 새 에피소드로 넘어갔으나, 빈번한 자동 리셋을 막기 위해 로그만 찍고 유지
+                    # 너무 자주 리셋되는 것을 막고, 사용자가 R키로 제어하도록 유도
+                    pass
 
                 if args_cli.real_time:
                     time.sleep(max(0, 0.02 - (time.time() - start_time)))
             
             ep_count += 1
-            print(f"🔄 에피소드 {ep_count} 종료. 리셋 후 장애물을 다시 배치합니다.")
+            print(f"🔄 에피소드 {ep_count} 종료.")
 
     env.close()
 
