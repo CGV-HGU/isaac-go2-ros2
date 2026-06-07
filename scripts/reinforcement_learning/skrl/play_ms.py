@@ -63,6 +63,7 @@ installed_version = metadata.version("rsl-rl-lib")
 
 import os
 import time
+import random
 
 import carb
 import carb.input
