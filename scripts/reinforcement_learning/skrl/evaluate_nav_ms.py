@@ -239,52 +239,35 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         simulation_app.update()
 
     # [중요] 기존 그래프가 있으면 확실하게 삭제
-    graph_path = "/World/ROS2_Nav_Graph"
+    graph_path = "/World/ROS2_Nav_Eval_Graph" # 중복 피하기 위해 이름 변경
     if stage.GetPrimAtPath(graph_path).IsValid():
-        try:
-            og.Controller.delete_graph(graph_path)
-            for _ in range(10): simulation_app.update()
-        except:
-            omni.kit.commands.execute("DeletePrims", paths=[graph_path])
-            for _ in range(10): simulation_app.update()
+        omni.kit.commands.execute("DeletePrims", paths=[graph_path])
+        for _ in range(50): simulation_app.update()
 
-    # 노드 타입 설정 (Stamped 명칭이 5.1.0에서 가끔 문제를 일으켜서 체크)
+    # 노드 타입 설정 (5.1.0 대응)
+    possible_pose_nodes = [
+        f"{ros2_bridge_prefix}.ROS2PublishPoseStamped",
+        f"{ros2_bridge_prefix}.ROS2PublishPose",
+        "omni.isaac.ros2_bridge.ROS2PublishPoseStamped",
+        "omni.isaac.ros2_bridge.ROS2PublishPose"
+    ]
+    
     NODE_TWIST_SUB = f"{ros2_bridge_prefix}.ROS2SubscribeTwist"
-    NODE_POSE_PUB = f"{ros2_bridge_prefix}.ROS2PublishPoseStamped"
+    if not ros2_bridge_prefix == "isaacsim.ros2.bridge":
+        NODE_TWIST_SUB = "omni.isaac.ros2_bridge.ROS2SubscribeTwist"
 
-    try:
-        og.Controller.edit(
-            {"graph_path": graph_path, "evaluator_name": "execution"},
-            {
-                og.Controller.Keys.CREATE_NODES: [
-                    ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                    ("ROSTwistSub", NODE_TWIST_SUB),
-                    ("ROSGoalPub", NODE_POSE_PUB),
-                ],
-                og.Controller.Keys.SET_VALUES: [
-                    ("ROSTwistSub.inputs:topicName", "/cmd_vel"),
-                    ("ROSGoalPub.inputs:topicName", "/goal_pose"),
-                    ("ROSGoalPub.inputs:frameId", "map"),
-                    ("ROSGoalPub.inputs:targetPrim", goal_prim_path),
-                ],
-                og.Controller.Keys.CONNECT: [
-                    ("OnTick.outputs:tick", f"ROSTwistSub.inputs:execIn"),
-                    ("OnTick.outputs:tick", f"ROSGoalPub.inputs:execIn"),
-                ],
-            },
-        )
-    except Exception as e:
-        print(f"[WARNING] 1차 OmniGraph 생성 실패, 다른 명칭 시도... ({e})")
-        # Stamped 명칭이 안될 경우 일반 Pose 명칭 시도
-        NODE_POSE_PUB_ALT = f"{ros2_bridge_prefix}.ROS2PublishPose"
+    success_graph = False
+    for pose_node_type in possible_pose_nodes:
+        if success_graph: break
         try:
+            print(f"[INFO] OmniGraph 생성 시도 중... (Pose Node: {pose_node_type})")
             og.Controller.edit(
                 {"graph_path": graph_path, "evaluator_name": "execution"},
                 {
                     og.Controller.Keys.CREATE_NODES: [
                         ("OnTick", "omni.graph.action.OnPlaybackTick"),
                         ("ROSTwistSub", NODE_TWIST_SUB),
-                        ("ROSGoalPub", NODE_POSE_PUB_ALT),
+                        ("ROSGoalPub", pose_node_type),
                     ],
                     og.Controller.Keys.SET_VALUES: [
                         ("ROSTwistSub.inputs:topicName", "/cmd_vel"),
@@ -298,11 +281,20 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     ],
                 },
             )
-        except Exception as e2:
-            print(f"[ERROR] OmniGraph 생성 최종 실패: {e2}")
+            success_graph = True
+            print(f"[INFO] OmniGraph 생성 성공! ({pose_node_type})")
+        except Exception as e:
+            print(f"[WARNING] '{pose_node_type}' 노드로 생성 실패, 다음 시도... ({e})")
+            if stage.GetPrimAtPath(graph_path).IsValid():
+                omni.kit.commands.execute("DeletePrims", paths=[graph_path])
+                for _ in range(20): simulation_app.update()
 
-    linear_attr = og.Controller.attribute("/World/ROS2_Nav_Graph/ROSTwistSub.outputs:linearVelocity")
-    angular_attr = og.Controller.attribute("/World/ROS2_Nav_Graph/ROSTwistSub.outputs:angularVelocity")
+    if not success_graph:
+        print("[ERROR] OmniGraph 생성 최종 실패. Nav2 통신이 불가능할 수 있습니다.")
+
+    # OmniGraph 속성 링크 미리 선언 (루프 내부 최적화용)
+    linear_attr = og.Controller.attribute(f"{graph_path}/ROSTwistSub.outputs:linearVelocity")
+    angular_attr = og.Controller.attribute(f"{graph_path}/ROSTwistSub.outputs:angularVelocity")
 
     # [추가] 키보드 입력 인터페이스 (R키 리셋용)
     def make_keyboard_state():
@@ -395,8 +387,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     break
 
                 # [4] OmniGraph로부터 ROS 2 /cmd_vel 속도 명령 실시간 패치
-                lin_vel = og.Controller.get_attr_value(linear_attr)
-                ang_vel = og.Controller.get_attr_value(angular_attr)
+                lin_vel = og.Controller.get(linear_attr)
+                ang_vel = og.Controller.get(angular_attr)
                 
                 v_forward = lin_vel[0] if lin_vel is not None else 0.0
                 v_lateral = lin_vel[1] if lin_vel is not None else 0.0
