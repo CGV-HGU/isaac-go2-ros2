@@ -308,14 +308,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     print(f"📍 고정 출발지: ({START_X}, {START_Y}) | 고정 목적지: ({GOAL_X}, {GOAL_Y})")
     print("⌨️  테스트 중 R 키를 누르면 즉시 에피소드를 리셋하고 다음 실험으로 넘어갑니다.")
 
-    for ep in range(1, TOTAL_EPISODES + 1):
-        if not simulation_app.is_running():
-            break
+    with torch.inference_mode():
+        for ep in range(1, TOTAL_EPISODES + 1):
+            if not simulation_app.is_running():
+                break
+                
+            print(f"\n🎬 [실험 {ep}/{TOTAL_EPISODES}] 에피소드 초기화 중...")
             
-        print(f"\n🎬 [실험 {ep}/{TOTAL_EPISODES}] 에피소드 초기화 중...")
-        
-        # [1] 로봇을 지정된 출발지로 강제 이동 (Teleport) 및 낙하 높이 안정화
-        with torch.inference_mode():
+            # [1] 로봇을 지정된 출발지로 강제 이동 (Teleport) 및 낙하 높이 안정화
             root_state = env.unwrapped.scene["robot"].data.default_root_state.clone()
             root_state[:, 0] = START_X
             root_state[:, 1] = START_Y
@@ -330,61 +330,60 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             env.unwrapped.scene["robot"].write_root_velocity_to_sim(root_state[:, 7:])
             
             env.unwrapped.scene["robot"].reset()
-        
-        # [2] 장애물 무작위 배치 및 물리 엔진 동기화 리셋
-        drawer_prim = stage.GetPrimAtPath(drawer_path)
-        if drawer_prim.IsValid():
-            if not drawer_prim.IsActive(): 
-                drawer_prim.SetActive(True)
-
-            x_rand = random.uniform(X_MIN, X_MAX)
-            y_rand = random.uniform(-Y_BOUND, Y_BOUND)
-            yaw_rand = random.uniform(0, 360)
             
-            mat = Gf.Matrix4d().SetRotate(Gf.Rotation(Gf.Vec3d(0, 0, 1), yaw_rand))
-            mat.SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.0))
-            
-            UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
-            
-            physx_iface.update_transform(drawer_path)
-            try:
-                physx_iface.set_rigid_body_linear_velocity(drawer_path, [0.0, 0.0, 0.0])
-                physx_iface.set_rigid_body_angular_velocity(drawer_path, [0.0, 0.0, 0.0])
-            except Exception:
-                pass
+            # [2] 장애물 무작위 배치 및 물리 엔진 동기화 리셋
+            drawer_prim = stage.GetPrimAtPath(drawer_path)
+            if drawer_prim.IsValid():
+                if not drawer_prim.IsActive(): 
+                    drawer_prim.SetActive(True)
 
-            print(f"    🎲 [장애물 랜덤 배치 완료] X: {x_rand:.2f}, Y: {y_rand:.2f}")
+                x_rand = random.uniform(X_MIN, X_MAX)
+                y_rand = random.uniform(-Y_BOUND, Y_BOUND)
+                yaw_rand = random.uniform(0, 360)
+                
+                mat = Gf.Matrix4d().SetRotate(Gf.Rotation(Gf.Vec3d(0, 0, 1), yaw_rand))
+                mat.SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.0))
+                
+                UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
+                
+                physx_iface.update_transform(drawer_path)
+                try:
+                    physx_iface.set_rigid_body_linear_velocity(drawer_path, [0.0, 0.0, 0.0])
+                    physx_iface.set_rigid_body_angular_velocity(drawer_path, [0.0, 0.0, 0.0])
+                except Exception:
+                    pass
 
-        # 초기화 상태 안정화를 위한 5틱 대기
-        for _ in range(5):
-            simulation_app.update()
+                print(f"    🎲 [장애물 랜덤 배치 완료] X: {x_rand:.2f}, Y: {y_rand:.2f}")
 
-        obs = env.get_observations()
-        print(f"    🎯 [Nav2 통신] 목적지 토픽 자동 연동 완료 -> ({GOAL_X}, {GOAL_Y})")
+            # 초기화 상태 안정화를 위한 5틱 대기
+            for _ in range(5):
+                simulation_app.update()
 
-        step_count = 0
-        max_steps = 1500  
-        success = False
-        final_dist = 999.0
-        
-        while step_count < max_steps and simulation_app.is_running():
-            start_time = time.time()
+            obs = env.get_observations()
+            print(f"    🎯 [Nav2 통신] 목적지 토픽 자동 연동 완료 -> ({GOAL_X}, {GOAL_Y})")
+
+            step_count = 0
+            max_steps = 1500  
+            success = False
+            final_dist = 999.0
             
-            # [수동 리셋 (R키)]
-            if kb_state["reset"]:
-                print(f"\n🔄 [수동 리셋] R키가 입력되어 {ep}번 실험을 중단하고 다음으로 넘어갑니다.")
-                kb_state["reset"] = False
-                break
+            while step_count < max_steps and simulation_app.is_running():
+                start_time = time.time()
+                
+                # [수동 리셋 (R키)]
+                if kb_state["reset"]:
+                    print(f"\n🔄 [수동 리셋] R키가 입력되어 {ep}번 실험을 중단하고 다음으로 넘어갑니다.")
+                    kb_state["reset"] = False
+                    break
 
-            # [4] OmniGraph로부터 ROS 2 /cmd_vel 속도 명령 실시간 패치
-            lin_vel = og.Controller.get_attr_value(linear_attr)
-            ang_vel = og.Controller.get_attr_value(angular_attr)
-            
-            v_forward = lin_vel[0] if lin_vel is not None else 0.0
-            v_lateral = lin_vel[1] if lin_vel is not None else 0.0
-            v_yaw = ang_vel[2] if ang_vel is not None else 0.0
-            
-            with torch.inference_mode():
+                # [4] OmniGraph로부터 ROS 2 /cmd_vel 속도 명령 실시간 패치
+                lin_vel = og.Controller.get_attr_value(linear_attr)
+                ang_vel = og.Controller.get_attr_value(angular_attr)
+                
+                v_forward = lin_vel[0] if lin_vel is not None else 0.0
+                v_lateral = lin_vel[1] if lin_vel is not None else 0.0
+                v_yaw = ang_vel[2] if ang_vel is not None else 0.0
+                
                 current_pos = env.unwrapped.scene["robot"].data.root_pos_w[0]
                 curr_x = current_pos[0].item()
                 curr_y = current_pos[1].item()
@@ -414,20 +413,20 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 if dones[0]:
                     print("    💥 [실패] 로봇이 넘어지거나 외부 충돌로 인하여 에피소드가 파괴됨.")
                     break
+                        
+                sleep_time = dt - (time.time() - start_time)
+                if args_cli.real_time and sleep_time > 0:
+                    time.sleep(sleep_time)
                     
-            sleep_time = dt - (time.time() - start_time)
-            if args_cli.real_time and sleep_time > 0:
-                time.sleep(sleep_time)
+                step_count += 1
                 
-            step_count += 1
-            
-        if not success and step_count >= max_steps:
-            print(f"    ⏰ [실패] 타임아웃 제한 시간 초과 (남은 거리: {final_dist:.2f}m)")
-            
-        # 결과를 CSV 데이터베이스 파일에 기록
-        with open(result_file, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([ep, success, step_count, round(final_dist, 2)])
+            if not success and step_count >= max_steps:
+                print(f"    ⏰ [실패] 타임아웃 제한 시간 초과 (남은 거리: {final_dist:.2f}m)")
+                
+            # 결과를 CSV 데이터베이스 파일에 기록
+            with open(result_file, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([ep, success, step_count, round(final_dist, 2)])
 
     print("\n================ 🎉 100회 자동 시나리오 주행 평가가 최종 완료되었습니다! ================")
     env.close()

@@ -281,39 +281,38 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # simulate environment
     ep_count = 0
-    while simulation_app.is_running():
-        # reset environment (수동/자동 리셋 시 여기로 돌아옴)
-        obs, _ = env.reset()
-        
-        # [추가] 리셋 직후 로봇이 안정적으로 지면에 내려올 때까지 대기
-        for _ in range(20):
-            simulation_app.update()
-        
-        # [추가] 장애물 랜덤 배치
-        drawer_prim = stage.GetPrimAtPath(drawer_path)
-        if drawer_prim.IsValid():
-            x_rand = random.uniform(-1.0, 3.0)
-            y_rand = random.uniform(-0.76, 0.76)
-            mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.01))
-            UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
-
-        # 물리 업데이트 및 깨끗한 관측치 추출
-        simulation_app.update()
-        obs = env.get_observations()
-
-        step_count = 0
+    with torch.inference_mode():
         while simulation_app.is_running():
-            start_time = time.time()
-            step_count += 1
+            # reset environment (수동/자동 리셋 시 여기로 돌아옴)
+            obs, _ = env.reset()
             
-            # [수동 리셋 (R키)]
-            if keyboard_state["reset"]:
-                print("\n🔄 [수동 리셋] R키가 입력되어 에피소드를 재시작합니다.")
-                keyboard_state["reset"] = False
-                break # 내부 루프 탈출 -> 외부 루프에서 env.reset() 호출됨
+            # [추가] 리셋 직후 로봇이 안정적으로 지면에 내려올 때까지 대기
+            for _ in range(20):
+                simulation_app.update()
+            
+            # [추가] 장애물 랜덤 배치
+            drawer_prim = stage.GetPrimAtPath(drawer_path)
+            if drawer_prim.IsValid():
+                x_rand = random.uniform(-1.0, 3.0)
+                y_rand = random.uniform(-0.76, 0.76)
+                mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.01))
+                UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
 
-            # run everything in inference mode
-            with torch.inference_mode():
+            # 물리 업데이트 및 깨끗한 관측치 추출
+            simulation_app.update()
+            obs = env.get_observations()
+
+            step_count = 0
+            while simulation_app.is_running():
+                start_time = time.time()
+                step_count += 1
+                
+                # [수동 리셋 (R키)]
+                if keyboard_state["reset"]:
+                    print("\n🔄 [수동 리셋] R키가 입력되어 에피소드를 재시작합니다.")
+                    keyboard_state["reset"] = False
+                    break # 내부 루프 탈출 -> 외부 루프에서 env.reset() 호출됨
+
                 # Get velocity from ROS 2 Twist Subscriber node (Nav2)
                 nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
                 try:
@@ -371,13 +370,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                         csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), False, round(dist, 2)])
                     break
 
-            # time delay for real-time evaluation
-            sleep_time = dt - (time.time() - start_time)
-            if args_cli.real_time and sleep_time > 0:
-                time.sleep(sleep_time)
+                # time delay for real-time evaluation
+                sleep_time = dt - (time.time() - start_time)
+                if args_cli.real_time and sleep_time > 0:
+                    time.sleep(sleep_time)
 
-        ep_count += 1
-        print(f"🔄 에피소드 {ep_count} 종료.")
+            ep_count += 1
+            print(f"🔄 에피소드 {ep_count} 종료.")
 
     input_interface.unsubscribe_to_keyboard_events(keyboard, keyboard_sub)
 
