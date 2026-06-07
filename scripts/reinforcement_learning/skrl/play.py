@@ -1,322 +1,179 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers.
 # All rights reserved.
-#
 # SPDX-License-Identifier: BSD-3-Clause
-
-"""Script to play a checkpoint if an RL agent from RSL-RL."""
-
-"""Launch Isaac Sim Simulator first."""
 
 import argparse
 import sys
-
+import os
+import time
+import csv
+import math
+import random
+import torch
+import torch.nn as nn
+import gymnasium as gym
 from isaaclab.app import AppLauncher
 
 # local imports
-import cli_args  # isort: skip
+import cli_args
 
-# add argparse arguments
-parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
-parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
-parser.add_argument(
-    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
-)
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument(
-    "--agent", type=str, default="rsl_rl_cfg_entry_point", help="Name of the RL agent configuration entry point."
-)
-parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument(
-    "--use_pretrained_checkpoint",
-    action="store_true",
-    help="Use the pre-trained checkpoint from Nucleus.",
-)
-parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
-# append RSL-RL cli arguments
+# argparse 설정
+parser = argparse.ArgumentParser(description="Play with Obstacle Randomization and CSV logging.")
+parser.add_argument("--num_envs", type=int, default=1, help="Number of environments.")
+parser.add_argument("--task", type=str, default="Isaac-Velocity-Flat-Unitree-Go2-v0", help="Task name.")
+parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time.")
 cli_args.add_rsl_rl_args(parser)
-# append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
 args_cli, hydra_args = parser.parse_known_args()
-# always enable cameras to record video
-if args_cli.video:
-    args_cli.enable_cameras = True
 
-# clear out sys.argv for Hydra
+# 앱 실행
 sys.argv = [sys.argv[0]] + hydra_args
-
-# launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-"""Check for installed RSL-RL version."""
-
-import importlib.metadata as metadata
-
-from packaging import version
-
-installed_version = metadata.version("rsl-rl-lib")
-
-"""Rest everything follows."""
-
-import os
-import time
-
-import carb
-import carb.input
-import gymnasium as gym
+# 앱 부팅 후 임포트
 import omni
-import omni.appwindow
+from pxr import Gf, UsdGeom
 import omni.graph.core as og
-from pxr import UsdGeom, Gf
-import torch
-from rsl_rl.runners import DistillationRunner, OnPolicyRunner
-
-from isaaclab.envs import (
-    DirectMARLEnv,
-    DirectMARLEnvCfg,
-    DirectRLEnvCfg,
-    ManagerBasedRLEnvCfg,
-    multi_agent_to_single_agent,
-)
-from isaaclab.utils.assets import retrieve_file_path
-from isaaclab.utils.dict import print_dict
-
-from isaaclab_rl.rsl_rl import (
-    RslRlBaseRunnerCfg,
-    RslRlVecEnvWrapper,
-    export_policy_as_jit,
-    export_policy_as_onnx,
-    handle_deprecated_rsl_rl_cfg,
-)
-from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
-
-import isaaclab_tasks  # noqa: F401
-from isaaclab_tasks.utils import get_checkpoint_path
+import isaaclab_tasks
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-# PLACEHOLDER: Extension template (do not remove this comment)
+# 센서 세팅 모듈
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import ros2_sensor_setup
 
+# 공용 정책 네트워크 (ELU 기반)
+class UniversalPolicy(nn.Module):
+    def __init__(self, input_size=48, output_size=12):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_size, 512), nn.ELU(),
+            nn.Linear(512, 256), nn.ELU(),
+            nn.Linear(256, 128), nn.ELU(),
+            nn.Linear(128, output_size)
+        )
+    def forward(self, obs):
+        if isinstance(obs, dict): obs = obs.get("states", obs)
+        return self.net(obs)
 
-def make_keyboard_state():
-    return {
-        "forward": 0.0,
-        "side": 0.0,
-        "yaw": 0.0,
-    }
-
-
-def update_keyboard_state(state, event):
-    pressed = event.type == carb.input.KeyboardEventType.KEY_PRESS
-    released = event.type == carb.input.KeyboardEventType.KEY_RELEASE
-
-    if not (pressed or released):
-        return
-
-    if event.input == carb.input.KeyboardInput.W:
-        state["forward"] = 1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.S:
-        state["forward"] = -1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.A:
-        state["side"] = 1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.D:
-        state["side"] = -1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.Q:
-        state["yaw"] = 1.0 if pressed else 0.0
-    elif event.input == carb.input.KeyboardInput.E:
-        state["yaw"] = -1.0 if pressed else 0.0
-
-
-@hydra_task_config(args_cli.task, args_cli.agent)
-def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
-    """Play with RSL-RL agent."""
-    # grab task name for checkpoint path
-    task_name = args_cli.task.split(":")[-1]
-    train_task_name = task_name.replace("-Play", "")
-
-    # override configurations with non-hydra CLI arguments
-    agent_cfg: RslRlBaseRunnerCfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
+@hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
+def main(env_cfg, agent_cfg, *args, **kwargs):
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
+    env = gym.make(args_cli.task, cfg=env_cfg)
 
-    # handle deprecated configurations
-    agent_cfg = handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)
+    # 1. 로봇 경로 획득 및 ROS 2 센서 세팅
+    robot_asset = env.unwrapped.scene["robot"]
+    # robot_prim_path는 보통 "/World/envs/env_0/Robot" 형태입니다.
+    robot_prim_path = robot_asset.root_physx_view.prim_paths[0] 
 
-    # set the environment seed
-    env_cfg.seed = agent_cfg.seed
-    env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
-
-    # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
-    log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Loading experiment from directory: {log_root_path}")
-    if args_cli.use_pretrained_checkpoint:
-        resume_path = get_published_pretrained_checkpoint("rsl_rl", train_task_name)
-        if not resume_path:
-            print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
-            return
-    elif args_cli.checkpoint:
-        resume_path = retrieve_file_path(args_cli.checkpoint)
+    # [수정] 경로 중복 방지를 위해 조건부로 base 추가
+    if robot_prim_path.endswith("/base"):
+        robot_base_path = robot_prim_path
     else:
-        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+        robot_base_path = f"{robot_prim_path}/base"
 
-    log_dir = os.path.dirname(resume_path)
+    camera_path = f"{robot_base_path}/front_cam"
 
-    # set the log directory for the environment (works for all environment types)
-    env_cfg.log_dir = log_dir
-
-    # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
-
-    # keyboard subscription
-    keyboard_state = make_keyboard_state()
-    app_window = omni.appwindow.get_default_app_window()
-    keyboard = app_window.get_keyboard()
-    input_interface = carb.input.acquire_input_interface()
-
-    def on_keyboard_event(event, *args, **kwargs):
-        update_keyboard_state(keyboard_state, event)
-        return True
-
-    keyboard_sub = input_interface.subscribe_to_keyboard_events(keyboard, on_keyboard_event)
-
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
-        env = multi_agent_to_single_agent(env)
-
-    # wrap for video recording
-    if args_cli.video:
-        video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
-            "step_trigger": lambda step: step == 0,
-            "video_length": args_cli.video_length,
-            "disable_logger": True,
-        }
-        print("[INFO] Recording videos during training.")
-        print_dict(video_kwargs, nesting=4)
-        env = gym.wrappers.RecordVideo(env, **video_kwargs)
-
-    # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
-
-    # ==========================================
-    # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
-    # ==========================================
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    import ros2_sensor_setup
     
     stage = omni.usd.get_context().get_stage()
-    ros2_sensor_setup.setup_ros2_sensors(stage)
-    # ==========================================
-    # ==========================================
+    ros2_sensor_setup.setup_ros2_sensors(stage, 
+                                       robot_base_path=robot_base_path, 
+                                       camera_path=camera_path)
 
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-    # load previously trained model
-    if agent_cfg.class_name == "OnPolicyRunner":
-        runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    elif agent_cfg.class_name == "DistillationRunner":
-        runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    else:
-        raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
-    runner.load(resume_path)
+    # 2. 모델 로드 (순수 PyTorch 방식)
+    resume_path = args_cli.checkpoint
+    if not resume_path:
+        from isaaclab_tasks.utils import get_checkpoint_path
+        log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
+        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
 
-    # obtain the trained policy for inference
-    policy = runner.get_inference_policy(device=env.unwrapped.device)
+    print(f"[INFO] Loading model checkpoint from: {resume_path}")
+    policy = UniversalPolicy().to(env.unwrapped.device)
+    checkpoint = torch.load(resume_path, map_location=env.unwrapped.device)
+    state_dict = checkpoint.get("policy", checkpoint.get("agent", checkpoint.get("state_dict", checkpoint)))
+    cleaned_dict = {k.replace("policy.", "").replace("model.", ""): v for k, v in state_dict.items() if isinstance(v, torch.Tensor)}
+    policy.load_state_dict(cleaned_dict, strict=False)
+    policy.eval()
 
-    # export the trained policy to JIT and ONNX formats
-    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+    # 3. 평가 및 장애물 설정
+    GOAL_X, GOAL_Y = 5.0, 0.0
+    drawer_path = "/World/fused_scene/Moveable_Objects/Drawer"
+    result_file = "./play_eval_results.csv"
+    
+    if not os.path.exists(result_file):
+        with open(result_file, 'w', newline='') as f:
+            csv.writer(f).writerow(["Timestamp", "Success", "Distance_to_Goal"])
 
-    if version.parse(installed_version) >= version.parse("4.0.0"):
-        # use the new export functions for rsl-rl >= 4.0.0
-        runner.export_policy_to_jit(path=export_model_dir, filename="policy.pt")
-        runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
-        policy_nn = None
-    else:
-        # extract the neural network for rsl-rl < 4.0.0
-        if version.parse(installed_version) >= version.parse("2.3.0"):
-            policy_nn = runner.alg.policy
-        else:
-            policy_nn = runner.alg.actor_critic
+    print("\n[INFO] Play 모드 시작: Nav2로 목표를 주면 자동으로 성공 여부를 기록합니다.")
 
-        # extract the normalizer
-        if hasattr(policy_nn, "actor_obs_normalizer"):
-            normalizer = policy_nn.actor_obs_normalizer
-        elif hasattr(policy_nn, "student_obs_normalizer"):
-            normalizer = policy_nn.student_obs_normalizer
-        else:
-            normalizer = None
-
-        # export to JIT and ONNX
-        export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
-        export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
-
-    print("\n================ Keyboard Control ================")
-    print("Click the 3D viewport once, then use:")
-    print("W / S : forward / backward")
-    print("A / D : left / right")
-    print("Q / E : yaw left / yaw right")
-    print("=================================================\n")
-
-    dt = env.unwrapped.step_dt
-
-    # reset environment
-    obs = env.get_observations()
-    # simulate environment
-    while simulation_app.is_running():
-        start_time = time.time()
-        # run everything in inference mode
-        with torch.inference_mode():
-            # Get velocity from ROS 2 Twist Subscriber node (Nav2)
-            nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
-            try:
-                cmd_node = og.Controller.node("/World/ROS2_Camera_Graph/ROS2CmdVel")
-                if cmd_node.is_valid():
-                    lin_vel = og.Controller.get(og.Controller.attribute("outputs:linearVelocity", cmd_node))
-                    ang_vel = og.Controller.get(og.Controller.attribute("outputs:angularVelocity", cmd_node))
-                    if lin_vel is not None and ang_vel is not None:
-                        nav_x, nav_y, nav_yaw = float(lin_vel[0]), float(lin_vel[1]), float(ang_vel[2])
-            except Exception:
-                pass
-
-            # keyboard -> base_velocity (Keyboard override Nav2)
-            kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
+    ep_count = 0
+    with torch.inference_mode():
+        while simulation_app.is_running():
+            # 1️⃣ 에피소드 시작 시 환경 리셋
+            env.reset()
             
-            final_x = kb_x if kb_x != 0.0 else nav_x
-            final_y = kb_y if kb_y != 0.0 else nav_y
-            final_yaw = kb_yaw if kb_yaw != 0.0 else nav_yaw
+            # [추가] 리셋 직후 로봇이 안정적으로 지면에 내려올 때까지 대기
+            for _ in range(20):
+                simulation_app.update()
+            
+            # 2️⃣ 장애물 랜덤 배치
+            drawer_prim = stage.GetPrimAtPath(drawer_path)
+            if drawer_prim.IsValid():
+                x_rand = random.uniform(-1.0, 3.0)
+                y_rand = random.uniform(-0.76, 0.76)
+                mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.01))
+                UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
+            
+            # 3️⃣ 물리 업데이트 및 깨끗한 관측치 추출
+            simulation_app.update()
+            obs_dict = env.unwrapped.observation_manager.compute()
+            obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
 
-            cmd = torch.tensor(
-                [final_x, final_y, final_yaw],
-                device=env.unwrapped.device,
-                dtype=torch.float32,
-            )
-            cmd = cmd.unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
-            env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
+            while simulation_app.is_running():
+                start_time = time.time()
+                
+                # Nav2 명령 수신
+                nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
+                try:
+                    cmd_node = og.Controller.node("/World/ROS2_Camera_Graph/ROS2CmdVel")
+                    if cmd_node.is_valid():
+                        lin_vel = og.Controller.get(og.Controller.attribute("outputs:linearVelocity", cmd_node))
+                        ang_vel = og.Controller.get(og.Controller.attribute("outputs:angularVelocity", cmd_node))
+                        nav_x, nav_y, nav_yaw = float(lin_vel[0]), float(lin_vel[1]), float(ang_vel[2])
+                except: pass
 
-            # agent stepping
-            actions = policy(obs)
-            # env stepping
-            obs, _, dones, _ = env.step(actions)
-            # reset recurrent states for episodes that have terminated
-            if version.parse(installed_version) >= version.parse("4.0.0"):
-                policy.reset(dones)
-            else:
-                policy_nn.reset(dones)
+                # 명령 전달 및 환경 스텝
+                cmd = torch.tensor([nav_x, nav_y, nav_yaw], device=env.unwrapped.device).unsqueeze(0)
+                env.unwrapped.command_manager.get_command("base_velocity")[:] = cmd
 
-        # time delay for real-time evaluation
-        sleep_time = dt - (time.time() - start_time)
-        if args_cli.real_time and sleep_time > 0:
-            time.sleep(sleep_time)
+                actions = policy(obs)
+                obs_dict, _, terminated, truncated, _ = env.step(actions)
+                obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
 
-    input_interface.unsubscribe_to_keyboard_events(keyboard, keyboard_sub)
+                # 성공 여부 체크
+                curr_pos = robot_asset.data.root_pos_w[0]
+                dist = math.dist((curr_pos[0].item(), curr_pos[1].item()), (GOAL_X, GOAL_Y))
+                
+                if dist < 0.5:
+                    print(f"🚩 [목적지 도달] 성공 기록 저장!")
+                    with open(result_file, 'a', newline='') as f:
+                        csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), True, round(dist, 2)])
+                    time.sleep(1.0); break
 
-    # close the simulator
+                if (terminated | truncated)[0]:
+                    print(f"💥 [실패] 리셋됨.")
+                    with open(result_file, 'a', newline='') as f:
+                        csv.writer(f).writerow([time.strftime("%Y-%m-%d %H:%M:%S"), False, round(dist, 2)])
+                    break
+
+                if args_cli.real_time:
+                    time.sleep(max(0, 0.02 - (time.time() - start_time)))
+            
+            ep_count += 1
+            print(f"🔄 에피소드 {ep_count} 종료. 리셋 후 장애물을 다시 배치합니다.")
+
     env.close()
 
-
 if __name__ == "__main__":
-    # run the main function
     main()
-    # close sim app
     simulation_app.close()

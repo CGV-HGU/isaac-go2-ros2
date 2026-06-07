@@ -45,14 +45,14 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
                 scale=(1.0, 1.0, 1.0),
             ),
             init_state=AssetBaseCfg.InitialStateCfg(
-                pos=(0.0, 0.0, 0.0), # Nova_Carter가 있던 월드 중심 좌표
+                pos=(0.0, 0.0, 0.0), 
                 rot=(1.0, 0.0, 0.0, 0.0)
             ),
         )
 
         # --- [로봇 시작 위치 설정] ---
-        # 복도 메쉬의 원점(0,0,0)에서 로봇이 안전하게 착지하도록 Z축만 0.4m 설정
-        self.scene.robot.init_state.pos = (0.0, 0.0, -1.0) 
+        # 초기 안정적인 스폰 높이와 기본 자세로 복구 (요청에 따라 0.25m로 하향)
+        self.scene.robot.init_state.pos = (-1.0, 0.0, 0.1) 
 
         # 지형 스캔 관련 불필요한 기능 끄기
         self.scene.height_scanner = None
@@ -60,6 +60,7 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         self.curriculum.terrain_levels = None
 
 
+@configclass
 class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()

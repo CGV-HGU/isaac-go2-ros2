@@ -22,7 +22,7 @@ ros2 run depthimage_to_laserscan depthimage_to_laserscan_node \
     -r depth:=/go2_camera/depth/image_raw \
     -r depth_camera_info:=/go2_camera/depth/camera_info \
     -r scan:=/scan \
-    -p output_frame:=front_cam \
+    -p output_frame:=base \
     -p use_sim_time:=true &
 
 echo "📍 3. RTAB-Map 로컬라이제이션 모드를 시작합니다..."

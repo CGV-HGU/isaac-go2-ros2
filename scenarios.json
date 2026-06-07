@@ -1,0 +1,1802 @@
+{
+    "trial_001": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.02,
+            -0.45,
+            0.0
+        ],
+        "obstacle_yaw": 204.7
+    },
+    "trial_002": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.72,
+            0.4,
+            0.0
+        ],
+        "obstacle_yaw": 297.7
+    },
+    "trial_003": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.03,
+            0.36,
+            0.0
+        ],
+        "obstacle_yaw": 215.1
+    },
+    "trial_004": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.58,
+            0.01,
+            0.0
+        ],
+        "obstacle_yaw": 92.0
+    },
+    "trial_005": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.99,
+            -0.12,
+            0.0
+        ],
+        "obstacle_yaw": 135.1
+    },
+    "trial_006": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.66,
+            0.53,
+            0.0
+        ],
+        "obstacle_yaw": 53.6
+    },
+    "trial_007": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.35,
+            -0.16,
+            0.0
+        ],
+        "obstacle_yaw": 193.4
+    },
+    "trial_008": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.55,
+            -0.57,
+            0.0
+        ],
+        "obstacle_yaw": 307.2
+    },
+    "trial_009": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.54,
+            -0.08,
+            0.0
+        ],
+        "obstacle_yaw": 161.3
+    },
+    "trial_010": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.89,
+            0.12,
+            0.0
+        ],
+        "obstacle_yaw": 84.3
+    },
+    "trial_011": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.47,
+            -0.28,
+            0.0
+        ],
+        "obstacle_yaw": 251.6
+    },
+    "trial_012": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.93,
+            0.39,
+            0.0
+        ],
+        "obstacle_yaw": 43.9
+    },
+    "trial_013": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.32,
+            0.58,
+            0.0
+        ],
+        "obstacle_yaw": 162.5
+    },
+    "trial_014": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.59,
+            -0.27,
+            0.0
+        ],
+        "obstacle_yaw": 103.2
+    },
+    "trial_015": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.58,
+            0.21,
+            0.0
+        ],
+        "obstacle_yaw": 26.8
+    },
+    "trial_016": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.14,
+            -0.39,
+            0.0
+        ],
+        "obstacle_yaw": 248.3
+    },
+    "trial_017": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.36,
+            -0.44,
+            0.0
+        ],
+        "obstacle_yaw": 321.5
+    },
+    "trial_018": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.25,
+            0.56,
+            0.0
+        ],
+        "obstacle_yaw": 337.3
+    },
+    "trial_019": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.68,
+            0.05,
+            0.0
+        ],
+        "obstacle_yaw": 132.8
+    },
+    "trial_020": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.38,
+            -0.59,
+            0.0
+        ],
+        "obstacle_yaw": 185.0
+    },
+    "trial_021": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.73,
+            -0.5,
+            0.0
+        ],
+        "obstacle_yaw": 205.4
+    },
+    "trial_022": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.57,
+            0.55,
+            0.0
+        ],
+        "obstacle_yaw": 351.6
+    },
+    "trial_023": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.56,
+            -0.27,
+            0.0
+        ],
+        "obstacle_yaw": 0.6
+    },
+    "trial_024": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.97,
+            0.25,
+            0.0
+        ],
+        "obstacle_yaw": 133.4
+    },
+    "trial_025": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.06,
+            0.1,
+            0.0
+        ],
+        "obstacle_yaw": 75.2
+    },
+    "trial_026": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.29,
+            -0.36,
+            0.0
+        ],
+        "obstacle_yaw": 307.5
+    },
+    "trial_027": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.17,
+            0.39,
+            0.0
+        ],
+        "obstacle_yaw": 160.4
+    },
+    "trial_028": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.94,
+            -0.18,
+            0.0
+        ],
+        "obstacle_yaw": 327.2
+    },
+    "trial_029": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.26,
+            -0.14,
+            0.0
+        ],
+        "obstacle_yaw": 215.5
+    },
+    "trial_030": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.99,
+            0.14,
+            0.0
+        ],
+        "obstacle_yaw": 29.5
+    },
+    "trial_031": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.63,
+            0.52,
+            0.0
+        ],
+        "obstacle_yaw": 179.5
+    },
+    "trial_032": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.3,
+            -0.32,
+            0.0
+        ],
+        "obstacle_yaw": 290.0
+    },
+    "trial_033": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.21,
+            0.21,
+            0.0
+        ],
+        "obstacle_yaw": 30.6
+    },
+    "trial_034": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.05,
+            -0.02,
+            0.0
+        ],
+        "obstacle_yaw": 291.8
+    },
+    "trial_035": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.53,
+            -0.07,
+            0.0
+        ],
+        "obstacle_yaw": 96.6
+    },
+    "trial_036": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.3,
+            0.26,
+            0.0
+        ],
+        "obstacle_yaw": 7.5
+    },
+    "trial_037": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.81,
+            0.06,
+            0.0
+        ],
+        "obstacle_yaw": 289.1
+    },
+    "trial_038": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.77,
+            -0.01,
+            0.0
+        ],
+        "obstacle_yaw": 340.5
+    },
+    "trial_039": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.65,
+            -0.43,
+            0.0
+        ],
+        "obstacle_yaw": 136.6
+    },
+    "trial_040": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.13,
+            -0.36,
+            0.0
+        ],
+        "obstacle_yaw": 233.1
+    },
+    "trial_041": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.97,
+            0.14,
+            0.0
+        ],
+        "obstacle_yaw": 117.6
+    },
+    "trial_042": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.08,
+            -0.13,
+            0.0
+        ],
+        "obstacle_yaw": 119.5
+    },
+    "trial_043": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.95,
+            0.31,
+            0.0
+        ],
+        "obstacle_yaw": 225.8
+    },
+    "trial_044": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.0,
+            0.02,
+            0.0
+        ],
+        "obstacle_yaw": 204.4
+    },
+    "trial_045": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.75,
+            0.47,
+            0.0
+        ],
+        "obstacle_yaw": 161.4
+    },
+    "trial_046": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.54,
+            -0.1,
+            0.0
+        ],
+        "obstacle_yaw": 298.9
+    },
+    "trial_047": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.33,
+            -0.27,
+            0.0
+        ],
+        "obstacle_yaw": 17.9
+    },
+    "trial_048": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.16,
+            -0.46,
+            0.0
+        ],
+        "obstacle_yaw": 200.7
+    },
+    "trial_049": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.78,
+            0.49,
+            0.0
+        ],
+        "obstacle_yaw": 247.9
+    },
+    "trial_050": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.36,
+            -0.02,
+            0.0
+        ],
+        "obstacle_yaw": 321.6
+    },
+    "trial_051": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.22,
+            -0.47,
+            0.0
+        ],
+        "obstacle_yaw": 324.9
+    },
+    "trial_052": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.77,
+            0.03,
+            0.0
+        ],
+        "obstacle_yaw": 35.7
+    },
+    "trial_053": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.26,
+            -0.26,
+            0.0
+        ],
+        "obstacle_yaw": 194.2
+    },
+    "trial_054": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.74,
+            -0.4,
+            0.0
+        ],
+        "obstacle_yaw": 200.5
+    },
+    "trial_055": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.51,
+            0.38,
+            0.0
+        ],
+        "obstacle_yaw": 184.2
+    },
+    "trial_056": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.3,
+            0.29,
+            0.0
+        ],
+        "obstacle_yaw": 167.5
+    },
+    "trial_057": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.31,
+            -0.05,
+            0.0
+        ],
+        "obstacle_yaw": 85.8
+    },
+    "trial_058": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.45,
+            -0.47,
+            0.0
+        ],
+        "obstacle_yaw": 95.0
+    },
+    "trial_059": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.74,
+            -0.1,
+            0.0
+        ],
+        "obstacle_yaw": 216.5
+    },
+    "trial_060": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.53,
+            0.35,
+            0.0
+        ],
+        "obstacle_yaw": 17.3
+    },
+    "trial_061": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.49,
+            0.01,
+            0.0
+        ],
+        "obstacle_yaw": 350.9
+    },
+    "trial_062": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.48,
+            0.59,
+            0.0
+        ],
+        "obstacle_yaw": 47.9
+    },
+    "trial_063": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.48,
+            -0.38,
+            0.0
+        ],
+        "obstacle_yaw": 326.4
+    },
+    "trial_064": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.06,
+            0.38,
+            0.0
+        ],
+        "obstacle_yaw": 173.6
+    },
+    "trial_065": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.06,
+            0.37,
+            0.0
+        ],
+        "obstacle_yaw": 218.1
+    },
+    "trial_066": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.19,
+            -0.09,
+            0.0
+        ],
+        "obstacle_yaw": 355.3
+    },
+    "trial_067": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.53,
+            -0.17,
+            0.0
+        ],
+        "obstacle_yaw": 111.5
+    },
+    "trial_068": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.74,
+            -0.02,
+            0.0
+        ],
+        "obstacle_yaw": 51.0
+    },
+    "trial_069": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.22,
+            -0.39,
+            0.0
+        ],
+        "obstacle_yaw": 357.1
+    },
+    "trial_070": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.31,
+            0.12,
+            0.0
+        ],
+        "obstacle_yaw": 12.8
+    },
+    "trial_071": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.91,
+            -0.56,
+            0.0
+        ],
+        "obstacle_yaw": 41.8
+    },
+    "trial_072": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.46,
+            0.4,
+            0.0
+        ],
+        "obstacle_yaw": 27.3
+    },
+    "trial_073": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.98,
+            0.59,
+            0.0
+        ],
+        "obstacle_yaw": 148.0
+    },
+    "trial_074": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.64,
+            0.37,
+            0.0
+        ],
+        "obstacle_yaw": 221.6
+    },
+    "trial_075": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.18,
+            -0.59,
+            0.0
+        ],
+        "obstacle_yaw": 217.4
+    },
+    "trial_076": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.6,
+            -0.35,
+            0.0
+        ],
+        "obstacle_yaw": 181.7
+    },
+    "trial_077": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.54,
+            0.27,
+            0.0
+        ],
+        "obstacle_yaw": 137.7
+    },
+    "trial_078": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.29,
+            0.24,
+            0.0
+        ],
+        "obstacle_yaw": 221.4
+    },
+    "trial_079": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.61,
+            -0.36,
+            0.0
+        ],
+        "obstacle_yaw": 187.9
+    },
+    "trial_080": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.3,
+            0.46,
+            0.0
+        ],
+        "obstacle_yaw": 236.8
+    },
+    "trial_081": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.87,
+            -0.43,
+            0.0
+        ],
+        "obstacle_yaw": 349.0
+    },
+    "trial_082": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.72,
+            0.1,
+            0.0
+        ],
+        "obstacle_yaw": 95.5
+    },
+    "trial_083": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.84,
+            -0.09,
+            0.0
+        ],
+        "obstacle_yaw": 129.5
+    },
+    "trial_084": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.69,
+            -0.03,
+            0.0
+        ],
+        "obstacle_yaw": 48.1
+    },
+    "trial_085": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.69,
+            0.36,
+            0.0
+        ],
+        "obstacle_yaw": 92.7
+    },
+    "trial_086": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.38,
+            0.17,
+            0.0
+        ],
+        "obstacle_yaw": 225.6
+    },
+    "trial_087": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.5,
+            0.37,
+            0.0
+        ],
+        "obstacle_yaw": 133.4
+    },
+    "trial_088": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.35,
+            -0.46,
+            0.0
+        ],
+        "obstacle_yaw": 100.8
+    },
+    "trial_089": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.3,
+            0.09,
+            0.0
+        ],
+        "obstacle_yaw": 258.7
+    },
+    "trial_090": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.02,
+            0.19,
+            0.0
+        ],
+        "obstacle_yaw": 251.2
+    },
+    "trial_091": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.76,
+            0.24,
+            0.0
+        ],
+        "obstacle_yaw": 346.0
+    },
+    "trial_092": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.22,
+            -0.58,
+            0.0
+        ],
+        "obstacle_yaw": 176.0
+    },
+    "trial_093": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.12,
+            -0.45,
+            0.0
+        ],
+        "obstacle_yaw": 309.2
+    },
+    "trial_094": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.77,
+            -0.21,
+            0.0
+        ],
+        "obstacle_yaw": 184.3
+    },
+    "trial_095": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.64,
+            -0.39,
+            0.0
+        ],
+        "obstacle_yaw": 182.7
+    },
+    "trial_096": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.6,
+            0.56,
+            0.0
+        ],
+        "obstacle_yaw": 44.6
+    },
+    "trial_097": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.75,
+            -0.6,
+            0.0
+        ],
+        "obstacle_yaw": 205.8
+    },
+    "trial_098": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.27,
+            -0.56,
+            0.0
+        ],
+        "obstacle_yaw": 116.9
+    },
+    "trial_099": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            0.98,
+            -0.59,
+            0.0
+        ],
+        "obstacle_yaw": 33.9
+    },
+    "trial_100": {
+        "robot_start": [
+            -3.5,
+            0.0,
+            0.0
+        ],
+        "robot_goal": [
+            3.5,
+            0.0,
+            0.0
+        ],
+        "obstacle_pos": [
+            1.19,
+            0.05,
+            0.0
+        ],
+        "obstacle_yaw": 248.3
+    }
+}
