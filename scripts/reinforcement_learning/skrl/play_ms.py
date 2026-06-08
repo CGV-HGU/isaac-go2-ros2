@@ -297,15 +297,20 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     drawer_prim.SetActive(True)
 
                 # [수정] 장애물 물리 및 레이저 스캔 인식 설정
-                from omni.isaac.core.utils.semantics import add_update_semantics
                 from pxr import UsdPhysics, PhysxSchema
-
+                import omni.syntheticdata._syntheticdata as sd
+                
                 if not drawer_prim.HasAPI(UsdPhysics.CollisionAPI):
                     UsdPhysics.CollisionAPI.Apply(drawer_prim)
                 if not drawer_prim.HasAPI(PhysxSchema.PhysxCollisionAPI):
                     PhysxSchema.PhysxCollisionAPI.Apply(drawer_prim)
-
-                add_update_semantics(drawer_prim, "obstacle")
+                
+                # 시맨틱 레이블 부여 (기초적인 방식으로 수정하여 ModuleNotFound 방지)
+                if not drawer_prim.HasAPI(UsdGeom.SubsetAPI): # 임의의 API 체크 후 속성 추가
+                    sem = drawer_prim.GetAttribute("semanticLabel")
+                    if not sem:
+                        UsdGeom.Xformable(drawer_prim).GetPrim().CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
+                        UsdGeom.Xformable(drawer_prim).GetPrim().CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
 
                 x_rand = random.uniform(-1.0, 3.0)
                 y_rand = random.uniform(-0.76, 0.76)

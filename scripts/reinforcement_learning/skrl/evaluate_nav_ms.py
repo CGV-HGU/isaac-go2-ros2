@@ -352,8 +352,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     drawer_prim.SetActive(True)
                 
                 # [수정] 장애물 물리 및 레이저 스캔 인식 설정 (충돌 메시 및 시맨틱 레이블 부여)
-                from omni.isaac.core.utils.semantics import add_update_semantics
-                from pxr import UsdPhysics, PhysxSchema
+                from pxr import UsdPhysics, PhysxSchema, Sdf
                 
                 # 충돌 속성 부여 (뚫고 지나가지 못하게 함)
                 if not drawer_prim.HasAPI(UsdPhysics.CollisionAPI):
@@ -361,8 +360,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 if not drawer_prim.HasAPI(PhysxSchema.PhysxCollisionAPI):
                     PhysxSchema.PhysxCollisionAPI.Apply(drawer_prim)
                 
-                # 시맨틱 레이블 부여 (Depth 카메라가 인식할 수 있게 함)
-                add_update_semantics(drawer_prim, "obstacle")
+                # 시맨틱 레이블 부여 (모듈 에러 방지를 위해 직접 속성 생성)
+                prim = drawer_prim.GetPrim()
+                if not prim.HasAttribute("semanticLabel"):
+                    prim.CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
+                    prim.CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
 
                 x_rand = random.uniform(X_MIN, X_MAX)
                 y_rand = random.uniform(-Y_BOUND, Y_BOUND)
