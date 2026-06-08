@@ -297,7 +297,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     drawer_prim.SetActive(True)
 
                 # [수정] 장애물 물리 및 레이저 스캔 인식 설정 (충돌 메시 및 시맨틱 레이블 부여)
-                from pxr import UsdPhysics, PhysxSchema, Sdf
+                from pxr import UsdPhysics, PhysxSchema, Sdf, Usd
                 
                 # 모든 하위 메시를 포함하여 충돌 및 시맨틱 레이블 적용
                 for p in Usd.PrimRange(drawer_prim):
