@@ -352,19 +352,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     drawer_prim.SetActive(True)
                 
                 # [수정] 장애물 물리 및 레이저 스캔 인식 설정 (충돌 메시 및 시맨틱 레이블 부여)
-                from pxr import UsdPhysics, PhysxSchema, Sdf
+                from pxr import UsdPhysics, PhysxSchema, Sdf, Usd
                 
-                # 충돌 속성 부여 (뚫고 지나가지 못하게 함)
-                if not drawer_prim.HasAPI(UsdPhysics.CollisionAPI):
-                    UsdPhysics.CollisionAPI.Apply(drawer_prim)
-                if not drawer_prim.HasAPI(PhysxSchema.PhysxCollisionAPI):
-                    PhysxSchema.PhysxCollisionAPI.Apply(drawer_prim)
-                
-                # 시맨틱 레이블 부여 (모듈 에러 방지를 위해 직접 속성 생성)
-                prim = drawer_prim.GetPrim()
-                if not prim.HasAttribute("semanticLabel"):
-                    prim.CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
-                    prim.CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
+                # 모든 하위 메시를 포함하여 충돌 및 시맨틱 레이블 적용
+                for p in Usd.PrimRange(drawer_prim):
+                    if p.IsA(UsdGeom.Mesh):
+                        # 충돌 속성 부여
+                        if not p.HasAPI(UsdPhysics.CollisionAPI):
+                            UsdPhysics.CollisionAPI.Apply(p)
+                        if not p.HasAPI(PhysxSchema.PhysxCollisionAPI):
+                            PhysxSchema.PhysxCollisionAPI.Apply(p)
+                        
+                        # 시맨틱 레이블 부여
+                        if not p.HasAttribute("semanticLabel"):
+                            p.CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
+                        if not p.HasAttribute("semanticType"):
+                            p.CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
 
                 x_rand = random.uniform(X_MIN, X_MAX)
                 y_rand = random.uniform(-Y_BOUND, Y_BOUND)
@@ -374,6 +377,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 mat.SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.02)) # 바닥에 끼지 않게 살짝 띄움
                 
                 UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
+                
+                # 물리 상태 강제 업데이트
+                for _ in range(5):
+                    simulation_app.update()
                 
                 try:
                     physx_iface.set_rigid_body_linear_velocity(drawer_path, [0.0, 0.0, 0.0])
