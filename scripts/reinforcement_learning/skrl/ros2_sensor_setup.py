@@ -101,14 +101,18 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ReadSimTime.outputs:simulationTime", "ROS2Clock.inputs:timeStamp"),
                 
                 ("OnTick.outputs:tick", "RenderProduct.inputs:execIn"),
-                ("RenderProduct.outputs:execOut", "ROS2CameraRGB.inputs:execIn"),
+                
+                # [수정] RenderProduct의 execOut 대신 OnTick에서 병렬로 신호를 줘서 멈춤 현상(Freezing) 방지
+                ("OnTick.outputs:tick", "ROS2CameraRGB.inputs:execIn"),
                 ("RenderProduct.outputs:renderProductPath", "ROS2CameraRGB.inputs:renderProductPath"),
-                ("RenderProduct.outputs:execOut", "ROS2CameraDepth.inputs:execIn"),
+                
+                ("OnTick.outputs:tick", "ROS2CameraDepth.inputs:execIn"),
                 ("RenderProduct.outputs:renderProductPath", "ROS2CameraDepth.inputs:renderProductPath"),
                 
-                ("RenderProduct.outputs:execOut", "ROS2CameraInfoRGB.inputs:execIn"),
+                ("OnTick.outputs:tick", "ROS2CameraInfoRGB.inputs:execIn"),
                 ("RenderProduct.outputs:renderProductPath", "ROS2CameraInfoRGB.inputs:renderProductPath"),
-                ("RenderProduct.outputs:execOut", "ROS2CameraInfoDepth.inputs:execIn"),
+                
+                ("OnTick.outputs:tick", "ROS2CameraInfoDepth.inputs:execIn"),
                 ("RenderProduct.outputs:renderProductPath", "ROS2CameraInfoDepth.inputs:renderProductPath"),
 
                 ("OnTick.outputs:tick", "ComputeOdometry.inputs:execIn"),
