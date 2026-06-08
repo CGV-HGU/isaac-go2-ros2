@@ -293,11 +293,26 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # [추가] 장애물 랜덤 배치
             drawer_prim = stage.GetPrimAtPath(drawer_path)
             if drawer_prim.IsValid():
+                if not drawer_prim.IsActive(): 
+                    drawer_prim.SetActive(True)
+
+                # [수정] 장애물 물리 및 레이저 스캔 인식 설정
+                from omni.isaac.core.utils.semantics import add_update_semantics
+                from pxr import UsdPhysics, PhysxSchema
+
+                if not drawer_prim.HasAPI(UsdPhysics.CollisionAPI):
+                    UsdPhysics.CollisionAPI.Apply(drawer_prim)
+                if not drawer_prim.HasAPI(PhysxSchema.PhysxCollisionAPI):
+                    PhysxSchema.PhysxCollisionAPI.Apply(drawer_prim)
+
+                add_update_semantics(drawer_prim, "obstacle")
+
                 x_rand = random.uniform(-1.0, 3.0)
                 y_rand = random.uniform(-0.76, 0.76)
-                mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.01))
+                mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.02))
                 UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
 
+                omni.physx.get_physx_interface().update_transform(drawer_path)
             # 물리 업데이트 및 깨끗한 관측치 추출
             simulation_app.update()
             obs = env.get_observations()

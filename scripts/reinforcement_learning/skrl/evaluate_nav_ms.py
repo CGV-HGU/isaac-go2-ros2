@@ -350,13 +350,26 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             if drawer_prim.IsValid():
                 if not drawer_prim.IsActive(): 
                     drawer_prim.SetActive(True)
+                
+                # [수정] 장애물 물리 및 레이저 스캔 인식 설정 (충돌 메시 및 시맨틱 레이블 부여)
+                from omni.isaac.core.utils.semantics import add_update_semantics
+                from pxr import UsdPhysics, PhysxSchema
+                
+                # 충돌 속성 부여 (뚫고 지나가지 못하게 함)
+                if not drawer_prim.HasAPI(UsdPhysics.CollisionAPI):
+                    UsdPhysics.CollisionAPI.Apply(drawer_prim)
+                if not drawer_prim.HasAPI(PhysxSchema.PhysxCollisionAPI):
+                    PhysxSchema.PhysxCollisionAPI.Apply(drawer_prim)
+                
+                # 시맨틱 레이블 부여 (Depth 카메라가 인식할 수 있게 함)
+                add_update_semantics(drawer_prim, "obstacle")
 
                 x_rand = random.uniform(X_MIN, X_MAX)
                 y_rand = random.uniform(-Y_BOUND, Y_BOUND)
                 yaw_rand = random.uniform(0, 360)
                 
                 mat = Gf.Matrix4d().SetRotate(Gf.Rotation(Gf.Vec3d(0, 0, 1), yaw_rand))
-                mat.SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.0))
+                mat.SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.02)) # 바닥에 끼지 않게 살짝 띄움
                 
                 UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
                 
@@ -367,7 +380,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 except Exception:
                     pass
 
-                print(f"    🎲 [장애물 랜덤 배치 완료] X: {x_rand:.2f}, Y: {y_rand:.2f}")
+                print(f"    🎲 [장애물 세팅 완료] 물리 충돌 및 레이저 인식 활성화 | X: {x_rand:.2f}, Y: {y_rand:.2f}")
 
             # 초기화 상태 안정화를 위한 5틱 대기
             for _ in range(5):
