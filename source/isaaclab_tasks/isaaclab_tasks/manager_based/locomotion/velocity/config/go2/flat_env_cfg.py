@@ -51,8 +51,8 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         )
 
         # --- [로봇 시작 위치 설정] ---
-        # 초기 안정적인 스폰 높이와 기본 자세로 복구 (요청에 따라 0.25m로 하향)
-        self.scene.robot.init_state.pos = (-1.0, 0.0, 0.15) 
+        # 초기 안정적인 스폰 높이와 기본 자세로 복구 (요청에 따라 0.1m로 하향)
+        self.scene.robot.init_state.pos = (-1.0, 0.0, 0.1) 
 
         # 지형 스캔 관련 불필요한 기능 끄기
         self.scene.height_scanner = None
