@@ -24,7 +24,7 @@ ros2 run depthimage_to_laserscan depthimage_to_laserscan_node \
     -r scan:=/scan \
     -p output_frame:=base \
     -p use_sim_time:=true \
-    -p scan_height:=200 \
+    -p scan_height:=450 \
     -p range_min:=0.05 \
     -p range_max:=5.0 &
 
