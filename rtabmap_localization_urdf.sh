@@ -14,7 +14,8 @@ ros2 run nav2_lifecycle_manager lifecycle_manager \
 sleep 2
 
 echo "🤖 1.5 Robot State Publisher (URDF)를 실행합니다..."
-URDF_FILE_PATH="../go2-ros2/robots/go2_description/urdf/go2_description.urdf"
+# 경로를 절대경로(PWD 기반)로 확실하게 잡아줌
+URDF_FILE_PATH="$(pwd)/../go2-ros2/robots/go2_description/urdf/go2_description.urdf"
 
 # URDF 파일이 존재하는지 확인 후 실행
 if [ -f "$URDF_FILE_PATH" ]; then
@@ -35,8 +36,8 @@ ros2 run depthimage_to_laserscan depthimage_to_laserscan_node \
     -r scan:=/scan \
     -p output_frame:=base \
     -p use_sim_time:=true \
-    -p scan_height:=450 \
-    -p range_min:=0.05 \
+    -p scan_height:=20 \
+    -p range_min:=0.2 \
     -p range_max:=5.0 &
 
 echo "📍 3. RTAB-Map 로컬라이제이션 모드를 시작합니다..."
