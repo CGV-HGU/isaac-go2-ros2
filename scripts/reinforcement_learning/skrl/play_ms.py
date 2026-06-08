@@ -316,8 +316,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 y_rand = random.uniform(-0.76, 0.76)
                 mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.02))
                 UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
-
-                omni.physx.get_physx_interface().update_transform(drawer_path)
             # 물리 업데이트 및 깨끗한 관측치 추출
             simulation_app.update()
             obs = env.get_observations()

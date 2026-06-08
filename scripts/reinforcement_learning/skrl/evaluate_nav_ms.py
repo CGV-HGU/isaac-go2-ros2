@@ -375,7 +375,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 
                 UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
                 
-                physx_iface.update_transform(drawer_path)
                 try:
                     physx_iface.set_rigid_body_linear_velocity(drawer_path, [0.0, 0.0, 0.0])
                     physx_iface.set_rigid_body_angular_velocity(drawer_path, [0.0, 0.0, 0.0])
