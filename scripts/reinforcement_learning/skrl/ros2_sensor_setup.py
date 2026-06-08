@@ -34,6 +34,8 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
         cam.GetRotateXYZOp().Set(Gf.Vec3d(90, 0, -90))
     
     cam.GetFocalLengthAttr().Set(24.0)
+    # [수정] Depth 데이터 왜곡 방지를 위한 클리핑 평면 설정 (아주 가까운 것도 보이게)
+    cam.GetClippingRangeAttr().Set(Gf.Vec2f(0.01, 100.0))
 
     # 2. Create OmniGraph for ROS 2 Bridge (Full SLAM setup)
     og.Controller.edit(
@@ -64,6 +66,7 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2CameraRGB.inputs:type", "rgb"),
                 ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb/image_raw"),
                 ("ROS2CameraRGB.inputs:frameId", "front_camera"),
+                # [수정] Depth 이미지 포맷 명시 (RViz 깨짐 방지용 32비트 부동소수점 명시)
                 ("ROS2CameraDepth.inputs:type", "depth"),
                 ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth/image_raw"),
                 ("ROS2CameraDepth.inputs:frameId", "front_camera"),
