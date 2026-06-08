@@ -307,21 +307,38 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                             UsdPhysics.CollisionAPI.Apply(p)
                         if not p.HasAPI(PhysxSchema.PhysxCollisionAPI):
                             PhysxSchema.PhysxCollisionAPI.Apply(p)
-                        
-                        # 시맨틱 레이블 부여 (Depth 카메라/레이저 인식용)
-                        if not p.HasAttribute("semanticLabel"):
-                            p.CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
-                        if not p.HasAttribute("semanticType"):
-                            p.CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
+                        # [수정] 장애물 물리 및 레이저 스캔 인식 설정 (하위 메시 전수 조사 및 Fabric 대응)
+                        from pxr import UsdPhysics, PhysxSchema, Sdf, Usd
 
-                x_rand = random.uniform(-1.0, 3.0)
-                y_rand = random.uniform(-0.76, 0.76)
-                mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.02))
-                UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
-                
-                # 물리 상태 강제 업데이트
-                for _ in range(5):
-                    simulation_app.update()
+                        # 모든 하위 메시를 뒤져서 물리 충돌체로 변환
+                        for p in Usd.PrimRange(drawer_prim):
+                            if p.IsA(UsdGeom.Mesh):
+                                # 1. 일반 충돌 속성 부여
+                                if not p.HasAPI(UsdPhysics.CollisionAPI):
+                                    UsdPhysics.CollisionAPI.Apply(p)
+                                if not p.HasAPI(PhysxSchema.PhysxCollisionAPI):
+                                    PhysxSchema.PhysxCollisionAPI.Apply(p)
+
+                                # 2. PhysX 전용 충돌 활성화 및 오프셋 설정 (뚫기 방지 강화)
+                                physx_col = PhysxSchema.PhysxCollisionAPI(p)
+                                physx_col.GetContactOffsetAttr().Set(0.02)
+                                physx_col.GetRestOffsetAttr().Set(0.0)
+
+                                # 3. 레이저 인식용 시맨틱 레이블 (모든 부품에 적용)
+                                if not p.HasAttribute("semanticLabel"):
+                                    p.CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
+                                if not p.HasAttribute("semanticType"):
+                                    p.CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
+
+                        x_rand = random.uniform(-1.0, 3.0)
+                        y_rand = random.uniform(-0.76, 0.76)
+                        mat = Gf.Matrix4d().SetTranslate(Gf.Vec3d(x_rand, y_rand, 0.02))
+                        UsdGeom.Xformable(drawer_prim).MakeMatrixXform().Set(mat)
+
+                        # 물리 엔진이 새로운 충돌체를 인지하도록 여러 번 업데이트
+                        for _ in range(10):
+                            simulation_app.update()
+
             # 물리 업데이트 및 깨끗한 관측치 추출
             simulation_app.update()
             obs = env.get_observations()
