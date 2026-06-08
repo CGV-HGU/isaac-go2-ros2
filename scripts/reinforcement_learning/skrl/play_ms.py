@@ -72,7 +72,7 @@ import gymnasium as gym
 import omni
 import omni.appwindow
 import omni.graph.core as og
-from pxr import UsdGeom, Gf
+from pxr import UsdGeom, Gf, Sdf
 import torch
 from rsl_rl.runners import DistillationRunner, OnPolicyRunner
 
@@ -305,12 +305,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 if not drawer_prim.HasAPI(PhysxSchema.PhysxCollisionAPI):
                     PhysxSchema.PhysxCollisionAPI.Apply(drawer_prim)
                 
-                # 시맨틱 레이블 부여 (기초적인 방식으로 수정하여 ModuleNotFound 방지)
-                if not drawer_prim.HasAPI(UsdGeom.SubsetAPI): # 임의의 API 체크 후 속성 추가
-                    sem = drawer_prim.GetAttribute("semanticLabel")
-                    if not sem:
-                        UsdGeom.Xformable(drawer_prim).GetPrim().CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
-                        UsdGeom.Xformable(drawer_prim).GetPrim().CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
+                # 시맨틱 레이블 부여 (직접 USD 속성 생성)
+                prim = drawer_prim.GetPrim()
+                if not prim.HasAttribute("semanticLabel"):
+                    prim.CreateAttribute("semanticLabel", Sdf.ValueTypeNames.String).Set("obstacle")
+                if not prim.HasAttribute("semanticType"):
+                    prim.CreateAttribute("semanticType", Sdf.ValueTypeNames.String).Set("class")
 
                 x_rand = random.uniform(-1.0, 3.0)
                 y_rand = random.uniform(-0.76, 0.76)
