@@ -27,11 +27,11 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
     else:
         cam.GetTranslateOp().Set(Gf.Vec3d(0.25, 0.0, 0.1))
 
-    # Rotation: 정면(+X)을 바라보도록 수정 (90도 왼쪽 편향 보고에 따라 -90 -> -180으로 조정)
+    # Rotation: 정면(+X)을 바라보도록 수정 (현재 90도 오른쪽 편향 보고에 따라 -180 -> -90으로 조정)
     if not cam.GetRotateXYZOp():
-        cam.AddRotateXYZOp().Set(Gf.Vec3d(90, 0, -180))
+        cam.AddRotateXYZOp().Set(Gf.Vec3d(90, 0, -90))
     else:
-        cam.GetRotateXYZOp().Set(Gf.Vec3d(90, 0, -180))
+        cam.GetRotateXYZOp().Set(Gf.Vec3d(90, 0, -90))
     
     cam.GetFocalLengthAttr().Set(24.0)
 
