@@ -1,0 +1,149 @@
+[33mcommit e65e02612e1a780a3bdcace88b2ef24f4c86d40e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32msimul-trio[m[33m)[m
+Author: sungyu0309 <tjsrbyt@gmail.com>
+Date:   Mon Jun 8 12:38:41 2026 +0900
+
+    for angle
+
+[33mcommit b37f1be394b3b83b8ba4a0f8518810e206036199[m[33m ([m[1;31morigin/simul-trio[m[33m)[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 14:15:56 2026 +0900
+
+    fix: Add missing Usd import and finalize deep collision logic
+
+[33mcommit 10189734aa36097e6f178db523f5c446b34c4d8c[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 14:08:14 2026 +0900
+
+    fix: Add missing Usd import from pxr in play_ms.py
+
+[33mcommit 1f42f58195c5d8de51a87ae497ab9c37271deb2f[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 14:03:17 2026 +0900
+
+    fix: Deep apply collision and semantics to all children of obstacles
+
+[33mcommit d3e21eeae5ada772020d44c700e4dff1b0ffde91[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 13:55:24 2026 +0900
+
+    fix: Remove failing update_transform calls in play_ms.py and evaluate_nav_ms.py
+
+[33mcommit 2e71046287bc5a1bb4326cddf08041552b537f08[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 13:51:31 2026 +0900
+
+    fix: Use direct USD attribute creation for semantics to avoid AttributeError and ModuleNotFound
+
+[33mcommit 3ef18f8cd4e9a73f32fcfa8ab5c83696b4ff3270[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 13:48:19 2026 +0900
+
+    fix: Replace problematic semantics import with manual attribute creation in play_ms.py and evaluate_nav_ms.py
+
+[33mcommit 4397e3e09eb613c6dcbf3648916b7639d8ac7ccb[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 13:44:47 2026 +0900
+
+    feat: Enable obstacle collision and semantic labeling for laser scan detection
+
+[33mcommit 6805b355ab78c06f9b64a535f838a78f2c3945ca[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 12:46:15 2026 +0900
+
+    fix: Correct camera orientation (90deg left) and align laser scan (output_frame: base)
+
+[33mcommit 2e102155542f7ef9a4120e3785bcd2a5ac30a5c3[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 02:40:09 2026 +0900
+
+    fix: Robust OmniGraph creation and API get fix in evaluate_nav_ms.py
+
+[33mcommit 9ca09a1446135f04e2df657fef1f61a12f9bc5cd[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 02:26:04 2026 +0900
+
+    fix: Robust OmniGraph node detection and API usage in evaluate_nav_ms.py
+
+[33mcommit 1380c897cfcce6ccaeea3c5080c4c30c38a6a8d8[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 02:17:09 2026 +0900
+
+    fix: Robust OmniGraph creation and graph cleanup in evaluate_nav_ms.py for Isaac Sim 5.1.0
+
+[33mcommit dbd91e8c4b644e02932b2750bf672c45130f64d8[m
+Author: sungyu0309 <tjsrbyt@gmail.com>
+Date:   Mon Jun 8 02:06:32 2026 +0900
+
+    add all
+
+[33mcommit 1450d8de9db19ffac6bcde4b98d9a631231edabf[m
+Author: sungyu0309 <tjsrbyt@gmail.com>
+Date:   Mon Jun 8 01:55:55 2026 +0900
+
+    add all
+
+[33mcommit 7c7e812e809e7d8214bfe9c1cb1e6ad6ebbb27c2[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 01:51:32 2026 +0900
+
+    fix: Move inference_mode to cover full loop to prevent RuntimeError during reset
+
+[33mcommit eefdd0499a73aefe49f57d8003dbc5ff948353b9[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 01:45:22 2026 +0900
+
+    fix: Add missing math import in play_ms.py
+
+[33mcommit 17ba97453ecd0f67d7a249d1c2d2e48e528a6925[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 01:37:48 2026 +0900
+
+    fix: Correct observation format for rsl_rl policy to avoid IndexError
+
+[33mcommit 4dab5464ac6fc85a121c7004fc378397f20b255b[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 01:28:59 2026 +0900
+
+    fix: Add missing random import in play_ms.py
+
+[33mcommit 4910e5bd17c9c7191c4cd8b491bb69bb24fb4696[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 01:12:30 2026 +0900
+
+    feat: Add evaluate_nav_ms hybrid script with OnPolicyRunner and team evaluation macro
+
+[33mcommit 02ae03241c9542a6a94e4e12859450d1207a4899[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 01:06:48 2026 +0900
+
+    fix: Update play_ms.py with team's keyboard speeds and full R key logic
+
+[33mcommit db489b1792c5fe07e0e03892a1e823783caf08ad[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 00:56:31 2026 +0900
+
+    fix: Update play_ms.sh to correctly reference play_ms.py
+
+[33mcommit ee4fa4022736bb1945c966c3aed5e7ea7221e8c1[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Mon Jun 8 00:56:03 2026 +0900
+
+    feat: Add alternative play_ms scripts using go2-rtabmap logic with simul-trio fixes
+
+[33mcommit e9ab4f94ac8d82f70f6eb44e23afb620598fda6e[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Sun Jun 7 23:45:02 2026 +0900
+
+    fix: Lower robot spawn height to 0.15m
+
+[33mcommit 22030dd34686b07758a01c9921a5ba8db61c030a[m
+Author: Glen02lee <glen@handong.ac.kr>
+Date:   Sun Jun 7 23:39:52 2026 +0900
+
+    fix: Lower robot spawn height to 0.25m for stability
+
+[33mcommit fd1ab98f37cd706f64b063c14bb637655db5dfb1[m
+Author: sungyu0309 <tjsrbyt@gmail.com>
+Date:   Sun Jun 7 23:37:58 2026 +0900
+
+    before new mapping
