@@ -12,3 +12,6 @@ echo "--------------------------------------------------------"
     --task Isaac-Velocity-Flat-Unitree-Go2-v0 \
     --headless \
     --num_envs 4096 
+
+# [추가] 학습 완료 후 최종 훈련 분석 이미지 리포트 자동 생성
+python generate_report.py 
