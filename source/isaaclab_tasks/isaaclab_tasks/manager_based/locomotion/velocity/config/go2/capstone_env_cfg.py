@@ -19,11 +19,9 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2FlatEnvCfg):
         super().__post_init__()
 
         # --- [오직 맵 설정만 추가] ---
-        # 기존 평면 바닥을 끄고 캡스톤 메쉬만 로드합니다.
-        self.scene.terrain = AssetBaseCfg(
-            prim_path="/World/ground",
-            spawn=None,
-        )
+        # 3.0.0 (Isaac Lab 2.3.2) 공식 템플릿 규격에 맞추어 TerrainImporterCfg를 유지하며 평지로 설정
+        self.scene.terrain.terrain_type = "plane"
+        self.scene.terrain.terrain_generator = None
         
         self.scene.custom_environment = AssetBaseCfg(
             prim_path="/World/fused_scene",
@@ -43,6 +41,7 @@ class UnitreeGo2CapstoneEnvCfg(UnitreeGo2FlatEnvCfg):
         # 험지용 센서는 평지 모델에서 필요 없으므로 부모 클래스 설정을 따라 자동으로 꺼진 상태를 유지합니다.
 
 
+@configclass
 class UnitreeGo2CapstoneEnvCfg_PLAY(UnitreeGo2CapstoneEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()

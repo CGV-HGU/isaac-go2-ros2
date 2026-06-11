@@ -40,11 +40,9 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
             self.commands.base_velocity.heading_command = False
 
         # --- [환경 설정: 순수 평지(Flat Plane)] ---
-        # 복잡한 메쉬를 제거하고, 학습에 최적화된 무한 평면으로 교체
-        self.scene.terrain = AssetBaseCfg(
-            prim_path="/World/ground",
-            spawn=sim_utils.GroundPlaneCfg(),
-        )
+        # 3.0.0 (Isaac Lab 2.3.2) 공식 템플릿 규격에 맞추어 TerrainImporterCfg를 유지하며 평지로 설정
+        self.scene.terrain.terrain_type = "plane"
+        self.scene.terrain.terrain_generator = None
         
         # 가우시안 메쉬 등 불필요한 에셋 삭제
         if hasattr(self.scene, "custom_environment"):
@@ -59,6 +57,7 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         self.curriculum.terrain_levels = None
 
 
+@configclass
 class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()
