@@ -6,11 +6,10 @@
 from isaaclab.utils import configclass
 
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
-
-##
-# Pre-defined configs
-##
 from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
+
+import isaaclab.envs.mdp as mdp
+from isaaclab.managers import RewardTermCfg
 
 
 @configclass
@@ -47,14 +46,24 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         }
         self.events.base_com = None
 
-        # rewards (optimized for Unitree Go2)
+        # rewards (optimized for Unitree Go2 Unified Walk)
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
-        self.rewards.feet_air_time.weight = 0.01
+        self.rewards.feet_air_time.weight = 0.25
         self.rewards.undesired_contacts = None
         self.rewards.dof_torques_l2.weight = -0.0002
         self.rewards.track_lin_vel_xy_exp.weight = 1.5
-        self.rewards.track_ang_vel_z_exp.weight = 0.75
+        self.rewards.track_ang_vel_z_exp.weight = 1.5 # 제자리 회전 반응성 극대화 (0.75 -> 1.5)
         self.rewards.dof_acc_l2.weight = -2.5e-7
+
+        # 몸체 수평 유지 강화 (넘어짐 및 뒤틀림 방지)
+        self.rewards.flat_orientation_l2.weight = -5.0
+
+        # 거미보행 방지: 몸체 높이(0.32m) 유지 보상 추가
+        self.rewards.base_height_l2 = RewardTermCfg(
+            func=mdp.base_height_l2,
+            weight=-10.0,
+            params={"target_height": 0.32}
+        )
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
