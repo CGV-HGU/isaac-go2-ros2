@@ -9,10 +9,31 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
     """
     print("[INFO] Setting up ROS 2 Bridge and Sensor OmniGraphs...")
 
-    # Enable required extensions for Isaac Sim 5.1.0
+    # Enable required extensions based on Isaac Sim version
     ext_manager = omni.kit.app.get_app().get_extension_manager()
-    ext_manager.set_extension_enabled_immediate("isaacsim.core.nodes", True)
-    ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
+    is_new_version = False
+    
+    # Try enabling Isaac Sim 5.1.0+ extensions
+    try:
+        # Check if the new extension exists first, or try enabling it
+        if ext_manager.is_extension_enabled("isaacsim.ros2.bridge") or ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True):
+            ext_manager.set_extension_enabled_immediate("isaacsim.core.nodes", True)
+            is_new_version = True
+            print("[INFO] Detected Isaac Sim 5.1.0+ version. Using 'isaacsim.*' namespace.")
+    except Exception:
+        pass
+
+    if not is_new_version:
+        # Fallback for Isaac Sim <5.1.0 (e.g. 4.X or 5.0.0)
+        try:
+            ext_manager.set_extension_enabled_immediate("omni.isaac.core_nodes", True)
+            ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
+            print("[INFO] Fallback to Isaac Sim <5.1.0 version. Using 'omni.isaac.*' namespace.")
+        except Exception as e:
+            print(f"[Error] Failed to enable ROS2 bridge extensions: {e}")
+
+    core_ns = "isaacsim.core.nodes" if is_new_version else "omni.isaac.core_nodes"
+    ros2_ns = "isaacsim.ros2.bridge" if is_new_version else "omni.isaac.ros2_bridge"
 
     # 1. Create Camera Prim attached to the robot's base
     if not stage.GetPrimAtPath(camera_path).IsValid():
@@ -29,18 +50,18 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
         {
             og.Controller.Keys.CREATE_NODES: [
                 ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
-                ("ROS2Clock", "isaacsim.ros2.bridge.ROS2PublishClock"),
-                ("RenderProduct", "isaacsim.core.nodes.IsaacCreateRenderProduct"),
-                ("ROS2CameraRGB", "isaacsim.ros2.bridge.ROS2CameraHelper"),
-                ("ROS2CameraDepth", "isaacsim.ros2.bridge.ROS2CameraHelper"),
-                ("ROS2CameraInfoRGB", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
-                ("ROS2CameraInfoDepth", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
-                ("ComputeOdometry", "isaacsim.core.nodes.IsaacComputeOdometry"),
-                ("ROS2Odometry", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
-                ("ROS2TF_World", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
-                ("ROS2TF_Base", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
-                ("ROS2CmdVel", "isaacsim.ros2.bridge.ROS2SubscribeTwist"),
+                ("ReadSimTime", f"{core_ns}.IsaacReadSimulationTime"),
+                ("ROS2Clock", f"{ros2_ns}.ROS2PublishClock"),
+                ("RenderProduct", f"{core_ns}.IsaacCreateRenderProduct"),
+                ("ROS2CameraRGB", f"{ros2_ns}.ROS2CameraHelper"),
+                ("ROS2CameraDepth", f"{ros2_ns}.ROS2CameraHelper"),
+                ("ROS2CameraInfoRGB", f"{ros2_ns}.ROS2CameraInfoHelper"),
+                ("ROS2CameraInfoDepth", f"{ros2_ns}.ROS2CameraInfoHelper"),
+                ("ComputeOdometry", f"{core_ns}.IsaacComputeOdometry"),
+                ("ROS2Odometry", f"{ros2_ns}.ROS2PublishOdometry"),
+                ("ROS2TF_World", f"{ros2_ns}.ROS2PublishTransformTree"),
+                ("ROS2TF_Base", f"{ros2_ns}.ROS2PublishTransformTree"),
+                ("ROS2CmdVel", f"{ros2_ns}.ROS2SubscribeTwist"),
             ],
             og.Controller.Keys.SET_VALUES: [
                 # Render Product

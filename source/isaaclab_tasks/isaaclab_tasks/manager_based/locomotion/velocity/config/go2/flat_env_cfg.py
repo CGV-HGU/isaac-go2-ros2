@@ -31,11 +31,9 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
 
         # --- [환경 설정: 기본 바닥 삭제 및 메쉬 전용 환경] ---
         
-        # 2. 기존 검은색 격자 바닥(Plane) 생성을 완전히 제거
-        self.scene.terrain = AssetBaseCfg(
-            prim_path="/World/ground",
-            spawn=None,  # 이 설정으로 인해 기본 바닥이 깔리지 않습니다.
-        )
+        # 3.0.0 (Isaac Lab 2.3.2) 공식 템플릿 규격에 맞추어 TerrainImporterCfg를 유지하며 평지로 설정
+        self.scene.terrain.terrain_type = "plane"
+        self.scene.terrain.terrain_generator = None
         
         # 3. 가우시안 복도 메쉬를 유일한 지형으로 등록
         self.scene.custom_environment = AssetBaseCfg(
@@ -60,6 +58,7 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         self.curriculum.terrain_levels = None
 
 
+@configclass
 class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
     def __post_init__(self) -> None:
         super().__post_init__()
