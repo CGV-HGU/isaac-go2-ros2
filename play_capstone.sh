@@ -1,8 +1,0 @@
-#!/bin/bash
-# Go2 로봇 캡스톤 환경(Custom USD) Play 실행 스크립트
-# 터미널에서 ./play_capstone.sh 를 입력하면 바로 실행됩니다.
-
-echo "🚀 Unitree Go2 캡스톤 커스텀 시뮬레이션(Play)을 시작합니다..."
-
-# 사용자님이 요청하신 정확한 명령어 (캡스톤 전용 환경 로드)
-./isaaclab.sh -p scripts/reinforcement_learning/skrl/play.py --task Isaac-Velocity-Capstone-Unitree-Go2-Play-v0 --num_envs 1 --checkpoint "/home/hayoung/IsaacLab/logs/skrl/unitree_go2_rough/2026-05-26_19-00-21_ppo_torch/checkpoints/best_agent.pt"
