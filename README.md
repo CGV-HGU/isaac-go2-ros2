@@ -61,17 +61,17 @@ flowchart TD
     classDef locomotion fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000;
     classDef topic fill:#ffffff,stroke:#757575,stroke-width:1px,stroke-dasharray: 3 3,color:#000;
 
-    subgraph System_Data_Flow [Sim-to-Real Integrated System Data Flow]
+    subgraph System_Data_Flow ["Sim-to-Real Integrated System Data Flow"]
         direction TB
 
         %% 1. Sensing Layer
-        subgraph Sensing_Layer [Sensing Layer]
+        subgraph Sensing_Layer ["Sensing Layer"]
             Cam[Monocular Camera / RGB-D D455]:::sensing
             Odom[Wheel/Visual Odometry]:::sensing
         end
 
         %% 2. Virtual Scan Generation Pipeline (from ICCAS 0531)
-        subgraph Virtual_Scan_Pipeline [Virtual Scan Generation Pipeline]
+        subgraph Virtual_Scan_Pipeline ["Virtual Scan Generation Pipeline"]
             YOLO["YOLOv11n-seg<br>(Floor Segmentation)"]:::vscan
             Contact["Contact Point Detection<br>(Lowest Non-Floor Pixel)"]:::vscan
             LUT["LUT Mapping<br>(Column-to-Bearing & Row-to-Range)"]:::vscan
@@ -88,7 +88,7 @@ flowchart TD
         end
 
         %% 3. Autonomy Navigation Stack (Nav2)
-        subgraph Autonomy_Stack [ROS 2 / Nav2 Autonomy Stack]
+        subgraph Autonomy_Stack ["ROS 2 / Nav2 Autonomy Stack"]
             RTABMap[RTAB-Map V-SLAM]:::nav2
             Costmap[Nav2 Costmap Layers]:::nav2
             Planner[DWB Local Planner]:::nav2
@@ -105,7 +105,7 @@ flowchart TD
         end
 
         %% 4. Locomotion Control Layer
-        subgraph Locomotion_Layer [Locomotion Control Layer (SKRL)]
+        subgraph Locomotion_Layer ["Locomotion Control Layer (SKRL)"]
             RL_Policy["RL Locomotion Policy<br>(MLP Policy Network)"]:::locomotion
             Motor[Go2 Joint Actuators]:::locomotion
             
