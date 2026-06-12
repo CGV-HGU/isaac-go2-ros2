@@ -55,64 +55,55 @@ flowchart LR
 ```mermaid
 flowchart TD
     %% Styling
-    classDef sensing fill:#e3f2fd,stroke:#0288d1,stroke-width:2px,color:#000;
-    classDef vscan fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000;
-    classDef nav2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000;
-    classDef locomotion fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000;
+    classDef offline fill:#f5f5f5,stroke:#757575,stroke-width:2px,color:#000;
+    classDef sim fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000;
+    classDef real fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000;
     classDef topic fill:#ffffff,stroke:#757575,stroke-width:1px,stroke-dasharray: 3 3,color:#000;
 
-    subgraph System_Data_Flow ["Sim-to-Real Integrated System Data Flow"]
-        direction TB
+    subgraph Offline_Modeling ["A. Offline Environment Modeling"]
+        A1["Real Hallway Photos<br>(Image Capture via DSLR)"]:::offline
+        A2["Structure-from-Motion<br>(COLMAP Camera Poses)"]:::offline
+        A3["3DGS & FVDB Integration<br>(Photorealistic Modeling)"]:::offline
+        A4["USD Physics Mesh<br>(Physics-Enabled Mesh)"]:::offline
 
-        %% 1. Sensing Layer
-        subgraph Sensing_Layer ["Sensing Layer"]
-            Cam[Monocular Camera / RGB-D D455]:::sensing
-            Odom[Wheel/Visual Odometry]:::sensing
-        end
-
-        %% 2. Virtual Scan Generation Pipeline (from ICCAS 0531)
-        subgraph Virtual_Scan_Pipeline ["Virtual Scan Generation Pipeline"]
-            YOLO["YOLOv11n-seg<br>(Floor Segmentation)"]:::vscan
-            Contact["Contact Point Detection<br>(Lowest Non-Floor Pixel)"]:::vscan
-            LUT["LUT Mapping<br>(Column-to-Bearing & Row-to-Range)"]:::vscan
-            Clearing["Floor-Visibility Check<br>(Costmap Clearing)"]:::vscan
-            
-            RGB_Topic([/camera/color/image_raw]):::topic
-            Scan_Topic([/scan]):::topic
-            
-            Cam --> RGB_Topic
-            RGB_Topic --> YOLO
-            YOLO -->|Floor Mask| Contact
-            YOLO -->|Visibility Event| Clearing
-            Contact --> LUT --> Scan_Topic
-        end
-
-        %% 3. Autonomy Navigation Stack (Nav2)
-        subgraph Autonomy_Stack ["ROS 2 / Nav2 Autonomy Stack"]
-            RTABMap[RTAB-Map V-SLAM]:::nav2
-            Costmap[Nav2 Costmap Layers]:::nav2
-            Planner[DWB Local Planner]:::nav2
-            
-            Odom_Topic([/odom]):::topic
-            CmdVel_Topic([/cmd_vel]):::topic
-            
-            Odom --> Odom_Topic
-            Odom_Topic --> RTABMap
-            RTABMap -->|tf: map to odom| Costmap
-            Scan_Topic --> Costmap
-            Clearing -->|Clear Obstacles| Costmap
-            Costmap --> Planner --> CmdVel_Topic
-        end
-
-        %% 4. Locomotion Control Layer
-        subgraph Locomotion_Layer ["Locomotion Control Layer (SKRL)"]
-            RL_Policy["RL Locomotion Policy<br>(MLP Policy Network)"]:::locomotion
-            Motor[Go2 Joint Actuators]:::locomotion
-            
-            CmdVel_Topic --> RL_Policy
-            RL_Policy -->|Joint Torques| Motor
-        end
+        A1 --> A2 --> A3 --> A4
     end
+
+    subgraph Virtual_Validation ["B. Virtual Validation (Isaac Sim / Lab)"]
+        direction TB
+        B1["Simulated Corridor<br>(3DGS Mesh Assets)"]:::sim
+        B2["Virtual RGB-D Camera<br>(Simulated D435i Camera)"]:::sim
+        B3["RTAB-Map V-SLAM<br>(Visual Odometry & Map)"]:::sim
+        B4["Nav2 Navigation Stack<br>(DWB Local Planner)"]:::sim
+        B5["RL Locomotion Policy<br>(PPO MLP Controller)"]:::sim
+        B6["Go2 Sim Model<br>(Gait Dynamics & Noise)"]:::sim
+
+        B1 -->|Visuals| B2
+        B2 -->|RGB-D| B3
+        B3 -->|Odom & Map| B4
+        B4 -->|cmd_vel| B5
+        B5 -->|Joint Torques| B6
+        B6 -->|Bobbing Noise| B1
+    end
+
+    subgraph Physical_Deployment ["C. Physical Deployment (Jetson Orin NX)"]
+        direction TB
+        C1["Real Hallway<br>(Physical Corridor)"]:::real
+        C2["Intel RealSense D435i<br>(RGB-D Camera Input)"]:::real
+        C3["RTAB-Map SLAM<br>(Mapping & Localization)"]:::real
+        C4["Nav2 Navigation Stack<br>(DWB Local Planner)"]:::real
+        C5["ROS 2 Sport Bridge<br>(Cmd Vel Router)"]:::real
+        C6["Unitree Sport API<br>(Go2 Joint Actuation)"]:::real
+
+        C1 -->|Capture| C2
+        C2 -->|RGB-D| C3
+        C3 -->|Odom & Map| C4
+        C4 -->|cmd_vel| C5
+        C5 -->|API Calls| C6
+        C6 -->|Motion| C1
+    end
+
+    A4 -->|Import USD| B1
 ```
 
 👉 **[View Detailed Architecture Documentation & Real-World Diagram](./docs/architecture.md)**
