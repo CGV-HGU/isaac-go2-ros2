@@ -104,7 +104,7 @@ def main(env_cfg, agent_cfg):
     ros2_sensor_setup.setup_ros2_sensors(omni.usd.get_context().get_stage())
 
     stage = omni.usd.get_context().get_stage()
-    GOAL_X, GOAL_Y = 5.0, 0.0
+    GOAL_X, GOAL_Y = 2.0, 0.0
     dt = env.unwrapped.step_dt
     
     keyboard_state = make_keyboard_state()
@@ -120,11 +120,13 @@ def main(env_cfg, agent_cfg):
         csv.writer(f).writerow(["Episode", "Success", "Time_Steps", "Final_Dist"])
 
     ep_count = 0
+    # 에피소드마다 장애물 배치를 새로 하도록 고정
     randomize_object = True 
 
     with torch.inference_mode():
         while simulation_app.is_running():
             print(f"\n🎬 [에피소드 {ep_count+1}] 조용히 재배치 중...")
+            randomize_object = True # 매 에피소드 시작 시 True로 설정
             
             # [1] 환경 매니저 리셋 (Done 상태 해제 필수)
             env_ids = torch.arange(env.unwrapped.num_envs, device=env.unwrapped.device)
@@ -134,10 +136,12 @@ def main(env_cfg, agent_cfg):
             robot_asset = env.unwrapped.scene["robot"]
             env.unwrapped.command_manager.get_command("base_velocity")[:] = 0.0
             root_state = robot_asset.data.default_root_state.clone()
-            start_x, start_y = 1.93166, 0.0 # [수정] 고정 위치
+            start_x, start_y = -5.0, 1.0 # 위치는 롤백 상태
             root_state[:, 0], root_state[:, 1], root_state[:, 2] = start_x, start_y, 0.28
-            yaw = math.atan2(GOAL_Y - start_y, GOAL_X - start_x)
+            # 목적지 방향에 150도 회전 추가
+            yaw = math.atan2(GOAL_Y - start_y, GOAL_X - start_x) + math.radians(150)
             root_state[:, 3], root_state[:, 6] = math.cos(yaw / 2.0), math.sin(yaw / 2.0)
+
             root_state[:, 7:] = 0.0
             robot_asset.reset()
             robot_asset.write_root_pose_to_sim(root_state[:, :7])
@@ -213,7 +217,20 @@ def main(env_cfg, agent_cfg):
             
             # [기록] CSV 파일에 즉시 기록
             with open(result_file, 'a', newline='') as f:
-                csv.writer(f).writerow([ep_count+1, str(success), step_count, round(dist, 2)])
+                # 1. 로봇 최종 위치 및 장애물 위치 추출
+                curr_pos = robot_asset.data.root_pos_w[0]
+                robot_pos_str = f"({curr_pos[0].item():.2f}, {curr_pos[1].item():.2f})"
+                obstacle_pos_str = f"({x_rand:.2f}, {y_rand:.2f})" if 'x_rand' in locals() else "None"
+                
+                # 2. 결과 기록 (성공/실패 추가)
+                csv.writer(f).writerow([
+                    ep_count+1, 
+                    "Success" if success else "Fail", 
+                    step_count, 
+                    round(dist, 2), 
+                    robot_pos_str, 
+                    obstacle_pos_str
+                ])
                 f.flush()
             
             ep_count += 1
