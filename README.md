@@ -55,50 +55,63 @@ flowchart LR
 ```mermaid
 flowchart TD
     %% Styling
-    classDef simEnv fill:#e3f2fd,stroke:#0288d1,stroke-width:2px;
-    classDef rosStack fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
-    classDef topic fill:#ffffff,stroke:#757575,stroke-width:1px,stroke-dasharray: 3 3;
+    classDef sensing fill:#e3f2fd,stroke:#0288d1,stroke-width:2px,color:#000;
+    classDef vscan fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000;
+    classDef nav2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000;
+    classDef locomotion fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000;
+    classDef topic fill:#ffffff,stroke:#757575,stroke-width:1px,stroke-dasharray: 3 3,color:#000;
 
-    subgraph Simulation_Architecture [Simulation System Architecture]
+    subgraph System_Data_Flow [Sim-to-Real Integrated System Data Flow]
         direction TB
-        
-        %% Environment & Hardware Mock
-        subgraph Sim_Hardware [Isaac Sim 5.1.0]
-            Env[Virtual Environment]
-            Cam[Virtual RGB-D Camera]
-            Odom[Isaac Compute Odometry]
-            Robot[Simulated Go2 Robot]
-            
-            Env -->|Render| Cam
-            Env -.->|Physics| Odom
-        end
-        class Sim_Hardware simEnv
 
-        %% ROS 2 Autonomy Stack
-        subgraph ROS2_Stack ["ROS 2 Autonomy Stack (Zero-Code Transferable)"]
-            Depth2Scan[depthimage_to_laserscan]
-            RTABMap[RTAB-Map V-SLAM]
-            Nav2[Nav2 Autonomous Navigation]
-            RL_Policy[SKRL Policy Loop]
-            
-            Depth_Topic([/depth/image_raw]):::topic
-            Scan_Topic([/scan]):::topic
-            Odom_Topic([/odom]):::topic
-            CmdVel_Topic([/cmd_vel_nav]):::topic
-            
-            Depth_Topic --> Depth2Scan --> Scan_Topic
-            Depth_Topic & Odom_Topic --> RTABMap
-            RTABMap -->|map to odom TF| Nav2
-            Scan_Topic --> Nav2
-            Nav2 --> CmdVel_Topic
-            CmdVel_Topic --> RL_Policy
+        %% 1. Sensing Layer
+        subgraph Sensing_Layer [Sensing Layer]
+            Cam[Monocular Camera / RGB-D D455]:::sensing
+            Odom[Wheel/Visual Odometry]:::sensing
         end
-        class ROS2_Stack rosStack
-        
-        %% Connections
-        Cam ==>|Publishes| Depth_Topic
-        Odom ==>|Publishes| Odom_Topic
-        RL_Policy ==>|Applies Torques| Robot
+
+        %% 2. Virtual Scan Generation Pipeline (from ICCAS 0531)
+        subgraph Virtual_Scan_Pipeline [Virtual Scan Generation Pipeline]
+            YOLO["YOLOv11n-seg<br>(Floor Segmentation)"]:::vscan
+            Contact["Contact Point Detection<br>(Lowest Non-Floor Pixel)"]:::vscan
+            LUT["LUT Mapping<br>(Column-to-Bearing & Row-to-Range)"]:::vscan
+            Clearing["Floor-Visibility Check<br>(Costmap Clearing)"]:::vscan
+            
+            RGB_Topic([/camera/color/image_raw]):::topic
+            Scan_Topic([/scan]):::topic
+            
+            Cam --> RGB_Topic
+            RGB_Topic --> YOLO
+            YOLO -->|Floor Mask| Contact
+            YOLO -->|Visibility Event| Clearing
+            Contact --> LUT --> Scan_Topic
+        end
+
+        %% 3. Autonomy Navigation Stack (Nav2)
+        subgraph Autonomy_Stack [ROS 2 / Nav2 Autonomy Stack]
+            RTABMap[RTAB-Map V-SLAM]:::nav2
+            Costmap[Nav2 Costmap Layers]:::nav2
+            Planner[DWB Local Planner]:::nav2
+            
+            Odom_Topic([/odom]):::topic
+            CmdVel_Topic([/cmd_vel]):::topic
+            
+            Odom --> Odom_Topic
+            Odom_Topic --> RTABMap
+            RTABMap -->|tf: map to odom| Costmap
+            Scan_Topic --> Costmap
+            Clearing -->|Clear Obstacles| Costmap
+            Costmap --> Planner --> CmdVel_Topic
+        end
+
+        %% 4. Locomotion Control Layer
+        subgraph Locomotion_Layer [Locomotion Control Layer (SKRL)]
+            RL_Policy["RL Locomotion Policy<br>(MLP Policy Network)"]:::locomotion
+            Motor[Go2 Joint Actuators]:::locomotion
+            
+            CmdVel_Topic --> RL_Policy
+            RL_Policy -->|Joint Torques| Motor
+        end
     end
 ```
 
