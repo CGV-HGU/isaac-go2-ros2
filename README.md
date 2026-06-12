@@ -1,7 +1,7 @@
 # Sim-to-Real Autonomous Navigation for Quadruped Robots
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-5.1.0-silver.svg)](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)
-[![IsaacLab](https://img.shields.io/badge/IsaacLab-4.1.0-green.svg)](https://isaac-sim.github.io/IsaacLab/)
+[![IsaacLab](https://img.shields.io/badge/IsaacLab-2.3.2-green.svg)](https://isaac-sim.github.io/IsaacLab/)
 [![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-blue.svg)](https://docs.ros.org/en/jazzy/)
 [![Robot](https://img.shields.io/badge/Hardware-Unitree_Go2_Edu_Plus-orange.svg)]()
 
