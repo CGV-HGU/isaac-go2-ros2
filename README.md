@@ -181,3 +181,16 @@ After the training completes, the new weights are saved in the `logs/` directory
     ./isaaclab.sh -p scripts/reinforcement_learning/skrl/play.py --task Isaac-Velocity-Flat-Unitree-Go2-v0 --num_envs 1 +checkpoint="logs/skrl/unitree_go2_flat/YOUR_NEW_FOLDER/checkpoints/best_agent.pt"
     ```
 4.  Run `./play.sh` again to see your newly trained agent in action!
+
+---
+
+## 📝 ICCAS 2026 Paper Draft
+
+This branch (`paper`) contains the LaTeX draft and templates for the ICCAS 2026 submission.
+
+*   **Manuscript Directory:** [ICCAS](./ICCAS)
+*   **Main LaTeX Source:** [ICCAS/main.tex](./ICCAS/main.tex) (compiled to match `ICCAS.cls`)
+*   **Official Class Template:** [ICCAS/Paper-Template_ICCAS.tex](./ICCAS/Paper-Template_ICCAS.tex)
+*   **Compiled PDF Draft:** [ICCAS/main.pdf](./ICCAS/main.pdf)
+
+To collaborate on this paper, edit the LaTeX source in the [ICCAS](./ICCAS) directory and compile with `pdflatex`.

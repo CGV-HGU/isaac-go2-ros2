@@ -1,0 +1,151 @@
+%% document class file for the preparation of a paper
+%% for the International Conference ICCAS 2026
+%% global option 'fleqn' ensures equations flush left.
+%% set '10pt' and 'twocolumn' options.
+
+\documentclass[10pt,twocolumn]{ICCAS}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{diagbox}
+
+\begin{document}
+
+\title{On-Board Vision-Based Quadrupedal Navigation using a Single RGB-D Camera and 3D Gaussian Splatting Testbed}
+
+\author{Minseok Lee${}^{1}$, Seongyu Han${}^{1}$, Heejae Moon${}^{1}$, and Sung Soo Hwang${}^{1*}$ }
+
+\affils{ ${}^{1}$School of Artificial Intelligence, Computer and Electrical Engineering, \\
+Handong Global University, Pohang 37554, Republic of Korea \\
+(\{glen, tjsrb439, 22000249\}@handong.ac.kr, sshwang@handong.edu) {\small${}^{*}$ Corresponding author}}
+
+\abstract{
+    Directly deploying autonomous navigation systems on physical quadruped robots in real-world environments presents significant challenges, particularly regarding hardware safety, time efficiency, and the dynamic wobbling induced by reinforcement learning (RL)-based locomotion. To address these limitations, this paper proposes a robust sim-to-real system integration approach using exclusively a single RGB-D camera, eliminating the need for costly and heavy LiDAR sensors. We pre-validate our comprehensive pipeline---comprising an RL locomotion controller, RTAB-Map for Visual SLAM, and the Nav2 framework---within a high-fidelity simulation environment modeled via Gaussian Splatting. This highly realistic digital twin serves as a primary testbed, enabling safe, risk-free parameter tuning against complex indoor dynamics. Furthermore, the entire navigation and control loop is optimized to run strictly on-board a single edge device, the Jetson Orin NX, overcoming tight embedded computational constraints. Experimental results demonstrate that our vision-only system successfully transitions to a physical Unitree Go2 robot, maintaining robust odometry estimation and reliable obstacle avoidance in complex corridors, thereby proving the feasibility of low-cost, autonomous quadrupedal navigation.
+}
+
+\keywords{
+    Quadruped Robot, Visual SLAM, Autonomous Navigation, Sim-to-Real, Gaussian Splatting, RGB-D Camera.
+}
+
+\maketitle
+
+%-----------------------------------------------------------------------
+
+\section{Introduction}
+Autonomous quadruped robots have gained significant attention due to their superior mobility in challenging and unstructured terrains compared to conventional wheeled counterparts. To achieve true autonomy in indoor environments, combining robust legged locomotion with precise simultaneous localization and mapping (SLAM) is essential. Recently, reinforcement learning (RL) has enabled agile and highly adaptable quadrupedal gaits capable of traversing rough terrains. 
+
+However, implementing autonomous navigation on top of RL-based locomotion introduces a critical problem: the continuous, high-frequency wobbling and shaking inherent to quadrupedal walking severely degrade the performance of vision-based SLAM systems, causing frequent tracking failures. Furthermore, evaluating and tuning these sensitive navigation algorithms directly on physical hardware in real-world environments involves prohibitive costs. Real-world testing is highly time-inefficient and poses a constant risk of severe hardware damage from collisions during the initial tuning phase. While conventional simulators offer a safe alternative, they often fail to capture the sensory complexity of real-world indoor structures, such as narrow pathways, continuous 90-degree corners, and unpredictable illumination changes, thereby widening the sim-to-real gap. 
+
+To overcome these constraints, this paper presents a high-fidelity sim-to-real system integration framework for quadrupedal autonomous navigation using exclusively a single RGB-D camera (Intel RealSense D455), completely avoiding reliance on expensive LiDAR sensors. Instead of risky real-world trials, we utilize a highly realistic simulation environment modeled through Gaussian Splatting that replicates actual, challenging indoor corridors. Within this safe digital twin, we integrate and pre-validate the entire software pipeline, which includes the RL locomotion controller, RTAB-Map for Visual SLAM, and the Nav2 framework. Crucially, the entire system is optimized to operate entirely on-board a single embedded edge device, the Jetson Orin NX, without the aid of external computational servers. 
+
+The primary contributions of this work are threefold: 
+\begin{enumerate}
+    \item We demonstrate a complete, low-cost autonomous navigation pipeline for quadruped robots utilizing only a single RGB-D camera;
+    \item We establish a safe and efficient validation methodology by leveraging a Gaussian Splatting-based simulation to optimize visual SLAM and navigation parameters under severe motion noise; and
+    \item We successfully verify the entire framework through on-board implementation on a physical Unitree Go2 robot, achieving reliable autonomous driving under stringent computational and environmental constraints.
+\end{enumerate}
+
+\section{Related Work}
+\subsection{RL-based Quadrupedal Locomotion}
+The application of reinforcement learning (RL) to legged locomotion has advanced quadrupedal control significantly. Traditional model-based approaches, such as Model Predictive Control (MPC) and Whole-Body Control (WBC), require precise mathematical models of the robot and environment. In contrast, model-free RL enables robots to learn robust walking behaviors directly from interaction. With the development of highly parallelized physics engines like NVIDIA Isaac Sim and Isaac Lab, training policies with thousands of simulated environments has become standard practice. This approach has successfully enabled the deployment of agile gaits on platforms such as ANYmal and Unitree Go1/Go2. By incorporating curriculum learning and domain randomization, researchers have bridged the physical gap, transferring walking policies directly from simulation to the real world. However, these works have primarily focused on locomotion stability, leaving high-level navigation and visual feedback largely unexplored.
+
+\subsection{Visual SLAM and Navigation Integration}
+Autonomous navigation in mobile robotics has traditionally relied on LiDAR-based SLAM due to its high accuracy and long-range sensing capability. However, LiDAR sensors are expensive, heavy, and consume considerable power, which limits their suitability for small-scale quadruped robots. Visual SLAM (VSLAM) utilizing RGB-D cameras has emerged as a compelling, cost-effective alternative. Among various frameworks, Real-Time Appearance-Based Mapping (RTAB-Map) stands out by integrating loop closure detection with graph-based optimization to provide drift-free mapping and localization. In parallel, the ROS 2 Navigation Stack (Nav2) has become the standard framework for global path planning and local obstacle avoidance. 
+
+While a few studies have attempted to integrate RL-based locomotion with visual SLAM, most validation is restricted to simple, synthetic virtual environments. These idealized environments fail to model the visual and geometric complexities of actual buildings, leading to immediate failures upon real-world deployment. This paper resolves this issue by employing 3D Gaussian Splatting to build a high-fidelity digital twin that closes the visual-spatial discrepancy.
+
+\section{System and Locomotion Control}
+\subsection{System Overview}
+The proposed system integrates an RL-trained locomotion policy, RTAB-Map Visual SLAM, and the Nav2 framework. The locomotion policy is pre-trained in NVIDIA Isaac Sim using Proximal Policy Optimization (PPO). The trained policy and navigation modules are connected via the ROS 2 Bridge. The high-level navigation stack processes raw RGB-D images to estimate the robot's pose and generate a 2D occupancy grid map. Nav2 utilizes this information to plan paths and output target velocities ($\mathbf{v}_{cmd} = [v_x, v_y, \omega_z]^T$). These commands are fed into the locomotion policy to drive the joint motors. The overall system architecture is depicted in Fig. 1.
+
+\begin{figure}[thb]
+\begin{center}
+%\includegraphics[width=6.5cm]{fig_system_overview.eps}
+\caption{\label{fig_system_overview}Overall architecture of the proposed autonomous quadrupedal navigation system. The navigation stack (RTAB-Map and Nav2) runs entirely on-board the Jetson Orin NX and commands the RL locomotion policy.}
+\end{center}
+\end{figure}
+
+\subsection{Locomotion Learning in Isaac Sim}
+To train a policy that is robust to physical perturbations and sensor noise, we set up a simulated training environment using the Procedural Terrain Generator in Isaac Lab. The training environment consists of mixed terrains including rough ground, slopes, and boxes. We apply curriculum learning to progressively increase the difficulty (e.g., terrain height and slope) based on the robot's success rate. To bridge the sim-to-real gap, extensive domain randomization is applied:
+\begin{itemize}
+    \item Robot body mass is randomized between $-1.0$~kg and $+3.0$~kg.
+    \item Ground friction coefficient is randomized between $0.6$ and $0.8$.
+    \item External forces (push disturbances) are applied at regular intervals to the robot's torso.
+\end{itemize}
+The physics simulator runs at 200~Hz, and the control loop operates at 50~Hz using a decimation factor of 4.
+
+The policy is trained using the PPO algorithm implemented in the PyTorch-based \texttt{skrl} library. Both the policy and value networks are Multilayer Perceptrons (MLPs) with hidden layer sizes of $[512, 256, 128]$ using the ELU activation function. The learning rate is initialized at $1.0 \times 10^{-3}$ and managed by a KL-adaptive scheduler with a threshold of $0.01$. The discount factor is set to $\gamma=0.99$ and GAE parameter to $\lambda=0.95$.
+
+The reward function is formulated to track commands while maintaining walking stability. The total reward $R$ is defined as:
+\begin{equation}
+R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i}
+\end{equation}
+where:
+\begin{itemize}
+    \item $R_{lin} = \exp(-||\mathbf{v}_{xy}^* - \mathbf{v}_{xy}||^2 / \sigma^2)$ is the linear velocity tracking reward ($w_{lin} = 1.5$).
+    \item $R_{ang} = \exp(-(\omega_{z}^* - \omega_{z})^2 / \sigma^2)$ is the angular velocity tracking reward ($w_{ang} = 0.75$).
+    \item $R_{air}$ rewards longer feet air time to encourage a clear gait ($w_{air} = 0.25$).
+    \item $P_i$ represents penalty terms for vertical velocity, body roll/pitch, deviation from a flat orientation, excessive joint torques, rapid joint acceleration, and undesired body contacts.
+\end{itemize}
+
+\subsection{3DGS Environment Construction \& Agent Deployment}
+To establish a high-fidelity validation platform, we reconstructed a campus corridor using 3D Gaussian Splatting (3DGS). Multiple photos of the environment were taken using a DSLR camera and processed using COLMAP to estimate camera poses. The 3DGS model was then converted into a physical triangle mesh using TSDF-based reconstruction, which was imported into Isaac Sim as a USD file. Physical collision properties were assigned to the floor and walls. The pre-trained locomotion policy was deployed directly in this reconstructed environment without any parameter modifications. Despite the geometric complexity of the real hallway, the robot maintained a stable gait, demonstrating the generalization capability of our domain-randomized training.
+
+\section{Autonomous Navigation}
+\subsection{Navigation System Configuration}
+The autonomous navigation system consists of an Intel RealSense D455 RGB-D camera, RTAB-Map, and the Nav2 framework. The D455 camera is mounted on the front of the Unitree Go2. In the virtual environment, a simulated RGB-D sensor generates matching color and depth streams. 
+
+RTAB-Map processes the depth images and visual features to estimate the robot's pose and build a 3D octomap, which is projected into a 2D occupancy grid. This 2D map and the estimated transform (\texttt{odom} to \texttt{base\_link}) are published to Nav2. Nav2's global planner computes a path to the goal, and the Dynamic Window Approach B (DWB) local planner computes control commands to steer the robot while avoiding obstacles. The velocity commands are mapped to the tracking commands of the locomotion policy.
+
+\subsection{Validation in 3DGS Environment}
+Before physical deployment, the entire software stack was validated in the 3DGS simulation. The simulated corridor spans approximately 200~m in length and 2.5~m in width, featuring both straight and curved sections. 
+
+The policy network takes both proprioceptive and exteroceptive observations at each step. Proprioception includes joint states, base angular velocity, and gravity vector projection. Exteroception is simulated via a virtual height scan: a $1.6 \text{ m} \times 1.0 \text{ m}$ grid with $0.1$~m resolution centered on the robot. Ray casting is used to query the heights of the 3DGS-derived mesh, providing the policy with local elevation data to adjust its steps. Command inputs represent the target velocities $[v_x, v_y, \omega_z]^T$ provided by the DWB local planner.
+
+\begin{figure}[thb]
+\begin{center}
+%\includegraphics[width=6.5cm]{fig_simulation_validation.eps}
+\caption{\label{fig_sim_validation}Visual SLAM and path planning validation inside the reconstructed 3DGS corridor environment. The reconstructed mesh provides accurate collision responses and realistic visual feedback.}
+\end{center}
+\end{figure}
+
+To evaluate obstacle avoidance, virtual boxes were placed along the corridor. The local planner dynamically recalculated trajectories around the obstacles, and the policy adjusted its walking pattern to negotiate the detours without collision.
+
+\subsection{Physical Deployment and Results}
+Following successful simulation testing, the identical control and navigation pipeline was deployed on a physical Unitree Go2 robot. The computing hardware on the robot consists of an NVIDIA Jetson Orin NX (20W mode, 16GB RAM) running ROS 2 Humble. The Intel RealSense D455 camera was connected directly to the Jetson Orin NX. 
+
+\begin{figure}[thb]
+\begin{center}
+%\includegraphics[width=6.5cm]{fig_real_deployment.eps}
+\caption{\label{fig_real_deployment}Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D455 and Jetson Orin NX, running the entire navigation stack on-board.}
+\end{center}
+\end{figure}
+
+RTAB-Map successfully closed loops in the physical corridor, compensating for the camera shake induced by the RL gait. Nav2 maintained stable global paths, and the robot completed the corridor traversal with an average speed of $0.4$~m/s. The experiment confirmed that parameters optimized in the 3DGS simulation (such as costmap inflation radius and visual feature extraction thresholds) translated to the physical platform without degradation.
+
+\section{Conclusion}
+This paper presented an integrated on-board, vision-based autonomous navigation system for quadruped robots. By combining an RL locomotion policy with RTAB-Map Visual SLAM and Nav2, we created a low-cost, LiDAR-free solution that operates on a single edge device. We demonstrated a safe validation pipeline using a 3D Gaussian Splatting-based digital twin of the target environment. The physical deployment on a Unitree Go2 proved that the proposed sim-to-real workflow is effective and robust. 
+
+Future work will focus on improving dynamic obstacle avoidance and optimizing the computational load on the Jetson Orin NX to support higher-resolution image processing.
+
+\section*{ACKNOWLEDGEMENT}
+This research was supported by No. 202500590001 of Handong Global University Research Grants, and the National Research Foundation of Korea (NRF) grant funded by the Korean government (MSIT) (No. RS-2025-24683458).
+
+\begin{thebibliography}{99}
+
+\bibitem{ref1}
+J. Hwangbo, J. Lee, A. Dosovitskiy, D. Bellicoso, V. Tsounis, V. Koltun, and M. Hutter, ``Learning agile and dynamic motor skills for legged robots,'' \textit{Science Robotics}, vol. 4, no. 26, 2019.
+
+\bibitem{ref2}
+M. Labb{\'e} and F. Pomerleau, ``Online global loop closure detection for large-scale multi-session graph-based SLAM,'' \textit{Autonomous Robots}, vol. 34, no. 3, pp. 183--200, 2013.
+
+\bibitem{ref3}
+S. Macenski, T. Foote, B. Gerkey, C. Lalancette, and W. Woodall, ``Robot Operating System 2: Design, architecture, and uses in the wild,'' \textit{Science Robotics}, vol. 7, no. 66, 2022.
+
+\bibitem{ref4}
+B. Kerbl, G. Kopanas, T. Leimk{\"u}hler, and G. Drettakis, ``3d gaussian splatting for real-time radiance field rendering,'' \textit{ACM Transactions on Graphics (TOG)}, vol. 42, no. 4, pp. 1--14, 2023.
+
+\end{thebibliography}
+
+\end{document}

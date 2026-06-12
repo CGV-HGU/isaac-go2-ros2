@@ -1,0 +1,4 @@
+This folder will contain the following figures for the paper:
+1. fig_system_overview.eps / png - The system architecture block diagram (RL policy, ROS2 bridge, RTAB-Map, Nav2, Jetson Orin NX)
+2. fig_simulation_validation.eps / png - Simulation verification inside 3DGS environment (RTAB-Map, occupancy grid, DWB local planner path)
+3. fig_real_deployment.eps / png - Unitree Go2 real-world deployment with RealSense D455 and Jetson Orin NX
