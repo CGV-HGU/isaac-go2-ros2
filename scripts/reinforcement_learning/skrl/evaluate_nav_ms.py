@@ -193,7 +193,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     import omni.physx
     import omni.graph.core as og
 
-    TOTAL_EPISODES = 100   # 🔁 총 실험 횟수
+    TOTAL_EPISODES = 10   # 🔁 총 실험 횟수 (100 -> 10으로 축소)
     START_X, START_Y = -1.0, 0.0
     GOAL_X, GOAL_Y = 5.0, 0.0
 
@@ -201,8 +201,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     X_MIN, X_MAX = -1.0, 3.0 
     Y_BOUND = 0.76  
     
-    result_file = "./eval_results.csv" 
+    result_file = os.path.abspath("./eval_results.csv")
+    print(f"[INFO] 결과 저장 경로: {result_file}")
     
+    # 평가 시작 시 헤더 기록
     with open(result_file, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(["Episode", "Success", "Time_Steps", "Final_Dist"])
@@ -212,7 +214,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     drawer_path = "/World/Moveable_Objects/Drawer"
     physx_iface = omni.physx.get_physx_interface()
 
-    # Nav2에 전달할 목적지 Prim 생성
+    # Nav2에 전달할 목적지 Prim 생성 및 구독 노드 추가
     goal_prim_path = "/World/Navigation_Goal"
     if stage.GetPrimAtPath(goal_prim_path).IsValid():
         omni.kit.commands.execute("DeletePrims", paths=[goal_prim_path])
@@ -220,78 +222,35 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     goal_geom = UsdGeom.Xform.Define(stage, goal_prim_path)
     goal_geom.AddTranslateOp().Set(Gf.Vec3d(GOAL_X, GOAL_Y, 0.0))
 
-    # [중요] ROS2 Bridge 확장 기능 활성화 및 로딩 대기
-    ext_manager = omni.kit.app.get_app().get_extension_manager()
-    
-    ros2_bridge_prefix = None
-    if ext_manager.is_extension_enabled("isaacsim.ros2.bridge"):
-        ros2_bridge_prefix = "isaacsim.ros2.bridge"
-    elif ext_manager.is_extension_enabled("omni.isaac.ros2_bridge"):
-        ros2_bridge_prefix = "omni.isaac.ros2_bridge"
-    else:
-        try:
-            ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
-            ros2_bridge_prefix = "isaacsim.ros2.bridge"
-        except:
-            try:
-                ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
-                ros2_bridge_prefix = "omni.isaac.ros2_bridge"
-            except:
-                print("[ERROR] ROS2 Bridge 확장 기능을 로드할 수 없습니다.")
+    # [수정] Nav2 목표지 구독 및 동기화용 OmniGraph 노드 추가
+    og.Controller.edit(
+        {"graph_path": graph_path, "evaluator_name": "execution"},
+        {
+            og.Controller.Keys.CREATE_NODES: [
+                ("OnTick", "omni.graph.action.OnPlaybackTick"),
+                ("ROSTwistSub", cmd_twist_type),
+                ("ROSGoalPub", pose_node_type),
+                ("ROSGoalSub", f"{ros2_bridge_prefix}.ROS2SubscribePose"),
+            ],
+            og.Controller.Keys.SET_VALUES: [
+                ("ROSTwistSub.inputs:topicName", "/cmd_vel"),
+                ("ROSGoalPub.inputs:topicName", "/goal_pose"),
+                ("ROSGoalPub.inputs:frameId", "map"),
+                ("ROSGoalPub.inputs:targetPrim", goal_prim_path),
+                ("ROSGoalSub.inputs:topicName", "/goal_pose"),
+            ],
+            og.Controller.Keys.CONNECT: [
+                ("OnTick.outputs:tick", "ROSTwistSub.inputs:execIn"),
+                ("OnTick.outputs:tick", "ROSGoalPub.inputs:execIn"),
+                ("OnTick.outputs:tick", "ROSGoalSub.inputs:execIn"),
+            ],
+        },
+    )
 
-    # 확장 기능 로딩 대기
-    print(f"[INFO] ROS2 Bridge ({ros2_bridge_prefix}) 로딩 대기 중...")
-    for _ in range(150):
-        simulation_app.update()
+    # 구독한 목표지 좌표를 동기화하기 위한 속성
+    goal_x_attr = og.Controller.attribute(f"{graph_path}/ROSGoalSub.outputs:positionX")
+    goal_y_attr = og.Controller.attribute(f"{graph_path}/ROSGoalSub.outputs:positionY")
 
-    # [중요] 기존 그래프가 있으면 확실하게 삭제
-    graph_path = "/World/ROS2_Nav_Eval_Graph"
-    if stage.GetPrimAtPath(graph_path).IsValid():
-        omni.kit.commands.execute("DeletePrims", paths=[graph_path])
-        for _ in range(50): simulation_app.update()
-
-    # 노드 타입 설정 (5.1.0 대응)
-    possible_pose_nodes = [
-        f"{ros2_bridge_prefix}.ROS2PublishPoseStamped",
-        f"{ros2_bridge_prefix}.ROS2PublishPose",
-        "omni.isaac.ros2_bridge.ROS2PublishPoseStamped",
-        "omni.isaac.ros2_bridge.ROS2PublishPose"
-    ]
-    
-    cmd_twist_type = f"{ros2_bridge_prefix}.ROS2SubscribeTwist" if ros2_bridge_prefix else "omni.isaac.ros2_bridge.ROS2SubscribeTwist"
-
-    success_graph = False
-    for pose_node_type in possible_pose_nodes:
-        if success_graph: break
-        try:
-            print(f"[INFO] OmniGraph 생성 시도 중... (Pose Node: {pose_node_type})")
-            og.Controller.edit(
-                {"graph_path": graph_path, "evaluator_name": "execution"},
-                {
-                    og.Controller.Keys.CREATE_NODES: [
-                        ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                        ("ROSTwistSub", cmd_twist_type),
-                        ("ROSGoalPub", pose_node_type),
-                    ],
-                    og.Controller.Keys.SET_VALUES: [
-                        ("ROSTwistSub.inputs:topicName", "/cmd_vel"),
-                        ("ROSGoalPub.inputs:topicName", "/goal_pose"),
-                        ("ROSGoalPub.inputs:frameId", "map"),
-                        ("ROSGoalPub.inputs:targetPrim", goal_prim_path),
-                    ],
-                    og.Controller.Keys.CONNECT: [
-                        ("OnTick.outputs:tick", "ROSTwistSub.inputs:execIn"),
-                        ("OnTick.outputs:tick", "ROSGoalPub.inputs:execIn"),
-                    ],
-                },
-            )
-            success_graph = True
-            print(f"[INFO] OmniGraph 생성 성공! ({pose_node_type})")
-        except Exception as e:
-            print(f"[WARNING] '{pose_node_type}' 노드로 생성 실패, 다음 시도... ({e})")
-            if stage.GetPrimAtPath(graph_path).IsValid():
-                omni.kit.commands.execute("DeletePrims", paths=[graph_path])
-                for _ in range(20): simulation_app.update()
 
     if not success_graph:
         print("[ERROR] OmniGraph 생성 최종 실패. Nav2 통신이 불가능할 수 있습니다.")
@@ -390,6 +349,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 try:
                     physx_iface.set_rigid_body_linear_velocity(drawer_path, [0.0, 0.0, 0.0])
                     physx_iface.set_rigid_body_angular_velocity(drawer_path, [0.0, 0.0, 0.0])
+                    
+                    # [추가] NAV2 코스트맵 잔상 제거 (CLI 명령 활용)
+                    os.system("ros2 service call /local_costmap/clear_entirely_local_costmap nav2_msgs/srv/ClearEntireCostmap '{}' > /dev/null 2>&1")
+                    os.system("ros2 service call /global_costmap/clear_entirely_global_costmap nav2_msgs/srv/ClearEntireCostmap '{}' > /dev/null 2>&1")
+                    print("    🧹 [초기화] NAV2 코스트맵 잔상 제거 완료")
                 except Exception:
                     pass
 
@@ -412,7 +376,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 
                 # [수동 리셋 (R키)]
                 if kb_state["reset"]:
-                    print(f"\n🔄 [수동 리셋] R키가 입력되어 {ep}번 실험을 중단하고 다음으로 넘어갑니다.")
+                    print(f"\n🔄 [수동 리셋] 장애물 잔상 제거 중...")
+                    # [추가] 장애물 완전히 삭제 및 잔상 제거
+                    drawer_prim = stage.GetPrimAtPath(drawer_path)
+                    if drawer_prim.IsValid():
+                        drawer_prim.SetActive(False)
+                        # 코스트맵 잔상 제거 서비스 호출
+                        os.system("ros2 service call /local_costmap/clear_entirely_local_costmap nav2_msgs/srv/ClearEntireCostmap '{}' > /dev/null 2>&1")
+                        os.system("ros2 service call /global_costmap/clear_entirely_global_costmap nav2_msgs/srv/ClearEntireCostmap '{}' > /dev/null 2>&1")
+                    
                     kb_state["reset"] = False
                     break
 
@@ -431,11 +403,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 curr_x = current_pos[0].item()
                 curr_y = current_pos[1].item()
                 
+                # [수정] 실제 NAV2 Goal 구독값으로 실시간 갱신
+                new_gx = og.Controller.get(goal_x_attr)
+                new_gy = og.Controller.get(goal_y_attr)
+                if new_gx is not None and new_gy is not None:
+                    GOAL_X, GOAL_Y = new_gx, new_gy
+                
                 final_dist = math.dist((curr_x, curr_y), (GOAL_X, GOAL_Y))
                 
                 # 목적지 통과 판정 (50cm 이내 접근 시 성공)
                 if final_dist < 0.5:
                     success = True
+                    # [수정] 성공 시 물리적 멈춤
+                    env.unwrapped.scene["robot"].write_root_velocity_to_sim(torch.zeros_like(env.unwrapped.scene["robot"].data.root_vel_w))
                     print(f"    🎉 [성공] Nav2 제어로 목적지 도달! (소요 스텝: {step_count}, 오차: {final_dist:.2f}m)")
                     break
 
@@ -453,6 +433,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 else:
                     policy_nn.reset(dones)
                     
+                # [수정] 성공 시에는 환경의 done 신호를 무시하고 성공 처리
+                if success:
+                    break
+                
                 if dones[0]:
                     print("    💥 [실패] 로봇이 넘어지거나 외부 충돌로 인하여 에피소드가 파괴됨.")
                     break
@@ -466,10 +450,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             if not success and step_count >= max_steps:
                 print(f"    ⏰ [실패] 타임아웃 제한 시간 초과 (남은 거리: {final_dist:.2f}m)")
                 
-            # 결과를 CSV 데이터베이스 파일에 기록
+            # 결과를 CSV 데이터베이스 파일에 즉시 기록 (모든 에피소드마다)
+            print(f"    💾 [기록] 에피소드 {ep} 결과 저장 중... (성공: {success})")
             with open(result_file, 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([ep, success, step_count, round(final_dist, 2)])
+                writer.writerow([ep, str(success), step_count, round(final_dist, 2)])
+                f.flush()
+                os.fsync(f.fileno())
 
     print("\n================ 🎉 100회 자동 시나리오 주행 평가가 최종 완료되었습니다! ================")
     env.close()

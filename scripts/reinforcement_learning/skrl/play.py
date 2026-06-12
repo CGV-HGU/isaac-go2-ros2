@@ -58,10 +58,49 @@ class UniversalPolicy(nn.Module):
         if isinstance(obs, dict): obs = obs.get("states", obs)
         return self.net(obs)
 
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+
+# ROS 2 자동 목적지 전송 노드
+class Nav2AutoGoal(Node):
+    def __init__(self):
+        super().__init__('nav2_auto_goal_node')
+        self.init_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
+        self.goal_pub = self.create_publisher(PoseStamped, '/goal_pose', 10)
+
+    def send_nav2_goal(self, start_x, start_y, goal_x, goal_y):
+        # 1. 초기 위치 전송 (Nav2 정렬)
+        init_msg = PoseWithCovarianceStamped()
+        init_msg.header.frame_id = "map"
+        init_msg.header.stamp = self.get_clock().now().to_msg()
+        init_msg.pose.pose.position.x = float(start_x)
+        init_msg.pose.pose.position.y = float(start_y)
+        yaw = math.atan2(goal_y - start_y, goal_x - start_x)
+        init_msg.pose.pose.orientation.z = math.sin(yaw / 2.0)
+        init_msg.pose.pose.orientation.w = math.cos(yaw / 2.0)
+        init_msg.pose.covariance = [0.0]*36
+        init_msg.pose.covariance[0], init_msg.pose.covariance[7], init_msg.pose.covariance[35] = 0.25, 0.25, 0.06
+        self.init_pub.publish(init_msg)
+        
+        time.sleep(1.0) # Nav2 처리 대기
+        
+        # 2. 목적지 전송
+        goal_msg = PoseStamped()
+        goal_msg.header.frame_id = "map"
+        goal_msg.header.stamp = self.get_clock().now().to_msg()
+        goal_msg.pose.position.x = float(goal_x)
+        goal_msg.pose.position.y = float(goal_y)
+        goal_msg.pose.orientation.w = 1.0
+        self.goal_pub.publish(goal_msg)
+        print(f"\n[Auto Goal] Nav2 목적지 전송 완료: ({goal_x}, {goal_y})")
+
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
 def main(env_cfg, agent_cfg, *args, **kwargs):
-    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
-    env = gym.make(args_cli.task, cfg=env_cfg)
+    # ROS 2 초기화
+    if not rclpy.ok(): rclpy.init()
+    nav_node = Nav2AutoGoal()
+
 
     # 1. 로봇 경로 획득 및 ROS 2 센서 세팅
     robot_asset = env.unwrapped.scene["robot"]
@@ -151,9 +190,21 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
             # 1️⃣ 에피소드 시작 시 환경 리셋
             env.reset()
             
+            # [수정] 사용자 요청에 따라 로봇 출발 위치를 (1.93, 0.0)으로 고정
+            START_X, START_Y = 1.93, 0.0
+            root_state = robot_asset.data.default_root_state.clone()
+            root_state[:, 0] = START_X
+            root_state[:, 1] = START_Y
+            root_state[:, 2] = 0.45 # 안정적인 스폰 높이
+            robot_asset.write_root_pose_to_sim(root_state[:, :7])
+            robot_asset.reset()
+            
             # [수정] 리셋 직후 로봇이 안정적으로 지면에 내려올 때까지 충분히 대기 (60스텝)
             for _ in range(60):
                 simulation_app.update()
+            
+            # [추가] Nav2에게 시작 위치와 목적지를 자동으로 전송
+            nav_node.send_nav2_goal(START_X, START_Y, GOAL_X, GOAL_Y)
             
             # 2️⃣ 장애물 랜덤 배치
             drawer_prim = stage.GetPrimAtPath(drawer_path)
@@ -207,6 +258,9 @@ def main(env_cfg, agent_cfg, *args, **kwargs):
                 actions = policy(obs)
                 obs_dict, _, terminated, truncated, _ = env.step(actions)
                 obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
+
+                # ROS 2 콜백 처리
+                rclpy.spin_once(nav_node, timeout_sec=0)
 
                 # [디버그] 명령 상태 출력 (0.5초 간격)
                 if int(time.time() * 2) % 2 == 0:

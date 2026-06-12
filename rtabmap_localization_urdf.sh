@@ -28,7 +28,7 @@ fi
 echo "🔗 Odom -> World Static TF 연결 중..."
 ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 odom World &
 
-echo "🔦 2. Depth 이미지를 2D Laser Scan으로 변환합니다 (충돌 방지 및 코스트맵 용)..."
+echo "🔦 2. Depth 이미지를 2D Laser Scan으로 변환합니다..."
 ros2 run depthimage_to_laserscan depthimage_to_laserscan_node \
     --ros-args \
     -r depth:=/go2_camera/depth/image_raw \
@@ -36,7 +36,7 @@ ros2 run depthimage_to_laserscan depthimage_to_laserscan_node \
     -r scan:=/scan \
     -p output_frame:=base \
     -p use_sim_time:=true \
-    -p scan_height:=20 \
+    -p scan_height:=10 \
     -p range_min:=0.2 \
     -p range_max:=5.0 &
 
