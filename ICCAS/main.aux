@@ -1,25 +1,39 @@
 \relax 
 \@writefile{toc}{\contentsline {section}{\numberline {1. \hskip -1em}Introduction}{1}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2. \hskip -1em}Related Work}{1}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1 \hskip -1em}RL-based Quadrupedal Locomotion}{1}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we build a high-fidelity 3DGS environment and train an RL locomotion policy to simulate camera bobbing noise for upper-level navigation tuning. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to optimize computational resources on the Jetson Orin NX.}}{2}{}\protected@file@percent }
-\newlabel{fig_system_overview}{{1}{2}{}{figure.1}{}}
+\citation{ref1}
+\citation{ref2}
+\citation{ref3}
+\citation{ref4}
+\citation{ref5}
+\@writefile{toc}{\contentsline {section}{\numberline {2. \hskip -1em}Related Work}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1 \hskip -1em}Reinforcement Learning for Quadrupedal Locomotion}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.2 \hskip -1em}Visual SLAM and Navigation Integration}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3. \hskip -1em}System and Locomotion Control}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1 \hskip -1em}System Overview}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1 \hskip -1em}System Architecture}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2 \hskip -1em}Locomotion Learning in Isaac Sim}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3 \hskip -1em}3DGS Environment Construction \& Agent Deployment}{2}{}\protected@file@percent }
+\citation{ref4}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we build a high-fidelity 3DGS environment and train an RL locomotion policy to simulate camera bobbing noise for upper-level navigation tuning. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to optimize computational resources on the Jetson Orin NX.}}{3}{}\protected@file@percent }
+\newlabel{fig_system_overview}{{1}{3}{}{figure.1}{}}
+\newlabel{eq_reward}{{1}{3}{}{equation.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3 \hskip -1em}3DGS Environment Construction \& Agent Deployment}{3}{}\protected@file@percent }
+\citation{ref2}
+\citation{ref5}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}}{4}{}\protected@file@percent }
+\newlabel{fig_3dgs_mesh}{{2}{4}{}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4. \hskip -1em}Autonomous Navigation}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1 \hskip -1em}Navigation System Configuration}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2 \hskip -1em}Validation in 3DGS Environment}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Autonomous navigation execution inside the reconstructed virtual environment, showing the simulated quadruped robot in Isaac Sim (left) and path planning/costmap synchronization in RViz (right).}}{4}{}\protected@file@percent }
+\newlabel{fig_sim_nav2}{{3}{4}{}{figure.3}{}}
 \bibcite{ref1}{1}
-\@writefile{toc}{\contentsline {section}{\numberline {4. \hskip -1em}Autonomous Navigation}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1 \hskip -1em}Navigation System Configuration}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2 \hskip -1em}Validation in 3DGS Environment}{3}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Visual SLAM and path planning validation inside the reconstructed 3DGS corridor environment. The reconstructed mesh provides accurate collision responses and realistic visual feedback.}}{3}{}\protected@file@percent }
-\newlabel{fig_sim_validation}{{2}{3}{}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3 \hskip -1em}Physical Deployment and Results}{3}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D455 and Jetson Orin NX, running the entire navigation stack on-board.}}{3}{}\protected@file@percent }
-\newlabel{fig_real_deployment}{{3}{3}{}{figure.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5. \hskip -1em}Conclusion}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Visual mapping results in the virtual sandbox. Top: Reconstructed 3D point cloud map from RTAB-Map. Bottom: Projected 2D occupancy grid map.}}{5}{}\protected@file@percent }
+\newlabel{fig_sim_validation}{{4}{5}{}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3 \hskip -1em}Physical Deployment and Results}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D435i and Jetson Orin NX, running the entire navigation stack on-board.}}{5}{}\protected@file@percent }
+\newlabel{fig_real_deployment}{{5}{5}{}{figure.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5. \hskip -1em}Conclusion}{5}{}\protected@file@percent }
 \bibcite{ref2}{2}
 \bibcite{ref3}{3}
 \bibcite{ref4}{4}
-\gdef \@abspage@last{4}
+\bibcite{ref5}{5}
+\gdef \@abspage@last{6}
