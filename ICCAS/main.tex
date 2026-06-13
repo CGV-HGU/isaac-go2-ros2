@@ -120,7 +120,7 @@ These images serve as the input to a Structure-from-Motion (SfM) workflow via CO
 \begin{figure}[thb]
 \begin{center}
 \vspace{-2mm}
-\includegraphics[width=0.55\linewidth]{figures/fig_3dgs_mesh.png}
+\includegraphics[width=0.8\linewidth]{figures/fig_3dgs_mesh.png}
 \vspace{-2mm}
 \caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}
 \vspace{-4mm}
@@ -141,25 +141,35 @@ A key technical challenge in establishing the simulation-based validation sandbo
 \subsection{Validation in 3DGS Environment}
 Prior to real-world deployment, the integrated navigation stack was validated in the 3DGS-based virtual corridor, which replicates the actual corridor dimensions of approximately 80~m in length and 2.5~m in width.
 
-During simulation, the policy network receives proprioceptive and exteroceptive observations at each time step. Proprioception comprises joint positions and velocities, base angular velocity, and gravity vector projection. Exteroception is emulated using a virtual height-scan grid ($1.6\text{ m} \times 1.0\text{ m}$ at a resolution of 0.1~m) centered on the robot base. Ray-casting queries the reconstructed 3DGS collision mesh to feed local elevation profiles to the policy, enabling adaptive foot placement. The reference command vector $[v_x, v_y, \omega_z]^T$ is supplied directly by the DWB local planner, which coordinates collision-free paths within the virtual environment as visualized in Fig.~\ref{fig_sim_validation}(a).
+During simulation, the policy network receives proprioceptive and exteroceptive observations at each time step. Proprioception comprises joint positions and velocities, base angular velocity, and gravity vector projection. Exteroception is emulated using a virtual height-scan grid ($1.6\text{ m} \times 1.0\text{ m}$ at a resolution of 0.1~m) centered on the robot base. Ray-casting queries the reconstructed 3DGS collision mesh to feed local elevation profiles to the policy, enabling adaptive foot placement. The reference command vector $[v_x, v_y, \omega_z]^T$ is supplied directly by the DWB local planner, which coordinates collision-free paths within the virtual environment as visualized in Fig.~\ref{fig_sim_nav2}.
 
-\begin{figure*}[t]
+\begin{figure}[thb]
 \begin{center}
-\includegraphics[width=0.44\textwidth]{figures/fig_sim_nav2.png}
-\hfill
-\includegraphics[width=0.22\textwidth]{figures/fig_3d_map.png}
-\hfill
-\includegraphics[width=0.22\textwidth]{figures/fig_2d_map.png}
-\caption{\label{fig_sim_validation}Simulation validation results in the virtual sandbox. (a) Nav2 navigation stack active in the 3DGS environment, showing the simulated quadruped in Isaac Sim (left) and path planning/costmap in RViz (right). (b) Reconstructed 3D point cloud map from RTAB-Map. (c) Projected 2D occupancy grid map.}
+\vspace{-2mm}
+\includegraphics[width=0.8\linewidth]{figures/fig_sim_nav2.png}
+\vspace{-2mm}
+\caption{\label{fig_sim_nav2}Autonomous navigation execution inside the reconstructed virtual environment, showing the simulated quadruped robot in Isaac Sim (left) and path planning/costmap synchronization in RViz (right).}
+\vspace{-4mm}
 \end{center}
-\end{figure*}
+\end{figure}
 
-To evaluate obstacle avoidance, virtual box obstacles were strategically placed along the corridor. As shown in Fig.~\ref{fig_sim_validation}(a), the local planner dynamically recalculated trajectories around the obstacles, and the RL locomotion policy adjusted its walking pattern to negotiate the detours without collision. The resulting 3D point cloud map and projected 2D occupancy grid map are shown in Fig.~\ref{fig_sim_validation}(b) and (c), respectively.
+\begin{figure}[thb]
+\begin{center}
+\vspace{-2mm}
+\includegraphics[width=0.48\linewidth]{figures/fig_3d_map.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{figures/fig_2d_map.png}
+\vspace{-2mm}
+\caption{\label{fig_sim_validation}Visual mapping results in the virtual sandbox. Left: Reconstructed 3D point cloud map from RTAB-Map. Right: Projected 2D occupancy grid map.}
+\vspace{-4mm}
+\end{center}
+\end{figure}
 
+To evaluate obstacle avoidance, virtual box obstacles were strategically placed along the corridor. As shown in Fig.~\ref{fig_sim_nav2}, the local planner dynamically recalculated trajectories around the obstacles, and the RL locomotion policy adjusted its walking pattern to negotiate the detours without collision. The resulting 3D point cloud map and projected 2D occupancy grid map are shown in Fig.~\ref{fig_sim_validation}.
 \begin{figure}[!t]
 \begin{center}
 \vspace{-2mm}
-\includegraphics[width=0.45\linewidth]{figures/fig_real_robot.jpg}
+\includegraphics[width=0.8\linewidth]{figures/fig_real_robot.jpg}
 \vspace{-2mm}
 \caption{\label{fig_real_deployment}Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D435i and Jetson Orin NX, running the entire navigation stack on-board.}
 \vspace{-4mm}
