@@ -10,7 +10,15 @@
 \usepackage{booktabs}
 \usepackage{diagbox}
 
+\linespread{0.97}
+
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.95}
+
 \begin{document}
+\raggedbottom
 
 \title{A Perceptual-Dynamic Gap Bridging Pipeline for Quadrupedal Visual Navigation using 3D Gaussian Splatting and RL-Induced Jitter}
 
@@ -41,6 +49,9 @@ To address these limitations, we propose a practical, bifurcated gap-bridging pi
 
 The contributions of this work are summarized as follows:
 \begin{enumerate}
+    \setlength{\itemsep}{1pt}
+    \setlength{\parskip}{0pt}
+    \setlength{\parsep}{0pt}
     \item We present a system integration pipeline that bridges the perceptual sim-to-real gap by incorporating DSLR-based 3DGS and \textit{fVDB} reconstruction into a physics simulator, establishing a photorealistic visual validation sandbox where virtual camera parameters are matched with the physical RGB-D camera.
     \item We bridge the dynamic sim-to-real gap by training an RL locomotion policy to serve as an active camera jitter generator, recreating quadruped-specific walking oscillations in the virtual sandbox.
     \item We demonstrate the feasibility of the pipeline by showing that navigation and mapping parameters optimized under simulated visual and dynamic disturbances transfer directly to a physical Unitree Go2 platform without real-world recalibration.
@@ -63,8 +74,11 @@ The proposed framework integrates RTAB-Map Visual SLAM, the Nav2 navigation stac
 
 \begin{figure*}[t]
 \begin{center}
+\vspace{-2mm}
 \includegraphics[width=\textwidth]{figures/fig_system_overview}
+\vspace{1mm}
 \caption{\label{fig_system_overview}Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we build a high-fidelity 3DGS environment and train an RL locomotion policy to simulate camera bobbing noise for upper-level navigation tuning. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to optimize computational resources on the Jetson Orin NX.}
+\vspace{-3.5mm}
 \end{center}
 \end{figure*}
 
@@ -73,6 +87,9 @@ The proposed framework integrates RTAB-Map Visual SLAM, the Nav2 navigation stac
 
 To synthesize representative legged locomotion dynamics and emulate physical camera bobbing noise in simulation, we train an RL policy in NVIDIA Isaac Lab (v2.3.2), built upon the Isaac Sim (v5.1.0) physics engine. The policy functions as a dynamic perturbation generator, producing walking-induced camera oscillations. We utilize the Procedural Terrain Generator in Isaac Lab to construct a training environment with mixed terrains, including uneven ground, ramps, and step obstacles. We employ curriculum learning to dynamically scale the terrain difficulty (e.g., obstacle heights and slope angles) in proportion to the robot's traversal success rate. To enhance the robustness of the policy and bridge the sim-to-real dynamics gap, we apply the following domain randomizations:
 \begin{itemize}
+    \setlength{\itemsep}{1pt}
+    \setlength{\parskip}{0pt}
+    \setlength{\parsep}{0pt}
     \item Torso mass randomization: $\Delta m \in [-1.0, +3.0]$~kg.
     \item Ground friction coefficient: $\mu \in [0.6, 0.8]$.
     \item External disturbances: impulse force perturbations applied to the robot's center of mass (CoM).
@@ -87,6 +104,9 @@ R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i}
 \end{equation}
 where:
 \begin{itemize}
+    \setlength{\itemsep}{1pt}
+    \setlength{\parskip}{0pt}
+    \setlength{\parsep}{0pt}
     \item $R_{lin} = \exp(-\|\mathbf{v}_{xy}^* - \mathbf{v}_{xy}\|_2^2 / \sigma_{lin}^2)$ is the linear velocity tracking reward, where $\mathbf{v}_{xy}^*$ and $\mathbf{v}_{xy}$ denote the target and actual base linear velocities, respectively ($w_{lin} = 1.5, \sigma_{lin} = 0.25$).
     \item $R_{ang} = \exp(-(\omega_{z}^* - \omega_{z})^2 / \sigma_{ang}^2)$ is the angular velocity tracking reward, where $\omega_{z}^*$ and $\omega_{z}$ denote the target and actual yaw rates, respectively ($w_{ang} = 0.75, \sigma_{ang} = 0.25$).
     \item $R_{air}$ denotes the foot clearance air-time reward to promote a distinct, symmetric gait ($w_{air} = 0.25$).
@@ -100,8 +120,11 @@ These images serve as the input to a Structure-from-Motion (SfM) workflow via CO
 
 \begin{figure}[thb]
 \begin{center}
+\vspace{-2mm}
 \includegraphics[width=0.8\linewidth]{figures/fig_3dgs_mesh.png}
+\vspace{1mm}
 \caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}
+\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
@@ -121,8 +144,11 @@ Prior to real-world deployment, the integrated navigation stack was validated in
 
 \begin{figure}[thb]
 \begin{center}
+\vspace{-2mm}
 \includegraphics[width=0.8\linewidth]{figures/fig_sim_nav2.png}
+\vspace{1mm}
 \caption{\label{fig_sim_nav2}Autonomous navigation execution inside the reconstructed virtual environment, showing the simulated quadruped robot in Isaac Sim (left) and path planning/costmap synchronization in RViz (right).}
+\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
@@ -130,10 +156,14 @@ During simulation, the policy network receives proprioceptive and exteroceptive 
 
 \begin{figure}[thb]
 \begin{center}
+\vspace{-2mm}
 \includegraphics[width=0.55\linewidth]{figures/fig_3d_map.png}
 \\
+\vspace{1.5mm}
 \includegraphics[width=0.55\linewidth]{figures/fig_2d_map.png}
+\vspace{1.5mm}
 \caption{\label{fig_sim_validation}Visual mapping results in the virtual sandbox. Top: Reconstructed 3D point cloud map from RTAB-Map. Bottom: Projected 2D occupancy grid map.}
+\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
@@ -144,8 +174,11 @@ Following virtual verification, the visual navigation pipeline was deployed on a
 
 \begin{figure}[thb]
 \begin{center}
+\vspace{-2mm}
 \includegraphics[width=0.8\linewidth]{figures/fig_real_robot.jpg}
+\vspace{1mm}
 \caption{\label{fig_real_deployment}Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D435i and Jetson Orin NX, running the entire navigation stack on-board.}
+\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
@@ -163,6 +196,9 @@ Future work will focus on incorporating dynamic obstacle avoidance strategies an
 This research was supported by the National Research Foundation of Korea (NRF) grant funded by the Korean government (MSIT) (No. RS-2025-24683458).
 
 \begin{thebibliography}{99}
+\footnotesize
+\setlength{\itemsep}{-1.5pt}
+\setlength{\parskip}{0pt}
 
 \bibitem{ref1}
 J. Hwangbo, J. Lee, A. Dosovitskiy, D. Bellicoso, V. Tsounis, V. Koltun, and M. Hutter, ``Learning agile and dynamic motor skills for legged robots,'' \textit{Science Robotics}, vol. 4, no. 26, p. eaau5872, 2019.
