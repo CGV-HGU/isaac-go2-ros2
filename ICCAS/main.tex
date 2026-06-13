@@ -98,10 +98,10 @@ The physics simulation step size is configured to 200~Hz, and the policy control
 
 The policy is trained using the PPO implementation in the PyTorch-based \textit{skrl} library. Both the actor and critic networks are parameterized as Multilayer Perceptrons (MLPs) with hidden layers of $[512, 256, 128]$ and Exponential Linear Unit (ELU) activation functions. The initial learning rate is $1.0 \times 10^{-3}$, regulated by a KL-divergence adaptive scheduler with a target threshold of $0.01$. The discount factor is $\gamma=0.99$, and the Generalized Advantage Estimator (GAE) parameter is $\lambda=0.95$.
 
-The reward function is formulated to track velocity references while maintaining stable legged posture. The total reward $R$ is defined as:
+The reward function is formulated to track velocity references while maintaining stable legged posture. The total reward $R$ is defined as shown in Eq. (\ref{eq_reward}):
 \vspace{-1.5mm}
 \begin{equation}
-R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i}
+R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i} \label{eq_reward}
 \end{equation}
 \vspace{-2.5mm}
 where:
