@@ -94,13 +94,11 @@ where:
 \subsection{3DGS Environment Construction \& Agent Deployment}
 To construct the virtual sandbox, we capture high-resolution corridor images using a DSLR camera, avoiding mobile device compression artifacts. These images serve as input to COLMAP for Structure-from-Motion (SfM) to resolve camera poses. Then, a 3DGS \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a PLY mesh for coarse geometry. To bridge the gap between photorealistic visualization and physical collision, the scene is integrated with NVIDIA's sparse volumetric framework, \textit{fVDB}, as shown in Fig.~\ref{fig_3dgs_mesh}.
 
-\begin{figure}[thb]
+\begin{figure}[!t]
 \begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_3dgs_mesh.jpg}
-\vspace{1mm}
+\includegraphics[width=0.75\linewidth]{figures/fig_3dgs_mesh.jpg}
+\vspace{1.5mm}
 \caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}
-\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
@@ -118,28 +116,23 @@ A key challenge is resolving the coordinate transform (TF) tree discrepancy betw
 \subsection{Validation in 3DGS Environment}
 We validated the integrated navigation stack in the 3DGS-based virtual corridor (80~m long, 2.5~m wide) before physical deployment.
 
-\begin{figure}[thb]
+\begin{figure}[!t]
 \begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_sim_nav2.jpg}
-\vspace{1mm}
+\includegraphics[width=0.75\linewidth]{figures/fig_sim_nav2.jpg}
+\vspace{1.5mm}
 \caption{\label{fig_sim_nav2}Autonomous navigation execution inside the reconstructed virtual environment, showing the simulated quadruped robot in Isaac Sim (left) and path planning/costmap synchronization in RViz (right).}
-\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
 In simulation, the policy receives proprioceptive (joint states, angular velocity, gravity projection) and exteroceptive (a $1.6\text{ m} \times 1.0\text{ m}$ height-scan grid) observations. Ray-casting queries the 3DGS collision mesh to feed local elevation profiles to the policy for adaptive foot placement. The velocity commands are supplied by the DWB planner, which coordinates collision-free paths (Fig.~\ref{fig_sim_nav2}).
 
-\begin{figure}[thb]
+\begin{figure}[!t]
 \begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.55\linewidth]{figures/fig_3d_map.jpg}
+\includegraphics[width=0.5\linewidth]{figures/fig_3d_map.jpg}
 \\
 \vspace{1.5mm}
-\includegraphics[width=0.55\linewidth]{figures/fig_2d_map.png}
-\vspace{1.5mm}
+\includegraphics[width=0.5\linewidth]{figures/fig_2d_map.png}
 \caption{\label{fig_sim_validation}Visual mapping results in the virtual sandbox. Top: Reconstructed 3D point cloud map from RTAB-Map. Bottom: Projected 2D occupancy grid map.}
-\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
@@ -148,13 +141,11 @@ To evaluate obstacle avoidance, virtual box obstacles were placed along the corr
 \subsection{Physical Deployment and Results}
 Following virtual validation, the pipeline was deployed on a physical Unitree Go2 platform in Oseok Hall corridor (Fig.~\ref{fig_real_deployment}). The onboard hardware consists of an NVIDIA Jetson Orin NX (20W mode, 16GB RAM) running Ubuntu 20.04 and ROS 2 Foxy. To satisfy resource constraints, the computationally heavy DRL locomotion policy was bypassed. Instead, Nav2 velocity commands were routed directly to the robot's proprietary motor controller via the Unitree Sport API using a custom ROS 2 bridge. This reserves Jetson Orin NX resources for RTAB-Map visual SLAM and Nav2 planning. The D435i sensor was connected via USB 3.0.
 
-\begin{figure}[thb]
+\begin{figure}[!t]
 \begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_real_robot.jpg}
-\vspace{1mm}
+\includegraphics[width=0.75\linewidth]{figures/fig_real_robot.jpg}
+\vspace{1.5mm}
 \caption{\label{fig_real_deployment}Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D435i and Jetson Orin NX, running the entire navigation stack on-board.}
-\vspace{-3.5mm}
 \end{center}
 \end{figure}
 

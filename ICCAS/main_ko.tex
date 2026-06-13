@@ -92,13 +92,11 @@ R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i}
 \subsection{3DGS 환경 구축 및 에이전트 배포}
 모바일 기기의 압축 왜곡을 배제하기 위해 DSLR로 복도 이미지를 촬영하고, COLMAP의 SfM을 활용해 카메라 pose를 추출한다. 이를 기반으로 3DGS \cite{ref4} 모델을 최적화하여 visual USDZ 및 geometric PLY mesh로 추출한다. 충돌 연산을 위해 이를 NVIDIA의 sparse volumetric framework \textit{fVDB}와 통합한다 (Fig.~\ref{fig_3dgs_mesh}).
 
-\begin{figure}[thb]
+\begin{figure}[!t]
 \begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_3dgs_mesh.jpg}
-\vspace{1mm}
+\includegraphics[width=0.75\linewidth]{figures/fig_3dgs_mesh.jpg}
+\vspace{1.5mm}
 \caption{\label{fig_3dgs_mesh}캠퍼스 복도에 대한 디지털 트윈 표현. 왼쪽: fVDB를 사용해 생성한 sparse volumetric collision mesh. 오른쪽: 고충실도 사실적 3DGS render.}
-\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
@@ -116,44 +114,38 @@ RTAB-Map은 RGB 스트림의 keypoint (GFTT/ORB 등)를 추출해 비전 주행�
 \subsection{3DGS 환경에서의 검증}
 물리 배포 전, 3DGS 기반 디지털 트윈 복도 (길이 80~m, 폭 2.5~m)에서 자율주행 성능을 사전 검증했다.
 
-\begin{figure}[thb]
+\begin{figure}[!t]
 \begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_sim_nav2.jpg}
-\vspace{1mm}
+\includegraphics[width=0.75\linewidth]{figures/fig_sim_nav2.jpg}
+\vspace{1.5mm}
 \caption{\label{fig_sim_nav2}재구성된 가상 환경 내부에서의 자율주행 실행 장면. 왼쪽은 Isaac Sim 안의 시뮬레이션 사족 보행 로봇을, 오른쪽은 RViz에서의 경로 계획 및 costmap 동기화를 보여준다.}
-\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
 시뮬레이션에서 보행 정책은 관성 데이터 (관절각, base angular 속도, 중력 투영)와 $1.6\text{ m} \times 1.0\text{ m}$ height-scan 그리드의 Ray-casting으로 3DGS collision mesh를 조회하여 exteroceptive elevation 정보를 수신하며 발목 조절을 달성한다. 목표 속도는 DWB 로컬 플래너로부터 수급한다 (Fig.~\ref{fig_sim_nav2}).
 
-\begin{figure}[thb]
+\begin{figure}[!t]
 \begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.55\linewidth]{figures/fig_3d_map.png}
+\includegraphics[width=0.5\linewidth]{figures/fig_3d_map.jpg}
 \\
 \vspace{1.5mm}
-\includegraphics[width=0.55\linewidth]{figures/fig_2d_map.png}
-\vspace{1.5mm}
+\includegraphics[width=0.5\linewidth]{figures/fig_2d_map.png}
 \caption{\label{fig_sim_validation}가상 sandbox에서의 visual mapping 결과. 위: RTAB-Map으로 재구성한 3D point cloud map. 아래: 투영된 2D occupancy grid map.}
-\vspace{-3.5mm}
 \end{center}
 \end{figure}
 
 장애물 회피 성능을 평가하기 위해 가상 box 장애물을 복도에 전략적으로 배치하였다. Fig.~\ref{fig_sim_nav2}에 보인 것처럼 local planner는 장애물 주변으로 trajectory를 동적으로 재계산하였고, RL 보행 정책은 보행 패턴을 조정하여 충돌 없이 우회 경로를 통과하였다. 그 결과 생성된 3D point cloud map과 투영된 2D occupancy grid map은 Fig.~\ref{fig_sim_validation}에 나타내었다.
-\begin{figure}[!t]
-\begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_real_robot.jpg}
-\vspace{1mm}
-\caption{\label{fig_real_deployment}실제 환경 실험 구성. Unitree Go2 로봇에는 Intel RealSense D435i와 Jetson Orin NX가 장착되어 있으며, 전체 navigation stack은 온보드로 실행된다.}
-\vspace{-3.5mm}
-\end{center}
-\end{figure}
 
 \subsection{물리 로봇 배포 및 결과}
 가상 검증 이후, 비전 주행 파이프라인은 한동대학교 오석관 3층 실제 복도에서 물리 Unitree Go2 Edu Plus 사족 보행 플랫폼에 배포되었다. 온보드 연산 하드웨어는 NVIDIA Jetson Orin NX(20W power mode, 16GB RAM)와 로봇 내장 expansion dock으로 구성되며, 모두 Ubuntu 20.04 및 ROS 2 Foxy를 실행한다. 엄격한 연산 자원 제약을 만족하기 위해 물리 배포 단계에서는 PyTorch 기반 DRL 보행 정책을 우회하였다. 대신 Nav2가 생성한 local trajectory command($\mathbf{v}_{cmd}$)는 Unitree Sport API를 통해 로봇의 독점 저수준 motor controller로 직접 매핑되었다. 이러한 명령을 전달하기 위해 Jetson Orin NX에서 경량 ROS 2 bridge를 개발하였고, 이를 통해 처리 자원을 RTAB-Map visual SLAM과 Nav2 planning에 집중하도록 하였다. Intel RealSense D435i depth camera는 USB 3.0을 통해 Jetson Orin NX에 직접 연결되었다.
+
+\begin{figure}[!t]
+\begin{center}
+\includegraphics[width=0.75\linewidth]{figures/fig_real_robot.jpg}
+\vspace{1.5mm}
+\caption{\label{fig_real_deployment}실제 환경 실험 구성. Unitree Go2 로봇에는 Intel RealSense D435i와 Jetson Orin NX가 장착되어 있으며, 전체 navigation stack은 온보드로 실행된다.}
+\end{center}
+\end{figure}
 
 물리 배포에서의 주요 실제적 문제는 가상 시뮬레이션 환경과 물리 로봇 설정 사이의 operating system(OS) 및 ROS 2 version 불일치이다. 시뮬레이션 검증 환경은 Ubuntu 24.04 및 ROS 2 Jazzy에서 개발되었지만, 물리 로봇의 onboard computing 환경은 제조사 firmware 의존성으로 인해 Ubuntu 20.04 및 ROS 2 Foxy로 제한된다. 이러한 차이를 연결하기 위해 visual navigation stack(RTAB-Map 및 Nav2)을 ROS 2 Jazzy에서 ROS 2 Foxy로 migration하여 물리 Jetson Orin NX에서 native로 실행되도록 하였다. 이러한 cross-version migration에도 불구하고 전체 visual navigation flow와 architecture는 시뮬레이션 환경에서 테스트한 것과 동일하게 유지된다. 이 호환성 덕분에 시뮬레이션된 RL ego-motion noise 조건에서 최적화된 navigation parameter, 구체적으로 costmap inflation radius, voxel grid resolution, visual loop-closure matching threshold를 물리 Foxy 플랫폼에 직접 적용할 수 있었으며, 파라미터 재조정 없이 성공적인 직접 sim-to-real 전이를 달성하였다.
 
