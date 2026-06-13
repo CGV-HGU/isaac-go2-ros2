@@ -9,16 +9,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{diagbox}
-
-\linespread{0.97}
-
-\renewcommand{\topfraction}{0.95}
-\renewcommand{\bottomfraction}{0.95}
-\renewcommand{\textfraction}{0.05}
-\renewcommand{\floatpagefraction}{0.95}
-
 \begin{document}
-\raggedbottom
 
 \title{A Perceptual-Dynamic Gap Bridging Pipeline for Quadrupedal Visual Navigation using 3D Gaussian Splatting and RL-Induced Jitter}
 
@@ -41,17 +32,14 @@ Handong Global University, Pohang 37554, Republic of Korea \\
 %-----------------------------------------------------------------------
 
 \section{Introduction}
-Autonomous quadrupedal robots have attracted substantial attention due to their superior mobility in traversing challenging and unstructured terrains compared to conventional wheeled systems. Achieving fully autonomous operations in indoor environments requires the seamless integration of stable legged locomotion and high-fidelity simultaneous localization and mapping (SLAM). Conventionally, indoor navigation has relied on Light Detection and Ranging (LiDAR) sensors. However, LiDARs are cost-prohibitive, heavy, and power-intensive, which makes visual navigation using a single, lightweight RGB-D camera a highly desirable, cost-effective alternative.
+Autonomous quadrupedal robots offer superior mobility in traversing challenging terrains compared to conventional wheeled systems. Achieving indoor autonomy requires the integration of legged locomotion and simultaneous localization and mapping (SLAM). Indoor navigation has conventionally relied on Light Detection and Ranging (LiDAR) sensors. However, LiDARs are costly, heavy, and power-intensive, making visual navigation using a single lightweight RGB-D camera a desirable and cost-effective alternative.
 
-Nevertheless, deploying visual navigation using a single RGB-D camera on a legged platform introduces two critical sim-to-real challenges. First is the \textit{perceptual sim-to-real gap}: standard physics simulators generate synthetic environments that lack photo-realistic visual textures and depth fidelity, causing feature-based visual SLAM to fail in the real world due to severe matching errors. Second is \textit{locomotion-induced ego-motion noise} (commonly referred to as bobbing noise): legged locomotion inherently generates periodic, high-frequency camera oscillations that cause motion blur and introduce temporal depth discrepancies (phantom obstacles). Because quadrupedal robots are highly expensive, sophisticated platforms, directly tuning navigation parameters on physical hardware to mitigate these disturbances is heavily constrained. Real-world experiments face strict time limits due to battery capacity, and any control or mapping failure during parameter tuning poses severe risks of collision-induced physical damage to the costly robot.
+However, visual navigation on legged platforms introduces two major sim-to-real challenges. First is the \textit{perceptual sim-to-real gap}: standard simulators lack photorealistic visual textures and depth fidelity, causing feature-based visual SLAM to fail in the real world due to matching errors. Second is \textit{locomotion-induced ego-motion noise} (camera bobbing): legged locomotion generates periodic oscillations that cause motion blur and temporal depth discrepancies (phantom obstacles). Furthermore, tuning parameters directly on physical hardware is constrained by battery capacity and the risk of collision-induced damage to expensive platforms.
 
-To address these limitations, we propose a practical, bifurcated gap-bridging pipeline for quadrupedal visual navigation utilizing a single front-facing RGB-D camera (Intel RealSense D435i). Our framework decouples virtual-space parameter verification from physical-space system deployment. Crucially, by using DSLR photos for offline 3DGS reconstruction and matching the virtual camera's parameters with the physical D435i sensor, we minimize the sensor discrepancy. In the simulation phase, we reconstruct a photorealistic digital twin of an indoor corridor using 3DGS. Because the robot's proprietary, low-level controller cannot be integrated directly into the physics simulator, we train a model-free RL locomotion policy in Isaac Lab to emulate physical gait characteristics, thereby generating representative camera ego-motion noise in the virtual environment. Under this synthesized visual and dynamic sandbox, we optimize the parameters of the RTAB-Map and Nav2 frameworks. Upon physical deployment, the deep neural network policy is bypassed, and navigation commands are routed to the manufacturer's built-in Sport API via a lightweight ROS 2 bridge, reserving the edge computer's resource budget for visual SLAM and navigation.
+To address these challenges, we propose a practical, bifurcated pipeline for quadrupedal visual navigation using a single front-facing RGB-D camera (Intel RealSense D435i). Our framework decouples virtual-space parameter verification from physical-space deployment. By using DSLR photos for offline 3DGS reconstruction and matching the virtual camera's parameters with the physical sensor, we minimize sensor discrepancy. In the simulation phase, we reconstruct a photorealistic digital twin of an indoor corridor. Because the robot's low-level controller cannot be integrated directly into the physics simulator, we train a model-free RL locomotion policy in Isaac Lab to emulate physical gait characteristics, generating representative camera ego-motion noise. Under this sandbox, we optimize the parameters of the RTAB-Map and Nav2 frameworks. Upon physical deployment, the computationally heavy RL policy is bypassed, and navigation commands are routed directly to the manufacturer's built-in Sport API via a ROS 2 bridge, saving edge computing resources for visual SLAM and navigation.
 
 The contributions of this work are summarized as follows:
 \begin{enumerate}
-    \setlength{\itemsep}{1pt}
-    \setlength{\parskip}{0pt}
-    \setlength{\parsep}{0pt}
     \item We present a system integration pipeline that bridges the perceptual sim-to-real gap by incorporating DSLR-based 3DGS and \textit{fVDB} reconstruction into a physics simulator, establishing a photorealistic visual validation sandbox where virtual camera parameters are matched with the physical RGB-D camera.
     \item We bridge the dynamic sim-to-real gap by training an RL locomotion policy to serve as an active camera jitter generator, recreating quadruped-specific walking oscillations in the virtual sandbox.
     \item We demonstrate the feasibility of the pipeline by showing that navigation and mapping parameters optimized under simulated visual and dynamic disturbances transfer directly to a physical Unitree Go2 platform without real-world recalibration.
@@ -59,18 +47,17 @@ The contributions of this work are summarized as follows:
 
 \section{Related Work}
 \subsection{Reinforcement Learning for Quadrupedal Locomotion}
-Reinforcement learning (RL) has significantly advanced control paradigms for legged systems \cite{ref1}. Classical model-based methods, such as Model Predictive Control (MPC) and Whole-Body Control (WBC), rely heavily on accurate system dynamics and environmental contact models. Conversely, model-free RL algorithms enable quadrupedal platforms to acquire robust locomotion policies through trial-and-error interactions. The advent of highly parallelized physics simulators, such as NVIDIA Isaac Sim and Isaac Lab, has facilitated the training of deep RL policies across thousands of concurrent environments. This paradigm has enabled successful real-world deployments of agile legged locomotion on systems such as ANYmal and Unitree Go1/Go2. Through domain randomization and curriculum learning, researchers have minimized the dynamics gap, allowing policies to transfer directly from simulation to physical platforms. However, most existing locomotion research focuses primarily on gait stability and disturbance rejection, leaving high-level visual navigation integration and sensor noise characteristics largely unaddressed.
+Reinforcement learning (RL) has advanced control paradigms for legged systems \cite{ref1}. While classical methods like Model Predictive Control (MPC) rely heavily on accurate dynamics, model-free RL enables robots to acquire robust policies. Highly parallelized simulators, such as NVIDIA Isaac Sim and Isaac Lab, facilitate training deep RL policies across thousands of concurrent environments, enabling successful sim-to-real transfer on systems like ANYmal and Unitree Go1/Go2. However, most locomotion research focuses primarily on gait stability, leaving high-level visual navigation integration and sensor noise characteristics unaddressed.
 
 \subsection{Visual SLAM and Navigation Integration}
-Mobile robot navigation has classically relied on Light Detection and Ranging (LiDAR) sensors due to their high spatial accuracy and wide field of view. Nonetheless, LiDARs are often cost-prohibitive, heavy, and power-intensive, making them less suitable for payload- and power-constrained quadruped robots. Visual SLAM (VSLAM) utilizing RGB-D cameras offers a lightweight, cost-effective alternative. Among state-of-the-art visual SLAM frameworks, Real-Time Appearance-Based Mapping (RTAB-Map) \cite{ref2} is widely adopted due to its ability to perform appearance-based loop closure detection combined with pose-graph optimization, producing drift-minimized trajectory estimates. Simultaneously, the ROS 2 Navigation (Nav2) framework \cite{ref3} has established itself as the industry standard for path planning and obstacle avoidance.
+Mobile robot navigation has classically relied on LiDAR sensors. However, LiDARs are heavy and power-intensive, making them less suitable for payload-constrained quadruped robots. Visual SLAM (VSLAM) utilizing RGB-D cameras offers a lightweight alternative. Among VSLAM frameworks, Real-Time Appearance-Based Mapping (RTAB-Map) \cite{ref2} is widely adopted for its appearance-based loop closure detection and pose-graph optimization. Simultaneously, the ROS 2 Navigation (Nav2) framework \cite{ref3} serves as the industry standard for path planning and obstacle avoidance.
 
-Although recent works have leveraged 3DGS \cite{ref4} to construct photorealistic digital twins for legged locomotion and navigation, such as \mbox{VR-Robo} \cite{ref5}, they often rely on heterogeneous sensors. For instance, \mbox{VR-Robo} captures environmental scenes using high-end consumer mobile devices (e.g., iPads or iPhones) for offline 3DGS model building, but deploys the trained policy using an action camera (e.g., Insta360 Ace) mounted on the physical quadruped. Deploying digital twins across different hardware setups introduces a device-level perceptual sensor gap, such as mismatched lens distortion models, distinct color profiles, and different field-of-view (FOV) boundaries. In contrast, our pipeline uses a high-resolution DSLR camera for offline 3DGS reconstruction, and configures the virtual camera inside Isaac Sim to match the FOV and resolution of the physical D435i RGB-D camera. This parameter synchronization minimizes discrepancies between virtual visual feedback and real-world deployment.
+Although works like \mbox{VR-Robo} \cite{ref5} leverage 3DGS \cite{ref4} to build digital twins, they often rely on heterogeneous sensors (e.g., using an iPad for modeling and an action camera for deployment). This introduces device-level sensor discrepancies, such as mismatched lens distortions and field-of-view (FOV) boundaries. In contrast, our pipeline uses a DSLR camera for offline 3DGS reconstruction and configures the virtual camera to match the physical D435i RGB-D camera. This parameter synchronization minimizes visual domain discrepancies.
 
 \section{System and Locomotion Control}
 \subsection{System Architecture}
 
-
-The proposed framework integrates RTAB-Map Visual SLAM, the Nav2 navigation stack, and a bifurcated locomotion control architecture. The control architecture utilizes a Deep Reinforcement Learning (DRL) locomotion policy for virtual validation and transitions to the robot's native, low-level Sport API for physical deployment. In the simulation phase, the DRL policy—trained via Proximal Policy Optimization (PPO) in Isaac Lab (v2.3.2) on Isaac Sim (v5.1.0)—is employed to generate representative quadrupedal gait dynamics and camera ego-motion (bobbing) noise. High-level velocity commands ($\mathbf{v}_{cmd} = [v_x, v_y, \omega_z]^T$) computed by the Nav2 local planner are mapped directly to the policy's action space. During real-world deployment, the computationally heavy DRL policy is bypassed to conserve edge computational resources, and Nav2 velocity commands are routed directly to the Unitree Sport API via a custom ROS 2 bridge. This resource-efficient architecture optimizes the computational budget of the Jetson Orin NX. The system architecture is illustrated in Fig.~\ref{fig_system_overview}.
+Our framework integrates RTAB-Map, Nav2, and a bifurcated locomotion control architecture. In simulation, a DRL policy—trained via Proximal Policy Optimization (PPO) in Isaac Lab (v2.3.2) on Isaac Sim (v5.1.0)—generates representative quadrupedal gait dynamics and camera ego-motion (bobbing) noise. High-level velocity commands ($\mathbf{v}_{cmd} = [v_x, v_y, \omega_z]^T$) from the Nav2 local planner are mapped directly to the policy's action space. During real-world deployment, the heavy DRL policy is bypassed to conserve resources, and velocity commands are routed directly to the Unitree Sport API via a ROS 2 bridge. This architecture optimizes the computational budget of the Jetson Orin NX. The system architecture is shown in Fig.~\ref{fig_system_overview}.
 
 \begin{figure*}[t]
 \begin{center}
@@ -84,80 +71,69 @@ The proposed framework integrates RTAB-Map Visual SLAM, the Nav2 navigation stac
 
 \subsection{Locomotion Learning in Isaac Sim}
 
-
-To synthesize representative legged locomotion dynamics and emulate physical camera bobbing noise in simulation, we train an RL policy in NVIDIA Isaac Lab (v2.3.2), built upon the Isaac Sim (v5.1.0) physics engine. The policy functions as a dynamic perturbation generator, producing walking-induced camera oscillations. We utilize the Procedural Terrain Generator in Isaac Lab to construct a training environment with mixed terrains, including uneven ground, ramps, and step obstacles. We employ curriculum learning to dynamically scale the terrain difficulty (e.g., obstacle heights and slope angles) in proportion to the robot's traversal success rate. To enhance the robustness of the policy and bridge the sim-to-real dynamics gap, we apply the following domain randomizations:
+To simulate camera bobbing noise, we train an RL policy in NVIDIA Isaac Lab (v2.3.2) on the Isaac Sim (v5.1.0) physics engine. The policy functions as a dynamic perturbation generator, producing walking-induced oscillations. We construct a training environment with mixed terrains (uneven ground, ramps, step obstacles) using the Procedural Terrain Generator and scale terrain difficulty via curriculum learning. To enhance policy robustness, we apply the following domain randomizations:
 \begin{itemize}
-    \setlength{\itemsep}{1pt}
-    \setlength{\parskip}{0pt}
-    \setlength{\parsep}{0pt}
     \item Torso mass randomization: $\Delta m \in [-1.0, +3.0]$~kg.
     \item Ground friction coefficient: $\mu \in [0.6, 0.8]$.
     \item External disturbances: impulse force perturbations applied to the robot's center of mass (CoM).
 \end{itemize}
-The physics simulation step size is configured to 200~Hz, and the policy control loop executes at 50~Hz (decimation factor of 4).
+The physics step is 200~Hz, and the policy executes at 50~Hz. Training uses the PPO implementation in the PyTorch-based \textit{skrl} library. Both actor and critic networks are Multilayer Perceptrons (MLPs) with hidden layers of $[512, 256, 128]$ and ELU activation functions. The learning rate is $1.0 \times 10^{-3}$, regulated by a KL-divergence scheduler. The discount factor is $\gamma=0.99$, and the GAE parameter is $\lambda=0.95$.
 
-The policy is trained using the PPO implementation in the PyTorch-based \textit{skrl} library. Both the actor and critic networks are parameterized as Multilayer Perceptrons (MLPs) with hidden layers of $[512, 256, 128]$ and Exponential Linear Unit (ELU) activation functions. The initial learning rate is $1.0 \times 10^{-3}$, regulated by a KL-divergence adaptive scheduler with a target threshold of $0.01$. The discount factor is $\gamma=0.99$, and the Generalized Advantage Estimator (GAE) parameter is $\lambda=0.95$.
-
-The reward function is formulated to track velocity references while maintaining stable legged posture. The total reward $R$ is defined as shown in Eq. (\ref{eq_reward}):
+The reward function tracks velocity references while maintaining legged stability. The total reward $R$ is:
 \begin{equation}
 R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i} \label{eq_reward}
 \end{equation}
 where:
 \begin{itemize}
-    \setlength{\itemsep}{1pt}
-    \setlength{\parskip}{0pt}
-    \setlength{\parsep}{0pt}
-    \item $R_{lin} = \exp(-\|\mathbf{v}_{xy}^* - \mathbf{v}_{xy}\|_2^2 / \sigma_{lin}^2)$ is the linear velocity tracking reward, where $\mathbf{v}_{xy}^*$ and $\mathbf{v}_{xy}$ denote the target and actual base linear velocities, respectively ($w_{lin} = 1.5, \sigma_{lin} = 0.25$).
-    \item $R_{ang} = \exp(-(\omega_{z}^* - \omega_{z})^2 / \sigma_{ang}^2)$ is the angular velocity tracking reward, where $\omega_{z}^*$ and $\omega_{z}$ denote the target and actual yaw rates, respectively ($w_{ang} = 0.75, \sigma_{ang} = 0.25$).
-    \item $R_{air}$ denotes the foot clearance air-time reward to promote a distinct, symmetric gait ($w_{air} = 0.25$).
-    \item $P_i$ constitutes the penalty terms enforcing physical constraints: minimizing base vertical linear velocity, roll/pitch oscillations, deviations from nominal joint limits, excessive torque commands, rapid joint accelerations, and unintended structural contact ($w_{p,i}$ are the corresponding penalty weights).
+    \item $R_{lin} = \exp(-\|\mathbf{v}_{xy}^* - \mathbf{v}_{xy}\|_2^2 / \sigma_{lin}^2)$ is the linear velocity tracking reward ($\mathbf{v}_{xy}^*$ and $\mathbf{v}_{xy}$ are target and actual velocities, $w_{lin} = 1.5, \sigma_{lin} = 0.25$).
+    \item $R_{ang} = \exp(-(\omega_{z}^* - \omega_{z})^2 / \sigma_{ang}^2)$ is the angular velocity tracking reward ($\omega_{z}^*$ and $\omega_{z}$ are target and actual yaw rates, $w_{ang} = 0.75, \sigma_{ang} = 0.25$).
+    \item $R_{air}$ is the foot clearance air-time reward ($w_{air} = 0.25$).
+    \item $P_i$ represents penalty terms for base vertical velocity, roll/pitch oscillations, joint limits, excessive torque, joint acceleration, and unintended contact ($w_{p,i}$ are penalty weights).
 \end{itemize}
 
 \subsection{3DGS Environment Construction \& Agent Deployment}
-To construct a high-fidelity virtual verification sandbox, we establish a structured neural reconstruction pipeline that converts physical environments into interactive simulation assets. First, we capture high-resolution corridor images using a DSLR camera. This DSLR setup yields sharp textures and color fidelity crucial for high-quality 3DGS modeling, while avoiding the aggressive post-processing and compression artifacts of smartphone sensors. 
-
-These images serve as the input to a Structure-from-Motion (SfM) workflow via COLMAP to resolve sparse camera poses and initial point clouds. Based on these poses, a 3D Gaussian Splatting (3DGS) \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a Polygon Mesh PLY file for coarse geometry. To bridge the gap between photorealistic visualization and physical collision, the reconstructed scene is integrated with NVIDIA's sparse volumetric data framework, \textit{fVDB}, as shown in Fig.~\ref{fig_3dgs_mesh}.
+To construct the virtual sandbox, we capture high-resolution corridor images using a DSLR camera, avoiding mobile device compression artifacts. These images serve as input to COLMAP for Structure-from-Motion (SfM) to resolve camera poses. Then, a 3DGS \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a PLY mesh for coarse geometry. To bridge the gap between photorealistic visualization and physical collision, the scene is integrated with NVIDIA's sparse volumetric framework, \textit{fVDB}, as shown in Fig.~\ref{fig_3dgs_mesh}.
 
 \begin{figure}[thb]
 \begin{center}
 \vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_3dgs_mesh.png}
+\includegraphics[width=0.8\linewidth]{figures/fig_3dgs_mesh.jpg}
 \vspace{1mm}
 \caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}
 \vspace{-3.5mm}
 \end{center}
 \end{figure}
 
-We import the combined USDZ and mesh assets into NVIDIA Isaac Sim (v5.1.0). Within the simulator, the NuRec engine utilizes the volumetric \textit{fVDB} representations to compute high-resolution collision boundaries and dynamic depth queries (\textit{GS Collision / Depth}). Finally, a ROS 2 bridge is established to connect the virtual environment to our external navigation stack; this bridge publishes virtual RGB-D camera sensor streams, visualizes the robot state in RViz, and routes the local planner's velocity commands back to the simulated agent. Within the simulator, we configure the virtual camera's field-of-view and resolution to match the physical Intel RealSense D435i. Using Isaac Sim's virtual camera module, the simulated RGB-D streams replicate the physical camera's feedback, minimizing the perceptual domain shift between the virtual environment and real-world deployment. The pre-trained DRL locomotion policy is then deployed directly on the Go2 model inside the reconstructed environment without further tuning. Despite the intricate geometric features and narrow corridor boundaries, the policy maintains robust gait characteristics, validating the effectiveness of the domain-randomized training regimen.
+We import these assets into Isaac Sim (v5.1.0), where the NuRec engine utilizes the volumetric \textit{fVDB} representation to compute collision boundaries. A ROS 2 bridge publishes virtual RGB-D sensor streams, visualizes the robot state in RViz, and routes velocity commands. The virtual camera's field-of-view and resolution are configured to match the physical D435i camera, minimizing the perceptual domain shift. The pre-trained DRL locomotion policy is then deployed directly on the Go2 model in simulation. Despite the narrow corridor boundaries, the policy maintains robust gait characteristics, validating the effectiveness of the domain-randomized training.
 
 \section{Autonomous Navigation}
 \subsection{Navigation System Configuration}
 
-The proposed navigation system consists of a cost-effective, LiDAR-free visual navigation pipeline incorporating an Intel RealSense D435i RGB-D sensor, the RTAB-Map visual SLAM framework \cite{ref2}, and the ROS 2 Nav2 stack. The D435i is rigidly mounted to the front torso of the Unitree Go2. Within the virtual sandbox, a simulated RGB-D sensor replicates matching color and depth profiles. Using a single RGB-D sensor for the entire pipeline also guarantees depth-texture consistency. While frameworks relying purely on monocular RGB reconstruction (e.g., \mbox{VR-Robo} \cite{ref5}) face geometric holes in textureless regions (such as solid walls or floors) due to photometric ambiguities, our use of the D435i's active depth sensor allows us to project robust metric local costmaps.
+The navigation system consists of an Intel RealSense D435i RGB-D sensor, the RTAB-Map framework \cite{ref2}, and the ROS 2 Nav2 stack. The sensor is mounted to the front torso of the Go2. In the virtual sandbox, the simulated camera replicates color and depth profiles. Using a single RGB-D sensor guarantees depth-texture consistency. Unlike monocular reconstruction frameworks (e.g., \mbox{VR-Robo} \cite{ref5}) that face geometric holes in textureless regions due to photometric ambiguities, the D435i's active depth sensor allows us to project robust metric local costmaps.
 
-The navigation workflow is driven entirely by the synchronized streams. Initially, RTAB-Map processes the RGB stream to extract visual keypoint features (e.g., GFTT/ORB) for frame-to-frame Visual Odometry (VO), loop-closure detection, and pose-graph optimization. The aligned depth stream is then projected into 3D coordinates using these feature coordinates, constructing a local 3D octomap that is subsequently projected onto a 2D occupancy grid map for global path planning. Concurrently, to achieve low-latency local obstacle avoidance without a costly LiDAR instrument, raw depth frames are converted into a pseudo-2D laser scan using the \textit{depthimage\_to\_laserscan} ROS 2 package. This synthesized scan is published as a \textit{/scan} topic to populate the Nav2 local costmap. The Nav2 global planner generates optimal paths on the occupancy grid, while the DWB (Dynamic Window Approach B) local planner utilizes the local costmap to compute steering commands $\mathbf{v}_{cmd}$ that safely route the robot around obstacles. Finally, these commands are transmitted to the active locomotion controller.
+Initially, RTAB-Map processes the RGB stream to extract visual keypoints (e.g., GFTT/ORB) for visual odometry (VO), loop closure, and pose-graph optimization. The depth stream is projected to construct a 3D octomap and a 2D occupancy grid. For low-latency obstacle avoidance, raw depth frames are converted into a pseudo-2D laser scan via the \textit{depthimage\_to\_laserscan} ROS 2 package and published to the \textit{/scan} topic. The Nav2 global planner generates paths on the occupancy grid, while the DWB local planner uses the local costmap to compute steering commands $\mathbf{v}_{cmd}$, which are sent to the controller.
 
-A key technical challenge in establishing the simulation-based validation sandbox is resolving the coordinate transform (TF) tree discrepancy between the physics simulator and the standard ROS 2 navigation stack. Conventionally, Nav2 expects a transform chain of \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{base\_link} (or \textit{base}). In contrast, Isaac Sim defines and tracks the robot's pose relative to the simulation world origin (\textit{world} frame). To satisfy both environments simultaneously and prevent coordinate conflicts or loops, we implement a custom static and dynamic transform bridge. The resulting TF tree is structured as \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{world} $\rightarrow$ \textit{base}. Here, RTAB-Map publishes the drift-corrected \textit{map} $\rightarrow$ \textit{odom} transform, while Isaac Sim's OmniGraph publisher links the odometry to the simulator's global frame, and the robot's state publisher completes the transform to the robot's physical base. This unique transform chain enables seamless compatibility, allowing standard ROS 2 navigation algorithms to operate within the virtual sandbox without code modification.
+A key challenge is resolving the coordinate transform (TF) tree discrepancy between the physics simulator and ROS 2. Nav2 expects \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{base}, whereas Isaac Sim tracks the robot relative to the simulator's \textit{world} frame. To prevent conflicts, we implement a custom bridge resulting in a TF tree structured as \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{world} $\rightarrow$ \textit{base}. RTAB-Map publishes the \textit{map} $\rightarrow$ \textit{odom} transform, while Isaac Sim links the odometry to the world frame, and the robot state publisher completes the chain. This enables standard ROS 2 navigation algorithms to operate in simulation without modification.
 
 \subsection{Validation in 3DGS Environment}
-Prior to real-world deployment, the integrated navigation stack was validated in the 3DGS-based virtual corridor, which replicates the actual corridor dimensions of approximately 80~m in length and 2.5~m in width.
+We validated the integrated navigation stack in the 3DGS-based virtual corridor (80~m long, 2.5~m wide) before physical deployment.
 
 \begin{figure}[thb]
 \begin{center}
 \vspace{-2mm}
-\includegraphics[width=0.8\linewidth]{figures/fig_sim_nav2.png}
+\includegraphics[width=0.8\linewidth]{figures/fig_sim_nav2.jpg}
 \vspace{1mm}
 \caption{\label{fig_sim_nav2}Autonomous navigation execution inside the reconstructed virtual environment, showing the simulated quadruped robot in Isaac Sim (left) and path planning/costmap synchronization in RViz (right).}
 \vspace{-3.5mm}
 \end{center}
 \end{figure}
 
-During simulation, the policy network receives proprioceptive and exteroceptive observations at each time step. Proprioception comprises joint positions and velocities, base angular velocity, and gravity vector projection. Exteroception is emulated using a virtual height-scan grid ($1.6\text{ m} \times 1.0\text{ m}$ at a resolution of 0.1~m) centered on the robot base. Ray-casting queries the reconstructed 3DGS collision mesh to feed local elevation profiles to the policy, enabling adaptive foot placement. The reference command vector $[v_x, v_y, \omega_z]^T$ is supplied directly by the DWB local planner, which coordinates collision-free paths within the virtual environment as visualized in Fig.~\ref{fig_sim_nav2}.
+In simulation, the policy receives proprioceptive (joint states, angular velocity, gravity projection) and exteroceptive (a $1.6\text{ m} \times 1.0\text{ m}$ height-scan grid) observations. Ray-casting queries the 3DGS collision mesh to feed local elevation profiles to the policy for adaptive foot placement. The velocity commands are supplied by the DWB planner, which coordinates collision-free paths (Fig.~\ref{fig_sim_nav2}).
 
 \begin{figure}[thb]
 \begin{center}
 \vspace{-2mm}
-\includegraphics[width=0.55\linewidth]{figures/fig_3d_map.png}
+\includegraphics[width=0.55\linewidth]{figures/fig_3d_map.jpg}
 \\
 \vspace{1.5mm}
 \includegraphics[width=0.55\linewidth]{figures/fig_2d_map.png}
@@ -167,10 +143,10 @@ During simulation, the policy network receives proprioceptive and exteroceptive 
 \end{center}
 \end{figure}
 
-To evaluate obstacle avoidance, virtual box obstacles were strategically placed along the corridor. As shown in Fig.~\ref{fig_sim_nav2}, the local planner dynamically recalculated trajectories around the obstacles, and the RL locomotion policy adjusted its walking pattern to negotiate the detours without collision. The resulting 3D point cloud map and projected 2D occupancy grid map are shown in Fig.~\ref{fig_sim_validation}.
+To evaluate obstacle avoidance, virtual box obstacles were placed along the corridor. The local planner dynamically recalculated trajectories, and the RL policy adjusted its walking pattern to negotiate detours (Fig.~\ref{fig_sim_nav2}). The resulting point cloud and occupancy grid maps are shown in Fig.~\ref{fig_sim_validation}.
 
 \subsection{Physical Deployment and Results}
-Following virtual verification, the visual navigation pipeline was deployed on a physical Unitree Go2 Edu Plus quadrupedal platform in the actual third-floor corridor of Oseok Hall at Handong Global University. The real-world experimental setup is shown in Fig.~\ref{fig_real_deployment}. The on-board computing hardware consists of an NVIDIA Jetson Orin NX (operating in 20W power mode, equipped with 16GB RAM) and the robot's built-in expansion dock, both running Ubuntu 20.04 and ROS 2 Foxy. To satisfy strict computational resource constraints, the PyTorch-based DRL locomotion policy was bypassed during physical deployment. Instead, the local trajectory commands ($\mathbf{v}_{cmd}$) generated by Nav2 were mapped directly to the robot's proprietary low-level motor controller via the Unitree Sport API. A lightweight ROS 2 bridge was developed on the Jetson Orin NX to route these commands, thereby reserving processing resources exclusively for RTAB-Map visual SLAM and Nav2 planning. The Intel RealSense D435i depth camera was directly connected to the Jetson Orin NX via USB 3.0.
+Following virtual validation, the pipeline was deployed on a physical Unitree Go2 platform in Oseok Hall corridor (Fig.~\ref{fig_real_deployment}). The onboard hardware consists of an NVIDIA Jetson Orin NX (20W mode, 16GB RAM) running Ubuntu 20.04 and ROS 2 Foxy. To satisfy resource constraints, the computationally heavy DRL locomotion policy was bypassed. Instead, Nav2 velocity commands were routed directly to the robot's proprietary motor controller via the Unitree Sport API using a custom ROS 2 bridge. This reserves Jetson Orin NX resources for RTAB-Map visual SLAM and Nav2 planning. The D435i sensor was connected via USB 3.0.
 
 \begin{figure}[thb]
 \begin{center}
@@ -182,23 +158,21 @@ Following virtual verification, the visual navigation pipeline was deployed on a
 \end{center}
 \end{figure}
 
-A major practical challenge in this physical deployment is the operating system (OS) and ROS 2 version mismatch between the virtual simulation environment and the physical robot setup. The simulation validation environment was developed on Ubuntu 24.04 and ROS 2 Jazzy, whereas the physical robot's onboard computing environment is restricted to Ubuntu 20.04 and ROS 2 Foxy due to manufacturer firmware dependencies. To bridge this disparity, the visual navigation stack (RTAB-Map and Nav2) was migrated from ROS 2 Jazzy to ROS 2 Foxy to run natively on the physical Jetson Orin NX. Despite this cross-version migration, the overall visual navigation flow and architecture remain identical to those tested in the simulation environment. This compatibility allowed the navigation parameters optimized under the simulated RL ego-motion noise (specifically, the costmap inflation radius, voxel grid resolution, and visual loop-closure matching thresholds) to be directly applied to the physical Foxy platform, achieving a successful direct Sim-to-Real transfer without parameter recalibration.
+A practical challenge is the OS and ROS 2 version mismatch: simulation used Ubuntu 24.04/ROS 2 Jazzy, while the robot's onboard computer is restricted to Ubuntu 20.04/ROS 2 Foxy. To address this, the visual navigation stack was migrated to ROS 2 Foxy to run natively on the Jetson Orin NX. Despite the version differences, the system architecture remained identical, allowing navigation parameters optimized under simulated RL ego-motion noise (costmap inflation radius, voxel grid resolution, loop-closure thresholds) to be transferred directly without manual recalibration.
 
-
-As shown in Fig.~\ref{fig_real_deployment}, RTAB-Map successfully executed loop closure detection in the physical environment, compensating for the high-frequency camera oscillations. Nav2 maintained stable global paths, allowing the robot to traverse the corridor at a target velocity of $0.4$~m/s. The physical results verified that key visual SLAM and costmap parameters optimized under the simulated RL ego-motion noise (e.g., costmap inflation radius, voxel grid resolution, and visual loop-closure matching thresholds) were highly transferable to the physical platform, demonstrating the utility of our simulated testing environment.
+As shown in Fig.~\ref{fig_real_deployment}, RTAB-Map successfully executed loop closure detection, compensating for camera oscillations. Nav2 maintained stable global paths at a target velocity of $0.4$~m/s. The results verify that parameters optimized under simulated RL ego-motion noise transfer directly to the physical platform, validating the utility of our sandbox.
 
 \section{Conclusion}
 This paper presented a practical, dual-stage visual navigation framework for quadrupedal robots. By leveraging a high-fidelity 3D Gaussian Splatting digital twin and simulating quadrupedal locomotion noise via an RL locomotion policy, we established a safe, photorealistic virtual validation sandbox for visual SLAM and path planning. For physical deployment, we bypassed the RL policy and routed commands directly to the robot's built-in Sport API via a custom ROS 2 bridge, optimizing edge computation on the Jetson Orin NX. Real-world experiments on the Unitree Go2 demonstrated that the parameters pre-tuned under simulated bobbing noise transferred successfully without manual in-situ recalibration, achieving robust visual tracking and obstacle avoidance.
 
 Future work will focus on incorporating dynamic obstacle avoidance strategies and optimizing the processing pipeline to support higher-resolution visual feedback on the edge computer.
 
+\section*{USE OF AI TOOLS}
+During the preparation of this work, the authors used Gemini (developed by Google) for grammar editing and style improvement of the manuscript. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the final text of the paper.
+
 \section*{ACKNOWLEDGEMENT}
 This research was supported by the National Research Foundation of Korea (NRF) grant funded by the Korean government (MSIT) (No. RS-2025-24683458).
-
 \begin{thebibliography}{99}
-\footnotesize
-\setlength{\itemsep}{-1.5pt}
-\setlength{\parskip}{0pt}
 
 \bibitem{ref1}
 J. Hwangbo, J. Lee, A. Dosovitskiy, D. Bellicoso, V. Tsounis, V. Koltun, and M. Hutter, ``Learning agile and dynamic motor skills for legged robots,'' \textit{Science Robotics}, vol. 4, no. 26, p. eaau5872, 2019.
