@@ -76,29 +76,12 @@ Although recent works have leveraged 3DGS \cite{ref4} to construct photorealisti
 \section{System and Locomotion Control}
 \subsection{System Architecture}
 
-\begin{figure}[thb]
-\begin{center}
-\vspace{-2mm}
-\includegraphics[width=0.55\linewidth]{figures/fig_3dgs_mesh.png}
-\vspace{-2mm}
-\caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}
-\vspace{-4mm}
-\end{center}
-\end{figure}
+
 The proposed framework integrates RTAB-Map Visual SLAM, the Nav2 navigation stack, and a bifurcated locomotion control architecture. The control architecture utilizes a Deep Reinforcement Learning (DRL) locomotion policy for virtual validation and transitions to the robot's native, low-level Sport API for physical deployment. In the simulation phase, the DRL policy—trained via Proximal Policy Optimization (PPO) in Isaac Lab (v2.3.2) on Isaac Sim (v5.1.0)—is employed to generate representative quadrupedal gait dynamics and camera ego-motion (bobbing) noise. High-level velocity commands ($\mathbf{v}_{cmd} = [v_x, v_y, \omega_z]^T$) computed by the Nav2 local planner are mapped directly to the policy's action space. During real-world deployment, the computationally heavy DRL policy is bypassed to conserve edge computational resources, and Nav2 velocity commands are routed directly to the Unitree Sport API via a custom ROS 2 bridge. This resource-efficient architecture optimizes the computational budget of the Jetson Orin NX. The system architecture is illustrated in Fig.~\ref{fig_system_overview}.
 
 \subsection{Locomotion Learning in Isaac Sim}
 
-\begin{figure*}[t]
-\begin{center}
-\includegraphics[width=0.44\textwidth]{figures/fig_sim_nav2.png}
-\hfill
-\includegraphics[width=0.22\textwidth]{figures/fig_3d_map.png}
-\hfill
-\includegraphics[width=0.22\textwidth]{figures/fig_2d_map.png}
-\caption{\label{fig_sim_validation}Simulation validation results in the virtual sandbox. (a) Nav2 navigation stack active in the 3DGS environment, showing the simulated quadruped in Isaac Sim (left) and path planning/costmap in RViz (right). (b) Reconstructed 3D point cloud map from RTAB-Map. (c) Projected 2D occupancy grid map.}
-\end{center}
-\end{figure*}
+
 To synthesize representative legged locomotion dynamics and emulate physical camera bobbing noise in simulation, we train an RL policy in NVIDIA Isaac Lab (v2.3.2), built upon the Isaac Sim (v5.1.0) physics engine. The policy functions as a dynamic perturbation generator, producing walking-induced camera oscillations. We utilize the Procedural Terrain Generator in Isaac Lab to construct a training environment with mixed terrains, including uneven ground, ramps, and step obstacles. We employ curriculum learning to dynamically scale the terrain difficulty (e.g., obstacle heights and slope angles) in proportion to the robot's traversal success rate. To enhance the robustness of the policy and bridge the sim-to-real dynamics gap, we apply the following domain randomizations:
 \begin{itemize}
     \setlength{\itemsep}{1pt}
@@ -134,6 +117,16 @@ To construct a high-fidelity virtual verification sandbox, we establish a struct
 
 These images serve as the input to a Structure-from-Motion (SfM) workflow via COLMAP to resolve sparse camera poses and initial point clouds. Based on these poses, a 3D Gaussian Splatting (3DGS) \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a Polygon Mesh PLY file for coarse geometry. To bridge the gap between photorealistic visualization and physical collision, the reconstructed scene is integrated with NVIDIA's sparse volumetric data framework, \textit{fVDB}, as shown in Fig.~\ref{fig_3dgs_mesh}.
 
+\begin{figure}[thb]
+\begin{center}
+\vspace{-2mm}
+\includegraphics[width=0.55\linewidth]{figures/fig_3dgs_mesh.png}
+\vspace{-2mm}
+\caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}
+\vspace{-4mm}
+\end{center}
+\end{figure}
+
 We import the combined USDZ and mesh assets into NVIDIA Isaac Sim (v5.1.0). Within the simulator, the NuRec engine utilizes the volumetric \textit{fVDB} representations to compute high-resolution collision boundaries and dynamic depth queries (\textit{GS Collision / Depth}). Finally, a ROS 2 bridge is established to connect the virtual environment to our external navigation stack; this bridge publishes virtual RGB-D camera sensor streams, visualizes the robot state in RViz, and routes the local planner's velocity commands back to the simulated agent. Because we use the exact same physical D435i sensor for both mapping and navigation, the 3DGS-rendered virtual camera naturally replicates the physical sensor's native lens distortion, white balance, dynamic range, and noise profiles. This eliminates any perceptual domain shift between the virtual validation environment and real-world deployment. The pre-trained DRL locomotion policy is then deployed directly on the Go2 model inside the reconstructed environment without further tuning. Despite the intricate geometric features and narrow corridor boundaries, the policy maintains robust gait characteristics, validating the effectiveness of the domain-randomized training regimen.
 
 \section{Autonomous Navigation}
@@ -149,6 +142,17 @@ A key technical challenge in establishing the simulation-based validation sandbo
 Prior to real-world deployment, the integrated navigation stack was validated in the 3DGS-based virtual corridor, which replicates the actual corridor dimensions of approximately 80~m in length and 2.5~m in width.
 
 During simulation, the policy network receives proprioceptive and exteroceptive observations at each time step. Proprioception comprises joint positions and velocities, base angular velocity, and gravity vector projection. Exteroception is emulated using a virtual height-scan grid ($1.6\text{ m} \times 1.0\text{ m}$ at a resolution of 0.1~m) centered on the robot base. Ray-casting queries the reconstructed 3DGS collision mesh to feed local elevation profiles to the policy, enabling adaptive foot placement. The reference command vector $[v_x, v_y, \omega_z]^T$ is supplied directly by the DWB local planner, which coordinates collision-free paths within the virtual environment as visualized in Fig.~\ref{fig_sim_validation}(a).
+
+\begin{figure*}[t]
+\begin{center}
+\includegraphics[width=0.44\textwidth]{figures/fig_sim_nav2.png}
+\hfill
+\includegraphics[width=0.22\textwidth]{figures/fig_3d_map.png}
+\hfill
+\includegraphics[width=0.22\textwidth]{figures/fig_2d_map.png}
+\caption{\label{fig_sim_validation}Simulation validation results in the virtual sandbox. (a) Nav2 navigation stack active in the 3DGS environment, showing the simulated quadruped in Isaac Sim (left) and path planning/costmap in RViz (right). (b) Reconstructed 3D point cloud map from RTAB-Map. (c) Projected 2D occupancy grid map.}
+\end{center}
+\end{figure*}
 
 To evaluate obstacle avoidance, virtual box obstacles were strategically placed along the corridor. As shown in Fig.~\ref{fig_sim_validation}(a), the local planner dynamically recalculated trajectories around the obstacles, and the RL locomotion policy adjusted its walking pattern to negotiate the detours without collision. The resulting 3D point cloud map and projected 2D occupancy grid map are shown in Fig.~\ref{fig_sim_validation}(b) and (c), respectively.
 
