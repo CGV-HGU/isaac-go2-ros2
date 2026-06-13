@@ -112,8 +112,9 @@ During simulation, the policy network receives proprioceptive and exteroceptive 
 
 \begin{figure}[thb]
 \begin{center}
-\includegraphics[width=\linewidth]{figures/fig_3d_map.png}
-\caption{\label{fig_sim_validation}Visual SLAM and path planning validation inside the reconstructed 3DGS corridor environment. The reconstructed mesh provides accurate collision responses and realistic visual feedback.}
+\includegraphics[width=0.75\linewidth]{figures/fig_3d_map.png} \\ \vspace{0.5mm}
+\includegraphics[width=0.75\linewidth]{figures/fig_2d_map.png}
+\caption{\label{fig_sim_validation}Visual SLAM mapping results inside the Oseok Hall corridor. (a) Reconstructed 3D point cloud map. (b) Projected 2D occupancy grid map used for path planning and navigation.}
 \end{center}
 \end{figure}
 
@@ -126,7 +127,7 @@ A major practical challenge in this physical deployment is the operating system 
 
 \begin{figure}[thb]
 \begin{center}
-\includegraphics[width=\linewidth]{figures/fig_real_robot.jpg}
+\includegraphics[width=0.7\linewidth]{figures/fig_real_robot.jpg}
 \caption{\label{fig_real_deployment}Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D435i and Jetson Orin NX, running the entire navigation stack on-board.}
 \end{center}
 \end{figure}
@@ -142,6 +143,8 @@ Future work will focus on incorporating dynamic obstacle avoidance strategies an
 This research was supported by the National Research Foundation of Korea (NRF) grant funded by the Korean government (MSIT) (No. RS-2025-24683458).
 
 \begin{thebibliography}{99}
+\setlength{\itemsep}{0pt}
+\setlength{\parskip}{0pt}
 
 \bibitem{ref1}
 J. Hwangbo, J. Lee, A. Dosovitskiy, D. Bellicoso, V. Tsounis, V. Koltun, and M. Hutter, ``Learning agile and dynamic motor skills for legged robots,'' \textit{Science Robotics}, vol. 4, no. 26, 2019.
