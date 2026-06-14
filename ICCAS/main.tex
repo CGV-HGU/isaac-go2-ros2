@@ -136,7 +136,10 @@ In simulation, the locomotion policy receives proprioceptive and exteroceptive (
 \end{center}
 \end{figure}
 
-We deployed the proposed framework on a physical Unitree Go2 robot to navigate the campus corridor, as shown in Fig.~\ref{fig_real_deployment}. The robot is equipped with the front-facing Intel RealSense D435i camera and the NVIDIA Jetson Orin NX on-board computer. The entire navigation and mapping stack runs locally on this edge computer. To reduce computational load, the RL policy was bypassed on the onboard Jetson Orin NX. Instead, velocity commands were routed directly to the Unitree Sport API using a ROS 2 bridge, reserving computing resources for SLAM and path planning. The D435i sensor was connected via USB 3.0.
+We deployed the proposed framework on a physical Unitree Go2 robot to navigate the campus corridor, as shown in Fig.~\ref{fig_real_deployment}. The robot is equipped with a front-facing Intel RealSense D435i camera and an NVIDIA Jetson Orin NX computer, running the entire navigation and mapping stack locally.
+
+\newpage
+To reduce computational load on the Jetson Orin NX, the RL policy is bypassed, and commands are sent to the built-in Sport API via a ROS 2 bridge, reserving onboard resources for SLAM and path planning. The camera is connected via USB 3.0.
 
 \begin{figure}[!t]
 \begin{center}
@@ -149,12 +152,12 @@ We deployed the proposed framework on a physical Unitree Go2 robot to navigate t
 Although the simulation used ROS 2 Jazzy (Ubuntu 24.04) and the physical robot used ROS 2 Foxy (Ubuntu 20.04), the same software architecture was maintained. This allowed parameters optimized under simulated camera noise to transfer directly to the physical platform without manual recalibration. RTAB-Map successfully detected loop closures, compensating for walking oscillations. The robot maintained a target velocity of $0.4$~m/s. These results indicate that parameters optimized in simulation transfer directly to the physical robot.
 
 \subsection{Limitations}
-While the proposed pipeline successfully bridges the sim-to-real gap, several limitations remain. First, bypassing the RL controller on-board the physical robot limits its adaptive locomotion capabilities, relying instead on the manufacturer's proprietary Sport API. Second, our navigation stack was evaluated primarily in static environments; dynamic obstacle avoidance and moving crowd navigation are left for future work. Finally, high-resolution rendering and SLAM are computationally constrained, necessitating edge hardware optimization.
+While the proposed pipeline successfully bridges the sim-to-real gap, some limitations remain. First, bypassing the RL controller onboard limits adaptive locomotion, relying instead on the built-in Sport API. Second, the navigation stack was evaluated in static environments; dynamic obstacle avoidance is left for future work. Finally, high-resolution rendering and SLAM require further edge hardware optimization.
 
 \section{Conclusion}
-This paper presented a dual-stage visual navigation framework for quadrupedal robots. By combining a 3D Gaussian Splatting digital twin with an RL locomotion policy that emulates walking dynamics, we established a simulation environment to optimize visual SLAM and path planning. For deployment, we bypassed the RL policy and routed velocity commands directly to the robot's Sport API via a ROS 2 bridge to reduce the onboard computational load. Real-world experiments on a Unitree Go2 demonstrated that parameters optimized under simulated camera jitter transfer directly to the physical platform, achieving stable visual tracking and obstacle avoidance without recalibration.
+This paper presented a visual navigation framework for quadrupedal robots. By combining a 3D Gaussian Splatting digital twin with an RL locomotion policy, we established a simulation environment to optimize visual SLAM and path planning. For deployment, we bypassed the RL policy and routed commands directly to the robot's Sport API via a ROS 2 bridge. Physical experiments on a Unitree Go2 demonstrated that parameters optimized under simulated camera jitter transfer directly to the physical platform, achieving stable mapping and obstacle avoidance without recalibration.
 
-Future work will focus on incorporating dynamic obstacle avoidance strategies and optimizing the processing pipeline to support higher-resolution visual feedback on the edge computer.
+Future work will focus on dynamic obstacle avoidance and edge hardware optimization to support higher-resolution feedback.
 
 \section*{ACKNOWLEDGEMENT}
 This research was supported by the National Research Foundation of Korea (NRF) grant funded by the Korean government (MSIT) (No. RS-2025-24683458).
