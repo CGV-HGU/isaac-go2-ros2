@@ -116,7 +116,7 @@ To resolve the coordinate transform (TF) tree discrepancy between the simulator 
 \subsection{Results and Evaluation}
 We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m wide) before physical deployment.
 
-\begin{figure}[!t]
+\begin{figure}[!b]
 \begin{center}
 \includegraphics[width=0.95\linewidth]{figures/fig_sim_nav2.jpg}
 \vspace{1.5mm}
@@ -126,7 +126,7 @@ We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m
 
 In simulation, the locomotion policy receives proprioceptive and exteroceptive (height-scan) inputs. Ray-casting queries the collision mesh to provide local elevation profiles for foot placement. The velocity commands are supplied by the DWB planner (Fig.~\ref{fig_sim_nav2}). To evaluate obstacle avoidance, virtual box obstacles were placed along the corridor. The local planner recalculated trajectories, and the policy adjusted its walking pattern to avoid obstacles (Fig.~\ref{fig_sim_nav2}). The resulting point cloud and occupancy grid maps are shown in Fig.~\ref{fig_sim_validation}.
 
-\begin{figure}[!t]
+\begin{figure}[!b]
 \begin{center}
 \includegraphics[width=0.5\linewidth]{figures/fig_3d_map.jpg}
 \\
