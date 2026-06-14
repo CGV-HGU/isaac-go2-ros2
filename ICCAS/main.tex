@@ -106,17 +106,17 @@ We capture corridor images using a DSLR camera to avoid compression artifacts. T
 
 We import these assets into Isaac Sim, where the collision boundaries are computed using the \textit{fVDB} representation. A ROS 2 bridge publishes virtual RGB-D sensor streams, visualizes the robot state in RViz, and routes velocity commands. The virtual camera's field-of-view and resolution are configured to match the physical D435i camera to reduce the visual gap. The pre-trained locomotion policy is then deployed on the Go2 model to maintain stable gaits within the simulated corridor.
 
-\section{Autonomous Navigation}
-\subsection{Navigation System Configuration}
+\section{Experimental Results}
+\subsection{Experimental Setup and Evaluation Methodology}
 
 The navigation system consists of an Intel RealSense D435i RGB-D sensor, the RTAB-Map framework \cite{ref2}, and the ROS 2 Nav2 stack. The sensor is mounted to the front torso of the Go2. In simulation, the virtual camera replicates the physical sensor's color and depth profiles. This setup ensures depth-texture consistency. Unlike monocular frameworks (e.g., \mbox{VR-Robo} \cite{ref5}) that suffer from depth ambiguity in textureless regions, the active depth sensor provides geometric measurements for local costmaps.
 
 RTAB-Map extracts visual keypoints (e.g., GFTT/ORB) from the RGB stream for odometry and loop-closure detection. The depth stream is projected to construct a 3D octomap and a 2D occupancy grid. For low-latency obstacle avoidance, raw depth frames are converted into a pseudo-2D laser scan via the \textit{depthimage\_to\_laserscan} package and published to the \textit{/scan} topic. The Nav2 global planner generates paths on the occupancy grid, while the DWB local planner uses the local costmap to compute steering commands $\mathbf{v}_{cmd}$.
 
-To resolve the coordinate transform (TF) tree discrepancy between the simulator and ROS 2, we implement a custom bridge. Nav2 expects \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{base}, whereas Isaac Sim tracks the robot relative to the simulator's \textit{world} frame. Our bridge maps the tree as \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{world} $\rightarrow$ \textit{base}, where RTAB-Map publishes the \textit{map} $\rightarrow$ \textit{odom} transform, and Isaac Sim links odometry to the world frame. This enables standard ROS 2 navigation in simulation without modification.
+To resolve the coordinate transform (TF) tree discrepancy between the simulator and ROS 2, we implement a custom bridge. Nav2 expects \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{base}, whereas Isaac Sim tracks the robot relative to the simulator's \textit{world} frame. Our bridge maps the tree as \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{world} $\rightarrow$ \textit{base}, where RTAB-Map publishes the \textit{map} $\rightarrow$ \textit{odom} transform, and Isaac Sim links odometry to the world frame. This enables standard ROS 2 navigation in simulation without modification. The system is evaluated by analyzing mapping consistency and obstacle avoidance success in both the simulated 3DGS corridor and the physical environment under walking-induced camera oscillations, measuring the transferability of the optimized parameters.
 
-\subsection{Validation in 3DGS Environment}
-We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m wide) before physical deployment.
+\subsection{Results and Evaluation}
+\textbf{Simulation Validation:} We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m wide) before physical deployment.
 
 \begin{figure}[!t]
 \begin{center}
@@ -126,9 +126,7 @@ We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m
 \end{center}
 \end{figure}
 
-In simulation, the locomotion policy receives proprioceptive and exteroceptive (height-scan) inputs. Ray-casting queries the collision mesh to provide local elevation profiles for foot placement. The velocity commands are supplied by the DWB planner (Fig.~\ref{fig_sim_nav2}).
-
-To evaluate obstacle avoidance, virtual box obstacles were placed along the corridor. The local planner recalculated trajectories, and the policy adjusted its walking pattern to avoid obstacles (Fig.~\ref{fig_sim_nav2}). The resulting point cloud and occupancy grid maps are shown in Fig.~\ref{fig_sim_validation}.
+In simulation, the locomotion policy receives proprioceptive and exteroceptive (height-scan) inputs. Ray-casting queries the collision mesh to provide local elevation profiles for foot placement. The velocity commands are supplied by the DWB planner (Fig.~\ref{fig_sim_nav2}). To evaluate obstacle avoidance, virtual box obstacles were placed along the corridor. The local planner recalculated trajectories, and the policy adjusted its walking pattern to avoid obstacles (Fig.~\ref{fig_sim_nav2}). The resulting point cloud and occupancy grid maps are shown in Fig.~\ref{fig_sim_validation}.
 
 \begin{figure}[!t]
 \begin{center}
@@ -140,8 +138,7 @@ To evaluate obstacle avoidance, virtual box obstacles were placed along the corr
 \end{center}
 \end{figure}
 
-\subsection{Physical Deployment and Results}
-We deployed the pipeline on a physical Unitree Go2 in a campus corridor (Fig.~\ref{fig_real_deployment}). The onboard hardware consists of an NVIDIA Jetson Orin NX (20W mode, 16GB RAM) running Ubuntu 20.04 and ROS 2 Foxy. To reduce computational load, the RL policy was bypassed on the onboard Jetson Orin NX. Instead, velocity commands were routed directly to the Unitree Sport API using a ROS 2 bridge, reserving computing resources for SLAM and path planning. The D435i sensor was connected via USB 3.0.
+\textbf{Physical Deployment:} We deployed the pipeline on a physical Unitree Go2 in a campus corridor (Fig.~\ref{fig_real_deployment}). The onboard hardware consists of an NVIDIA Jetson Orin NX (20W mode, 16GB RAM) running Ubuntu 20.04 and ROS 2 Foxy. To reduce computational load, the RL policy was bypassed on the onboard Jetson Orin NX. Instead, velocity commands were routed directly to the Unitree Sport API using a ROS 2 bridge, reserving computing resources for SLAM and path planning. The D435i sensor was connected via USB 3.0.
 
 \begin{figure}[!t]
 \begin{center}
@@ -151,9 +148,10 @@ We deployed the pipeline on a physical Unitree Go2 in a campus corridor (Fig.~\r
 \end{center}
 \end{figure}
 
-Although the simulation used ROS 2 Jazzy (Ubuntu 24.04) and the physical robot used ROS 2 Foxy (Ubuntu 20.04), the same software architecture was maintained. This allowed parameters optimized under simulated camera noise to transfer directly to the physical platform without manual recalibration.
+Although the simulation used ROS 2 Jazzy (Ubuntu 24.04) and the physical robot used ROS 2 Foxy (Ubuntu 20.04), the same software architecture was maintained. This allowed parameters optimized under simulated camera noise to transfer directly to the physical platform without manual recalibration. RTAB-Map successfully detected loop closures, compensating for walking oscillations. The robot maintained a target velocity of $0.4$~m/s. These results indicate that parameters optimized in simulation transfer directly to the physical robot.
 
-RTAB-Map successfully detected loop closures, compensating for walking oscillations. The robot maintained a target velocity of $0.4$~m/s. These results indicate that parameters optimized in simulation transfer directly to the physical robot.
+\subsection{Limitations}
+While the proposed pipeline successfully bridges the sim-to-real gap, several limitations remain. First, bypassing the RL controller on-board the physical robot limits its adaptive locomotion capabilities, relying instead on the manufacturer's proprietary Sport API. Second, our navigation stack was evaluated primarily in static environments; dynamic obstacle avoidance and moving crowd navigation are left for future work. Finally, high-resolution rendering and SLAM are computationally constrained, necessitating edge hardware optimization.
 
 \section{Conclusion}
 This paper presented a dual-stage visual navigation framework for quadrupedal robots. By combining a 3D Gaussian Splatting digital twin with an RL locomotion policy that emulates walking dynamics, we established a simulation environment to optimize visual SLAM and path planning. For deployment, we bypassed the RL policy and routed velocity commands directly to the robot's Sport API via a ROS 2 bridge to reduce the onboard computational load. Real-world experiments on a Unitree Go2 demonstrated that parameters optimized under simulated camera jitter transfer directly to the physical platform, achieving stable visual tracking and obstacle avoidance without recalibration.
