@@ -7,6 +7,7 @@
 
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{booktabs}
 \usepackage{diagbox}
 \begin{document}
@@ -116,7 +117,9 @@ To resolve the coordinate transform (TF) tree discrepancy, a custom bridge maps 
 \subsection{Results and Evaluation}
 We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m wide) before physical deployment.
 
-\begin{figure}[!b]
+In simulation, the locomotion policy receives proprioceptive and exteroceptive (height-scan) inputs. Ray-casting queries the collision mesh to provide local elevation profiles for foot placement. The closed-loop navigation system in simulation is illustrated in Fig.~\ref{fig_sim_nav2}. The local planner (DWB) in the Nav2 stack generates velocity commands based on the synchronized costmap and path planning displayed in RViz (Fig.~\ref{fig_sim_nav2}, right). These commands are then sent to the trained RL locomotion policy controlling the virtual robot in Isaac Sim (Fig.~\ref{fig_sim_nav2}, left), which simulates the physical walking dynamics and camera motion. To validate obstacle avoidance, virtual obstacles are introduced in the corridor. As shown in the RViz visualization (Fig.~\ref{fig_sim_nav2}, right), the local planner dynamically recalculates paths to circumvent obstacles, and the robot successfully executes these maneuvers in the simulator (Fig.~\ref{fig_sim_nav2}, left).
+
+\begin{figure}[H]
 \begin{center}
 \includegraphics[width=0.98\linewidth]{figures/fig_sim_nav2.jpg}
 \vspace{1.5mm}
@@ -124,14 +127,9 @@ We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m
 \end{center}
 \end{figure}
 
-In simulation, the locomotion policy receives proprioceptive and exteroceptive (height-scan) inputs. Ray-casting queries the collision mesh to provide local elevation profiles for foot placement. The closed-loop navigation system in simulation is illustrated in Fig.~\ref{fig_sim_nav2}. The local planner (DWB) in the Nav2 stack generates velocity commands based on the synchronized costmap and path planning displayed in RViz (Fig.~\ref{fig_sim_nav2}, right). These commands are then sent to the trained RL locomotion policy controlling the virtual robot in Isaac Sim (Fig.~\ref{fig_sim_nav2}, left), which simulates the physical walking dynamics and camera motion. To validate obstacle avoidance, virtual obstacles are introduced in the corridor. As shown in the RViz visualization (Fig.~\ref{fig_sim_nav2}, right), the local planner dynamically recalculates paths to circumvent obstacles, and the robot successfully executes these maneuvers in the simulator (Fig.~\ref{fig_sim_nav2}, left). The resulting mapping outputs generated during simulated navigation are shown in Fig.~\ref{fig_sim_validation}.
+The resulting mapping outputs generated during simulated navigation are shown in Fig.~\ref{fig_sim_validation}.
 
-We deployed the proposed framework on a physical Unitree Go2 robot to navigate the campus corridor, as shown in Fig.~\ref{fig_real_deployment}. The robot is equipped with a front-facing Intel RealSense D435i camera and an NVIDIA Jetson Orin NX computer, running the entire navigation and mapping stack locally.
-
-To reduce computational load on the Jetson Orin NX, the RL policy is bypassed, and commands are sent to the built-in Sport API via a ROS 2 bridge, reserving onboard resources for SLAM and path planning. The camera is connected via USB 3.0.
-
-\newpage
-\begin{figure}[!b]
+\begin{figure}[H]
 \begin{center}
 \includegraphics[width=0.83\linewidth, height=0.61\linewidth]{figures/fig_3d_map.jpg}
 \hfill
@@ -141,7 +139,11 @@ To reduce computational load on the Jetson Orin NX, the RL policy is bypassed, a
 \end{center}
 \end{figure}
 
-\begin{figure}[!b]
+We deployed the proposed framework on a physical Unitree Go2 robot to navigate the campus corridor, as shown in Fig.~\ref{fig_real_deployment}. The robot is equipped with a front-facing Intel RealSense D435i camera and an NVIDIA Jetson Orin NX computer, running the entire navigation and mapping stack locally.
+
+To reduce computational load on the Jetson Orin NX, the RL policy is bypassed, and commands are sent to the built-in Sport API via a ROS 2 bridge, reserving onboard resources for SLAM and path planning. The camera is connected via USB 3.0.
+
+\begin{figure}[H]
 \begin{center}
 \includegraphics[width=0.98\linewidth]{figures/fig_real_robot.jpg}
 \vspace{1.5mm}
