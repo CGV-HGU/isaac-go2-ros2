@@ -107,11 +107,11 @@ We import these assets into Isaac Sim, where the collision boundaries are comput
 \section{Experimental Results}
 \subsection{Experimental Setup and Evaluation Methodology}
 
-The navigation system consists of an Intel RealSense D435i RGB-D sensor, the RTAB-Map framework \cite{ref2}, and the ROS 2 Nav2 stack. The sensor is mounted to the front torso of the Go2. In simulation, the virtual camera replicates the physical sensor's color and depth profiles. This setup ensures depth-texture consistency. Unlike monocular frameworks (e.g., \mbox{VR-Robo} \cite{ref5}) that suffer from depth ambiguity in textureless regions, the active depth sensor provides geometric measurements for local costmaps.
+The navigation system consists of an Intel RealSense D435i RGB-D sensor, RTAB-Map \cite{ref2}, and the ROS 2 Nav2 stack. The sensor is mounted to the front torso of the Go2, and the virtual camera in simulation replicates its color and depth profiles to ensure consistency. Unlike monocular frameworks (e.g., \mbox{VR-Robo} \cite{ref5}) that suffer from depth ambiguity, the active depth sensor provides direct geometric measurements for local costmaps.
 
-RTAB-Map uses visual keypoints (e.g., GFTT/ORB) from the RGB stream for odometry and loop-closure detection. The depth stream is projected to construct a 3D octomap and a 2D occupancy grid. For low-latency obstacle avoidance, raw depth frames are converted into a pseudo-2D laser scan via the \textit{depthimage\_to\_}\allowbreak\textit{laserscan} package and published to the \textit{/scan} topic. The Nav2 global planner generates paths on the occupancy grid, while the DWB local planner uses the local costmap to compute steering commands $\mathbf{v}_{cmd}$.
+RTAB-Map uses visual keypoints (e.g., GFTT/ORB) for odometry and loop-closure detection. The depth stream is projected to construct a 3D octomap and a 2D occupancy grid. For low-latency obstacle avoidance, raw depth frames are converted to a pseudo-2D laser scan via the \textit{depthimage\_to\_}\allowbreak\textit{laserscan} package. The Nav2 global planner plans paths on the occupancy grid, while the DWB local planner uses the local costmap to compute steering commands $\mathbf{v}_{cmd}$.
 
-To resolve the coordinate transform (TF) tree discrepancy between the simulator and ROS 2, we implement a custom bridge. Nav2 expects \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{base}, whereas Isaac Sim tracks the robot relative to the simulator's \textit{world} frame. Our bridge maps the tree as \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{world} $\rightarrow$ \textit{base}, where RTAB-Map publishes the \textit{map} $\rightarrow$ \textit{odom} transform, and Isaac Sim links odometry to the world frame. This enables standard ROS 2 navigation in simulation without modification. The system is evaluated by analyzing mapping consistency and obstacle avoidance success in both the simulated 3DGS corridor and the physical environment under walking-induced camera oscillations, measuring the transferability of the optimized parameters.
+To resolve the coordinate transform (TF) tree discrepancy, a custom bridge maps the tree as \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{world} $\rightarrow$ \textit{base}, where RTAB-Map publishes the \textit{map} $\rightarrow$ \textit{odom} transform and Isaac Sim links odometry to the world frame. This enables standard ROS 2 navigation in simulation. The system is evaluated by analyzing mapping consistency and obstacle avoidance in both simulated and physical environments under locomotion-induced camera oscillations, measuring the transferability of the optimized parameters.
 
 \subsection{Results and Evaluation}
 We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m wide) before physical deployment.
@@ -138,7 +138,6 @@ In simulation, the locomotion policy receives proprioceptive and exteroceptive (
 
 We deployed the proposed framework on a physical Unitree Go2 robot to navigate the campus corridor, as shown in Fig.~\ref{fig_real_deployment}. The robot is equipped with a front-facing Intel RealSense D435i camera and an NVIDIA Jetson Orin NX computer, running the entire navigation and mapping stack locally.
 
-\newpage
 To reduce computational load on the Jetson Orin NX, the RL policy is bypassed, and commands are sent to the built-in Sport API via a ROS 2 bridge, reserving onboard resources for SLAM and path planning. The camera is connected via USB 3.0.
 
 \begin{figure}[!t]
