@@ -100,7 +100,7 @@ R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i}
 \end{center}
 \end{figure}
 
-생성된 자산을 Isaac Sim에 로드하고, \textit{fVDB} representation으로 충돌 경계를 설정한다. ROS 2 브리지를 통해 가상 RGB-D 스트림을 송출하고 velocity 명령을 수신한다. 시뮬레이션 카메라 FOV와 해상도를 실제 Intel RealSense D435i와 동기화하여 지각적 차이를 줄였다. 사전 학습된 locomotion 정책은 시뮬레이션의 Go2 모델에 적용되어 장애물 회피와 복도 보행을 수행한다.
+생성된 자산을 Isaac Sim에 로드하고, \textit{fVDB} representation으로 충돌 경계를 설정한다. ROS 2 브리지를 통해 가상 RGB-D 스트림을 송출하고 속도 명령을 수신한다. 시뮬레이션 카메라 FOV와 해상도를 실제 Intel RealSense D435i와 동기화하여 지각적 차이를 줄였다. 사전 학습된 보행 정책은 시뮬레이션의 Go2 모델에 적용되어 장애물 회피와 복도 보행을 수행한다.
 
 \section{자율주행}
 \subsection{주행 시스템 구성}
