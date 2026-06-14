@@ -29,6 +29,16 @@ Handong Global University, Pohang 37554, Republic of Korea \\
 
 \maketitle
 
+\begin{figure*}[t]
+\begin{center}
+\vspace{-2mm}
+\includegraphics[width=\textwidth]{figures/fig_system_overview}
+\vspace{1mm}
+\caption{\label{fig_system_overview}Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we reconstruct a 3DGS environment and train an RL locomotion policy to emulate camera bobbing noise. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to reduce computational load on the Jetson Orin NX.}
+\vspace{-3.5mm}
+\end{center}
+\end{figure*}
+
 %-----------------------------------------------------------------------
 
 \section{Introduction}
@@ -45,11 +55,13 @@ The contributions of this work are as follows:
     \item We demonstrate that navigation and mapping parameters optimized under simulated disturbances transfer directly to a physical Unitree Go2 without recalibration.
 \end{enumerate}
 
+The remainder of this paper is organized as follows: Section II reviews related work. Section III describes the system architecture, locomotion learning, and environment construction. Section IV details the navigation configuration, simulated validation, and real-world deployment results. Finally, Section V concludes this paper.
+
 \section{Related Work}
-\subsection{Reinforcement Learning for Quadrupedal Locomotion}
+\textbf{Reinforcement Learning for Quadrupedal Locomotion:}
 Reinforcement learning (RL) has advanced legged control \cite{ref1}, enabling robust policies without accurate dynamics models. Highly parallelized simulators like NVIDIA Isaac Sim and Isaac Lab facilitate deep RL training for sim-to-real transfer on platforms like ANYmal and Unitree Go1/Go2. However, most legged RL research focuses on gait stability, leaving visual navigation integration and sensor noise characteristics unaddressed.
 
-\subsection{Visual SLAM and Navigation Integration}
+\textbf{Visual SLAM and Navigation Integration:}
 Mobile robot navigation has traditionally relied on LiDAR sensors, which are heavy and power-intensive for payload-constrained quadruped robots. Visual SLAM (VSLAM) using RGB-D cameras offers a lightweight alternative. Real-Time Appearance-Based Mapping (RTAB-Map) \cite{ref2} combines appearance-based loop closure detection with pose-graph optimization to minimize drift. For path planning and obstacle avoidance, the ROS 2 Navigation (Nav2) framework \cite{ref3} is widely used.
 
 Although frameworks like \mbox{VR-Robo} \cite{ref5} use 3DGS \cite{ref4} to build digital twins, they often rely on heterogeneous sensors (e.g., using an iPad for modeling and an action camera for deployment). This introduces device-level discrepancies in lens distortion and field-of-view (FOV). In contrast, our pipeline uses a DSLR camera for 3DGS reconstruction and configures the virtual camera to match the physical D435i sensor, minimizing visual discrepancies.
@@ -58,16 +70,6 @@ Although frameworks like \mbox{VR-Robo} \cite{ref5} use 3DGS \cite{ref4} to buil
 \subsection{System Architecture}
 
 Our framework integrates RTAB-Map, Nav2, and a dual-stage locomotion control architecture. In simulation, a DRL policy—trained via PPO in Isaac Lab (v2.3.2) on Isaac Sim (v5.1.0)—generates camera bobbing noise. High-level velocity commands ($\mathbf{v}_{cmd} = [v_x, v_y, \omega_z]^T$) from the Nav2 local planner are mapped directly to the policy's action space. During real-world deployment, the DRL policy is bypassed, and velocity commands are routed directly to the Unitree Sport API via a ROS 2 bridge. This architecture reduces the computational load on the Jetson Orin NX. The system architecture is shown in Fig.~\ref{fig_system_overview}.
-
-\begin{figure*}[t]
-\begin{center}
-\vspace{-2mm}
-\includegraphics[width=\textwidth]{figures/fig_system_overview}
-\vspace{1mm}
-\caption{\label{fig_system_overview}Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we reconstruct a 3DGS environment and train an RL locomotion policy to simulate camera bobbing noise. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to reduce computational load on the Jetson Orin NX.}
-\vspace{-3.5mm}
-\end{center}
-\end{figure*}
 
 \subsection{Locomotion Learning in Isaac Sim}
 
@@ -126,6 +128,8 @@ We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m
 
 In simulation, the locomotion policy receives proprioceptive and exteroceptive (height-scan) inputs. Ray-casting queries the collision mesh to provide local elevation profiles for foot placement. The velocity commands are supplied by the DWB planner (Fig.~\ref{fig_sim_nav2}).
 
+To evaluate obstacle avoidance, virtual box obstacles were placed along the corridor. The local planner recalculated trajectories, and the policy adjusted its walking pattern to avoid obstacles (Fig.~\ref{fig_sim_nav2}). The resulting point cloud and occupancy grid maps are shown in Fig.~\ref{fig_sim_validation}.
+
 \begin{figure}[!t]
 \begin{center}
 \includegraphics[width=0.5\linewidth]{figures/fig_3d_map.jpg}
@@ -135,8 +139,6 @@ In simulation, the locomotion policy receives proprioceptive and exteroceptive (
 \caption{\label{fig_sim_validation}Visual mapping results in simulation. Top: Reconstructed 3D point cloud map from RTAB-Map. Bottom: Projected 2D occupancy grid map.}
 \end{center}
 \end{figure}
-
-To evaluate obstacle avoidance, virtual box obstacles were placed along the corridor. The local planner recalculated trajectories, and the policy adjusted its walking pattern to avoid obstacles (Fig.~\ref{fig_sim_nav2}). The resulting point cloud and occupancy grid maps are shown in Fig.~\ref{fig_sim_validation}.
 
 \subsection{Physical Deployment and Results}
 We deployed the pipeline on a physical Unitree Go2 in a campus corridor (Fig.~\ref{fig_real_deployment}). The onboard hardware consists of an NVIDIA Jetson Orin NX (20W mode, 16GB RAM) running Ubuntu 20.04 and ROS 2 Foxy. To reduce computational load, the RL policy was bypassed on the onboard Jetson Orin NX. Instead, velocity commands were routed directly to the Unitree Sport API using a ROS 2 bridge, reserving computing resources for SLAM and path planning. The D435i sensor was connected via USB 3.0.
@@ -158,11 +160,11 @@ This paper presented a dual-stage visual navigation framework for quadrupedal ro
 
 Future work will focus on incorporating dynamic obstacle avoidance strategies and optimizing the processing pipeline to support higher-resolution visual feedback on the edge computer.
 
-\section*{USE OF AI TOOLS}
-During the preparation of this work, the authors used Gemini (developed by Google) for grammar editing and style improvement of the manuscript. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the final text of the paper.
-
 \section*{ACKNOWLEDGEMENT}
 This research was supported by the National Research Foundation of Korea (NRF) grant funded by the Korean government (MSIT) (No. RS-2025-24683458).
+
+\section*{USE OF AI TOOLS}
+During the preparation of this work, the authors used Gemini (developed by Google) for grammar editing and style improvement of the manuscript. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the final text of the paper.
 \begin{thebibliography}{99}
 
 \bibitem{ref1}
