@@ -64,7 +64,7 @@ Our framework integrates RTAB-Map, Nav2, and a dual-stage locomotion control arc
 \vspace{-2mm}
 \includegraphics[width=\textwidth]{figures/fig_system_overview}
 \vspace{1mm}
-\caption{\label{fig_system_overview}Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we build a high-fidelity 3DGS environment and train an RL locomotion policy to simulate camera bobbing noise for upper-level navigation tuning. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to optimize computational resources on the Jetson Orin NX.}
+\caption{\label{fig_system_overview}Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we reconstruct a 3DGS environment and train an RL locomotion policy to simulate camera bobbing noise. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to reduce computational load on the Jetson Orin NX.}
 \vspace{-3.5mm}
 \end{center}
 \end{figure*}
@@ -98,7 +98,7 @@ We capture corridor images using a DSLR camera to avoid compression artifacts. T
 \begin{center}
 \includegraphics[width=0.75\linewidth]{figures/fig_3dgs_mesh.jpg}
 \vspace{1.5mm}
-\caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: High-fidelity photorealistic 3DGS render.}
+\caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: 3DGS render.}
 \end{center}
 \end{figure}
 
@@ -132,7 +132,7 @@ In simulation, the locomotion policy receives proprioceptive and exteroceptive (
 \\
 \vspace{1.5mm}
 \includegraphics[width=0.5\linewidth]{figures/fig_2d_map.png}
-\caption{\label{fig_sim_validation}Visual mapping results in the virtual sandbox. Top: Reconstructed 3D point cloud map from RTAB-Map. Bottom: Projected 2D occupancy grid map.}
+\caption{\label{fig_sim_validation}Visual mapping results in simulation. Top: Reconstructed 3D point cloud map from RTAB-Map. Bottom: Projected 2D occupancy grid map.}
 \end{center}
 \end{figure}
 
