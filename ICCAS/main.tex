@@ -126,7 +126,7 @@ We validated the navigation stack in a simulated 3DGS corridor (80~m long, 2.5~m
 
 In simulation, the locomotion policy receives proprioceptive and exteroceptive (height-scan) inputs. Ray-casting queries the collision mesh to provide local elevation profiles for foot placement. The closed-loop navigation system in simulation is illustrated in Fig.~\ref{fig_sim_nav2}. The local planner (DWB) in the Nav2 stack generates velocity commands based on the synchronized costmap and path planning displayed in RViz (Fig.~\ref{fig_sim_nav2}, right). These commands are then sent to the trained RL locomotion policy controlling the virtual robot in Isaac Sim (Fig.~\ref{fig_sim_nav2}, left), which simulates the physical walking dynamics and camera motion. To validate obstacle avoidance, virtual obstacles are introduced in the corridor. As shown in the RViz visualization (Fig.~\ref{fig_sim_nav2}, right), the local planner dynamically recalculates paths to circumvent obstacles, and the robot successfully executes these maneuvers in the simulator (Fig.~\ref{fig_sim_nav2}, left). The resulting mapping outputs generated during simulated navigation are shown in Fig.~\ref{fig_sim_validation}.
 
-\begin{figure}[!b]
+\begin{figure}[!t]
 \begin{center}
 \includegraphics[width=0.49\linewidth]{figures/fig_3d_map.jpg}
 \hfill
