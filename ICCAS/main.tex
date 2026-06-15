@@ -28,6 +28,12 @@
 
 \setlength{\textfloatsep}{14pt plus 2pt minus 2pt}
 \setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+\makeatletter
+\def\section{\@startsection {section}{1}{\z@}{4.5ex plus 0.5ex
+     minus .2ex}{1.2ex}{\center\fontsize{11pt}{11pt}\rm\bf\MakeUppercaseBlue}}
+\def\subsection{\@startsection{subsection}{2}{\z@}{1.2ex
+     }{0.4ex}{\noindent\rm\bf\textcolor[RGB]{0,112,192}}}
+\makeatother
 
 \begin{document}
 
@@ -77,7 +83,7 @@ Reinforcement learning (RL) has advanced legged control \cite{ref1}. Prior studi
 
 Mobile robot navigation has traditionally relied on LiDAR sensors, which are heavy and power-intensive for payload-constrained quadruped robots. Visual SLAM (VSLAM) using RGB-D cameras offers a lightweight alternative, with ORB-SLAM2 \cite{ref8} and RTAB-Map \cite{ref2} providing practical foundations for camera-based mapping. For path planning and obstacle avoidance, the ROS 2 Navigation (Nav2) framework \cite{ref3} is widely used.
 
-Photorealistic reconstruction methods provide another route to reducing the perceptual sim-to-real gap. Structure-from-Motion pipelines such as COLMAP \cite{ref9} estimate camera poses, while 3DGS \cite{ref4} enables real-time photorealistic rendering from reconstructed scenes. Although frameworks like \mbox{VR-Robo} \cite{ref5} use 3DGS to build digital twins, they often rely on heterogeneous sensors, introducing device-level discrepancies in lens distortion and field-of-view (FOV). In contrast, our pipeline configures the virtual camera to match the physical D435i sensor, minimizing visual discrepancies.
+Photorealistic reconstruction methods provide another route to reducing the perceptual sim-to-real gap. Structure-from-Motion pipelines such as COLMAP \cite{ref9} estimate camera poses, while 3DGS \cite{ref4} enables real-time photorealistic rendering from reconstructed scenes. Recent Gaussian-based SLAM systems such as SplaTAM \cite{ref10} also show the relevance of explicit Gaussian scene representations for dense RGB-D tracking and mapping. Although frameworks like \mbox{VR-Robo} \cite{ref5} use 3DGS to build digital twins, they often rely on heterogeneous sensors, introducing device-level discrepancies in lens distortion and field-of-view (FOV). In contrast, our pipeline configures the virtual camera to match the physical D435i sensor, minimizing visual discrepancies.
 
 \section{System and Locomotion Control}
 \subsection{System Architecture}
@@ -207,6 +213,9 @@ R. Mur-Artal and J. D. Tard{\'o}s, ``ORB-SLAM2: An open-source SLAM system for m
 
 \bibitem{ref9}
 J. L. Sch{\"o}nberger and J.-M. Frahm, ``Structure-from-motion revisited,'' in \textit{Proc. CVPR}, pp. 4104--4113, 2016.
+
+\bibitem{ref10}
+N. Keetha, J. Karhade, K. M. Jatavallabhula, G. Yang, S. Scherer, D. Ramanan, and J. Luiten, ``SplaTAM: Splat, track \& map 3D Gaussians for dense RGB-D SLAM,'' in \textit{Proc. CVPR}, 2024.
 
 \end{thebibliography}
 
