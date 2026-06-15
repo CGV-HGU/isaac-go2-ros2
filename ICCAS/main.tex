@@ -105,9 +105,9 @@ where:
 \end{itemize}
 
 \subsection{3DGS Environment Construction \& Agent Deployment}
-We capture corridor images using a DSLR camera to avoid compression artifacts. These images serve as input to COLMAP \cite{ref9} for Structure-from-Motion (SfM) to resolve camera poses. Then, a 3DGS \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a PLY mesh for coarse geometry. For physical collision modeling, we integrate the scene with NVIDIA's sparse volumetric framework, \textit{fVDB}. The resulting digital twin, combining visual photorealism and physical collision boundaries, is \mbox{shown in Fig.~\ref{fig_3dgs_mesh}}. We utilize the high-fidelity 3DGS model for camera rendering (Fig.~\ref{fig_3dgs_mesh}, right) and the corresponding fVDB sparse volumetric mesh for collision detection and robot-environment contact simulation (Fig.~\ref{fig_3dgs_mesh}, left).
+We capture corridor images using a DSLR camera to avoid compression artifacts. These images serve as input to COLMAP \cite{ref9} for Structure-from-Motion (SfM) to resolve camera poses. Then, a 3DGS \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a PLY mesh for coarse geometry. For physical collision modeling, we integrate the scene with NVIDIA's sparse volumetric framework, \textit{fVDB}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \begin{center}
 \includegraphics[width=0.98\linewidth]{figures/fig_3dgs_mesh.jpg}
 \vspace{1.5mm}
@@ -115,6 +115,8 @@ We capture corridor images using a DSLR camera to avoid compression artifacts. T
 \vspace{-2mm}
 \end{center}
 \end{figure}
+
+Fig.~\ref{fig_3dgs_mesh} shows the resulting digital twin, which combines visual photorealism with physical collision boundaries. We utilize the high-fidelity 3DGS model for camera rendering (Fig.~\ref{fig_3dgs_mesh}, right) and the corresponding fVDB sparse volumetric mesh for collision detection and robot-environment contact simulation (Fig.~\ref{fig_3dgs_mesh}, left).
 
 We import these assets into Isaac Sim, where the collision boundaries are computed using the \textit{fVDB} representation. A ROS 2 bridge publishes virtual RGB-D sensor streams, visualizes the robot state in RViz, and routes velocity commands. The virtual camera's field-of-view and resolution are configured to match the physical D435i camera to reduce the visual gap. The pre-trained locomotion policy is then deployed on the Go2 model to maintain stable gaits within the simulated corridor.
 
