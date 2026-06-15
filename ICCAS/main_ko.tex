@@ -1,0 +1,215 @@
+%% Korean translation of main.tex for review/discussion.
+
+\documentclass[10pt,twocolumn]{ICCAS}
+
+\usepackage{kotex}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{diagbox}
+
+\makeatletter
+\long\def\@makecaption#1#2#3{
+    \vskip 0pt
+    \noindent\hbox to\hsize{\hfil\parbox{0.96\hsize}{\centering #1~ #2}\hfil}
+}
+\makeatother
+
+\setlength{\textfloatsep}{14pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+\makeatletter
+\def\section{\@startsection {section}{1}{\z@}{4.5ex plus 0.5ex
+     minus .2ex}{1.2ex}{\center\fontsize{11pt}{11pt}\rm\bf\MakeUppercaseBlue}}
+\def\subsection{\@startsection{subsection}{2}{\z@}{1.2ex
+     }{0.4ex}{\noindent\rm\bf\textcolor[RGB]{0,112,192}}}
+\makeatother
+
+\begin{document}
+
+\title{3D Gaussian Splatting을 활용한 사족 보행 로봇 비전 주행의 Sim-to-Real 간극 완화}
+
+\author{Minseok Lee${}^{1}$, Seongyu Han${}^{1}$, Heejae Moon${}^{1}$, and Sung Soo Hwang${}^{1*}$ }
+
+\affils{ ${}^{1}$School of Artificial Intelligence, Computer and Electrical Engineering, \\
+Handong Global University, Pohang 37554, Republic of Korea \\
+(\{glen, tjsrb439, 22000249\}@handong.ac.kr, sshwang@handong.edu) {\small${}^{*}$ Corresponding author}}
+
+\abstract{
+    물리 사족 보행 로봇에 비전 기반 주행을 배포하는 것은 시각적 sim-to-real 간극과 보행으로 유도되는 카메라 흔들림 때문에 어렵다. 이러한 흔들림은 특징점 추적과 깊이 일관성을 저하시킨다. 본 논문은 이러한 지각적 및 동역학적 간극을 완화하여 가상 환경에서 파라미터를 최적화할 수 있는 파이프라인을 제안한다. 시뮬레이션 단계에서는 캠퍼스 복도의 3D Gaussian Splatting(3DGS) 디지털 트윈을 재구성하고, 강화학습(RL) 보행 정책을 사용하여 카메라 bobbing noise를 생성한다. 이렇게 합성된 시각 및 동역학 교란 조건에서 RTAB-Map visual SLAM과 Nav2 stack의 파라미터를 최적화한다. 실제 배포 단계에서는 RL 정책을 우회하고, ROS 2 bridge를 통해 속도 명령을 물리 로봇의 내장 Sport API로 직접 전달한다. 실제 실험은 simulated jitter에서 최적화된 파라미터가 물리 플랫폼으로 직접 이전되어, 별도의 수동 재조정 없이 visual mapping과 정성적 obstacle-aware replanning을 지원할 수 있음을 보인다.
+}
+
+\keywords{
+    Quadrupedal Locomotion, Visual SLAM, Sim-to-Real Pipeline, 3D Gaussian Splatting, Ego-motion Jitter, Virtual Sandbox.
+}
+
+\maketitle
+
+\begin{figure*}[t]
+\begin{center}
+\vspace{-2mm}
+\includegraphics[width=\textwidth]{figures/fig_system_overview}
+\vspace{1mm}
+\caption{\label{fig_system_overview}제안하는 Sim-to-Real 사족 보행 로봇 주행 프레임워크의 전체 구조. (a) 가상 검증 단계에서는 3DGS 환경을 재구성하고 RL 보행 정책을 학습하여 camera bobbing noise를 모사한다. (b) 물리 배포 단계에서는 RL 정책을 우회하고, Jetson Orin NX의 계산 부하를 줄이기 위해 ROS 2 bridge를 통해 Unitree Sport API로 명령을 전달한다.}
+\vspace{-3.5mm}
+\end{center}
+\end{figure*}
+
+\section{서론}
+자율 사족 보행 로봇은 험지와 비정형 지형에서 바퀴형 시스템보다 우수한 이동성을 제공한다. 실내 자율 주행을 달성하기 위해서는 보행 제어와 동시적 위치추정 및 지도작성(SLAM)의 통합이 필요하다. 기존 실내 주행은 LiDAR 센서에 의존하는 경우가 많았으나, LiDAR는 무겁고 전력 소모가 크다. 단일 RGB-D 카메라를 사용하는 비전 기반 주행은 경량이고 비용 효율적인 대안이다.
+
+그러나 보행 로봇의 비전 주행에는 두 가지 주요 sim-to-real 문제가 존재한다. 첫째는 \textit{지각적 간극}이다. 일반적인 시뮬레이터는 사실적인 텍스처와 깊이 충실도가 부족하므로, 실제 환경에서는 특징점 매칭 오류로 visual SLAM이 실패할 수 있다. 둘째는 \textit{동역학적 간극}이다. 보행 이동은 카메라 bobbing을 발생시키며, 이는 motion blur와 잘못된 장애물 검출(phantom obstacle)을 유발할 수 있다. 또한 물리 하드웨어에서 직접 파라미터를 튜닝하는 것은 배터리 제약과 충돌 위험 때문에 제한적이다.
+
+이러한 문제를 해결하기 위해 본 논문은 시뮬레이션 기반 파라미터 검증과 물리 배포를 분리하는 파이프라인을 제안한다. 단일 전방 RGB-D 카메라(Intel RealSense D435i)와 DSLR 이미지 기반 오프라인 3DGS 재구성을 사용하여 가상 카메라와 물리 카메라의 특성을 정렬함으로써 센서 불일치를 줄인다. 시뮬레이션에서는 실내 복도의 디지털 트윈을 재구성한다. 로봇의 저수준 제어기가 독점적이기 때문에, Isaac Lab에서 RL 보행 정책을 학습하여 실제 보행 진동을 모사하고 대표적인 카메라 노이즈를 생성한다. 이 가상 환경에서 RTAB-Map과 Nav2 파라미터를 최적화한다. 물리 배포 단계에서는 계산량이 큰 RL 정책을 우회하고, 제조사 Sport API로 속도 명령을 직접 전달하여 SLAM과 경로 계획을 위한 엣지 컴퓨팅 자원을 확보한다.
+
+요약하면, 본 연구는 DSLR 기반 3DGS와 \textit{fVDB} 재구성을 물리 시뮬레이터에 통합하고, 가상 카메라를 물리 센서와 정렬함으로써 photorealistic validation environment를 구축한다. 또한 RL 보행 정책을 사용하여 보행 동역학을 모사하고, simulated disturbance에서 최적화한 파라미터가 물리 Unitree Go2로 수동 재조정 없이 이전될 수 있음을 검증한다.
+
+본 논문의 구성은 다음과 같다. 2장에서는 관련 연구를 검토한다. 3장에서는 시스템 구조, 보행 학습, 환경 구축 방법을 설명한다. 4장에서는 주행 설정, 시뮬레이션 검증, 실제 배포 결과를 제시한다. 마지막으로 5장에서 결론을 제시한다.
+
+\section{관련 연구}
+강화학습(RL)은 보행 제어 분야를 발전시켜 왔다 \cite{ref1}. 기존 연구들은 actuator modeling, domain randomization, 대규모 병렬 학습을 통해 사족 보행 정책의 sim-to-real transfer를 수행하였다 \cite{ref6,ref7}. 그러나 대부분의 보행 RL 연구는 gait stability에 초점을 두며, 비전 주행 통합이나 센서 노이즈 특성은 충분히 다루지 않았다.
+
+이동 로봇 주행은 전통적으로 LiDAR 센서에 의존해 왔지만, LiDAR는 payload가 제한된 사족 보행 로봇에서 무겁고 전력 소모가 크다. RGB-D 카메라를 사용하는 visual SLAM(VSLAM)은 경량 대안이며, ORB-SLAM2 \cite{ref8}와 RTAB-Map \cite{ref2}은 카메라 기반 mapping의 실용적 기반을 제공한다. 경로 계획과 장애물 회피를 위해서는 ROS 2 Navigation(Nav2) 프레임워크 \cite{ref3}가 널리 사용된다.
+
+Photorealistic reconstruction 방법은 지각적 sim-to-real 간극을 줄이는 또 다른 접근이다. COLMAP과 같은 Structure-from-Motion pipeline \cite{ref9}은 카메라 pose를 추정하며, 3DGS \cite{ref4}는 재구성된 장면에서 실시간 photorealistic rendering을 가능하게 한다. 최근 SplaTAM과 같은 Gaussian 기반 SLAM 시스템 \cite{ref10}은 명시적 Gaussian scene representation이 dense RGB-D tracking 및 mapping에도 유용함을 보인다. VR-Robo \cite{ref5}와 같은 프레임워크는 3DGS를 사용하여 digital twin을 구축하지만, 이종 센서에 의존하는 경우가 있어 렌즈 왜곡과 field-of-view(FOV) 측면의 device-level discrepancy가 발생할 수 있다. 반면 본 파이프라인은 가상 카메라를 물리 D435i 센서와 일치하도록 설정하여 시각적 불일치를 최소화한다.
+
+\section{시스템 및 보행 제어}
+\subsection{시스템 구조}
+
+본 프레임워크는 RTAB-Map, Nav2, 그리고 이중 단계 보행 제어 구조를 통합한다. 시뮬레이션에서는 Isaac Sim(v5.1.0) 기반 Isaac Lab(v2.3.2)에서 PPO로 학습된 DRL 정책이 camera bobbing noise를 생성한다. Nav2 local planner의 고수준 속도 명령($\mathbf{v}_{cmd} = [v_x, v_y, \omega_z]^T$)은 정책의 action space로 직접 매핑된다. 실제 배포 단계에서는 DRL 정책을 우회하고, ROS 2 bridge를 통해 속도 명령을 Unitree Sport API로 직접 전달한다. 이 구조는 Jetson Orin NX의 계산 부하를 줄인다. 시스템 구조는 Fig.~\ref{fig_system_overview}에 제시되어 있다.
+
+\subsection{Isaac Sim에서의 보행 학습}
+
+카메라 bobbing noise를 모사하기 위해 NVIDIA Isaac Lab(v2.3.2)과 Isaac Sim(v5.1.0) 물리 엔진에서 RL 정책을 학습한다. 이 정책은 보행으로 유도되는 진동을 생성하는 역할을 한다. Procedural Terrain Generator를 사용하여 uneven ground, ramp, step obstacle을 포함한 혼합 지형 학습 환경을 구성하고, curriculum learning으로 지형 난이도를 조절한다. 정책의 강건성을 높이기 위해 다음 domain randomization을 적용한다.
+\begin{itemize}
+    \item 몸체 질량 randomization: $\Delta m \in [-1.0, +3.0]$~kg.
+    \item 지면 마찰 계수: $\mu \in [0.6, 0.8]$.
+    \item 외란: 로봇의 center of mass(CoM)에 impulse force perturbation 적용.
+\end{itemize}
+물리 step은 200~Hz이고, 정책은 50~Hz로 실행된다. 학습에는 PyTorch 기반 \textit{skrl} 라이브러리의 PPO 구현을 사용한다. Actor와 critic network는 모두 $[512, 256, 128]$ hidden layer와 ELU activation을 갖는 MLP이다. Learning rate는 $1.0 \times 10^{-3}$이며 KL-divergence scheduler로 조절된다. Discount factor는 $\gamma=0.99$, GAE parameter는 $\lambda=0.95$이다.
+
+Reward function은 velocity reference를 추종하면서 보행 안정성을 유지하도록 설계되었다. 전체 reward $R$은 다음과 같다.
+\begin{equation}
+R = w_{lin} R_{lin} + w_{ang} R_{ang} + w_{air} R_{air} - \sum_{i} w_{p,i} P_{i} \label{eq_reward}
+\end{equation}
+여기서:
+\begin{itemize}
+    \item $R_{lin} = \exp(-\|\mathbf{v}_{xy}^* - \mathbf{v}_{xy}\|_2^2 / \sigma_{lin}^2)$는 선속도 추종 reward이다($\mathbf{v}_{xy}^*$와 $\mathbf{v}_{xy}$는 각각 목표 및 실제 속도, $w_{lin} = 1.5, \sigma_{lin} = 0.25$).
+    \item $R_{ang} = \exp(-(\omega_{z}^* - \omega_{z})^2 / \sigma_{ang}^2)$는 각속도 추종 reward이다($\omega_{z}^*$와 $\omega_{z}$는 각각 목표 및 실제 yaw rate, $w_{ang} = 0.75, \sigma_{ang} = 0.25$).
+    \item $R_{air}$는 foot clearance air-time reward이다($w_{air} = 0.25$).
+    \item $P_i$는 base vertical velocity, roll/pitch oscillation, joint limit, excessive torque, joint acceleration, unintended contact에 대한 penalty term이다($w_{p,i}$는 penalty weight).
+\end{itemize}
+
+\subsection{3DGS 환경 구축 및 에이전트 배포}
+압축 artifact를 피하기 위해 DSLR 카메라로 복도 이미지를 취득한다. 이 이미지들은 COLMAP \cite{ref9} 기반 Structure-from-Motion(SfM)에 입력되어 카메라 pose를 추정하는 데 사용된다. 이후 3DGS \cite{ref4} 모델을 최적화하고, visual rendering을 위한 USDZ asset과 coarse geometry를 위한 PLY mesh로 내보낸다. 물리 collision modeling을 위해 NVIDIA의 sparse volumetric framework인 \textit{fVDB}와 장면을 통합한다.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=0.98\linewidth]{figures/fig_3dgs_mesh.jpg}
+\vspace{1.5mm}
+\caption{\label{fig_3dgs_mesh}캠퍼스 복도의 digital twin 표현. 왼쪽: fVDB로 생성한 sparse volumetric collision mesh. 오른쪽: 3DGS render.}
+\vspace{-2mm}
+\end{center}
+\end{figure}
+
+Fig.~\ref{fig_3dgs_mesh}는 visual photorealism과 physical collision boundary를 결합한 digital twin을 보여준다. 고충실도 3DGS 모델은 카메라 rendering에 사용하고(Fig.~\ref{fig_3dgs_mesh}, 오른쪽), 대응되는 fVDB sparse volumetric mesh는 collision detection과 robot-environment contact simulation에 사용한다(Fig.~\ref{fig_3dgs_mesh}, 왼쪽).
+
+이 asset들을 Isaac Sim으로 가져오고, collision boundary는 \textit{fVDB} 표현을 사용하여 계산한다. ROS 2 bridge는 가상 RGB-D 센서 스트림을 발행하고, RViz에서 로봇 상태를 시각화하며, 속도 명령을 전달한다. 가상 카메라의 field-of-view와 resolution은 물리 D435i 카메라와 일치하도록 설정하여 visual gap을 줄인다. 이후 사전 학습된 보행 정책을 Go2 model에 배포하여 시뮬레이션 복도 내에서 안정적인 gait를 유지한다.
+
+\section{실험 결과}
+\subsection{실험 설정 및 평가 방법}
+
+주행 시스템은 Intel RealSense D435i RGB-D sensor, RTAB-Map \cite{ref2}, ROS 2 Nav2 stack으로 구성된다. 센서는 Go2의 전방 몸체에 장착되며, 시뮬레이션의 가상 카메라는 색상 및 깊이 profile을 물리 센서와 일치시킨다. Depth ambiguity가 존재하는 monocular framework(e.g., \mbox{VR-Robo} \cite{ref5})와 달리, active depth sensor는 local costmap을 위한 직접적인 기하 정보를 제공한다.
+
+RTAB-Map은 odometry와 loop-closure detection을 위해 visual keypoint(e.g., GFTT/ORB)를 사용한다. Depth stream은 3D octomap과 2D occupancy grid를 구성하기 위해 투영된다. Low-latency obstacle avoidance를 위해 raw depth frame은 \textit{depthimage\_to\_}\allowbreak\textit{laserscan} package를 통해 pseudo-2D laser scan으로 변환된다. Nav2 global planner는 occupancy grid에서 경로를 계획하고, DWB local planner는 local costmap을 사용하여 steering command $\mathbf{v}_{cmd}$를 계산한다.
+
+Coordinate transform(TF) tree 불일치를 해결하기 위해 custom bridge는 tree를 \textit{map} $\rightarrow$ \textit{odom} $\rightarrow$ \textit{world} $\rightarrow$ \textit{base}로 매핑한다. 여기서 RTAB-Map은 \textit{map} $\rightarrow$ \textit{odom} transform을 발행하고 Isaac Sim은 odometry를 world frame에 연결한다. 이를 통해 시뮬레이션에서 표준 ROS 2 navigation이 가능해진다. 시스템은 simulated 및 physical environment에서 mapping consistency를 분석하고, locomotion-induced camera oscillation 조건의 시뮬레이션에서 obstacle-aware replanning을 정성적으로 확인하는 방식으로 평가한다.
+
+\subsection{결과 및 평가}
+물리 배포 전에 80~m 길이, 2.5~m 폭의 simulated 3DGS corridor에서 navigation stack을 검증하였다.
+
+시뮬레이션에서 locomotion policy는 proprioceptive 및 exteroceptive(height-scan) 입력을 받는다. Ray-casting은 collision mesh를 질의하여 foot placement를 위한 local elevation profile을 제공한다. 시뮬레이션의 closed-loop navigation system은 Fig.~\ref{fig_sim_nav2}에 나타냈다. Nav2 stack의 local planner(DWB)는 RViz에 표시되는 synchronized costmap과 path planning을 기반으로 velocity command를 생성한다(Fig.~\ref{fig_sim_nav2}, 오른쪽). 이 명령은 Isaac Sim의 가상 로봇을 제어하는 학습된 RL locomotion policy로 전달되며(Fig.~\ref{fig_sim_nav2}, 왼쪽), 이는 실제 보행 동역학과 카메라 움직임을 모사한다. Virtual obstacle을 복도에 삽입하여 obstacle-aware replanning을 정성적으로 검증하였다. RViz visualization에서 보이듯이(Fig.~\ref{fig_sim_nav2}, 오른쪽), local planner는 삽입된 장애물 주변으로 경로를 재계산하고, simulated robot은 replanned trajectory를 따른다(Fig.~\ref{fig_sim_nav2}, 왼쪽).
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=0.98\linewidth]{figures/fig_sim_nav2.png}
+\vspace{1.5mm}
+\caption{\label{fig_sim_nav2}재구성된 가상 환경에서의 정성적 obstacle-aware replanning 결과. 왼쪽은 Isaac Sim에서 동작하는 simulated quadruped robot, 오른쪽은 삽입된 장애물 주변에서 Nav2 path planning과 local costmap update가 수행되는 RViz 화면을 보여준다.}
+\end{center}
+\end{figure}
+
+제안 프레임워크를 물리 Unitree Go2 로봇에 배포하여 캠퍼스 복도를 주행하였다(Fig.~\ref{fig_real_deployment}). 로봇은 전방 Intel RealSense D435i 카메라와 NVIDIA Jetson Orin NX 컴퓨터를 탑재하며, 전체 navigation 및 mapping stack은 onboard에서 실행된다.
+
+실환경 배포 중 생성된 mapping output은 Fig.~\ref{fig_real_mapping}에 제시하였다.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=0.83\linewidth, height=0.61\linewidth]{figures/fig_3d_map.jpg}
+\hfill
+\includegraphics[width=0.134\linewidth, height=0.61\linewidth]{figures/fig_2d_map.png}
+\vspace{1.5mm}
+\caption{\label{fig_real_mapping}실환경 배포에서 생성된 visual mapping 결과. 왼쪽: RTAB-Map으로 재구성한 3D point cloud map. 오른쪽: 투영된 2D occupancy grid map.}
+\end{center}
+\end{figure}
+
+Jetson Orin NX의 계산 부하를 줄이기 위해 RL 정책은 우회되며, 명령은 ROS 2 bridge를 통해 내장 Sport API로 전달된다. 이를 통해 onboard 자원은 SLAM과 path planning에 집중된다. 카메라는 USB 3.0으로 연결된다.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=0.98\linewidth]{figures/fig_real_robot.jpg}
+\vspace{1.5mm}
+\caption{\label{fig_real_deployment}실제 실험 설정. Unitree Go2 로봇은 Intel RealSense D435i와 Jetson Orin NX를 탑재하고, 전체 navigation stack을 onboard에서 실행한다.}
+\end{center}
+\end{figure}
+
+시뮬레이션은 ROS 2 Jazzy(Ubuntu 24.04)를 사용하고 물리 로봇은 ROS 2 Foxy(Ubuntu 20.04)를 사용했지만, 동일한 software architecture를 유지하였다. 이를 통해 simulated camera noise 조건에서 최적화된 파라미터를 수동 재조정 없이 물리 플랫폼으로 직접 이전할 수 있었다. RTAB-Map은 보행 중 loop closure를 검출했으며, 로봇은 목표 속도 $0.4$~m/s를 유지하였다. 이러한 결과는 제안 파이프라인이 navigation parameter의 실용적 transfer를 가능하게 함을 보인다.
+
+\subsection{한계점 및 향후 연구}
+몇 가지 한계가 남아 있다. 첫째, 물리 배포는 학습된 locomotion policy를 우회하고 내장 Sport API를 사용한다. 따라서 본 연구는 learned controller 자체가 아니라 navigation 및 mapping parameter의 transfer를 검증한다. 둘째, 실험은 주로 정적 복도 환경에서 수행되었으며, obstacle avoidance는 repeated-trial success rate 없이 정성적으로 평가되었다. 향후 연구에서는 localization drift, map consistency, obstacle-avoidance success rate, dynamic obstacle, edge optimization에 대한 정량 benchmark를 포함할 예정이다.
+
+\section{결론}
+본 논문은 사족 보행 로봇의 비전 주행을 위한 3DGS 기반 sim-to-real validation pipeline을 제시하였다. Photorealistic digital twin과 RL-generated walking dynamics를 결합함으로써, 제안 프레임워크는 물리 배포 전에 visual 및 motion disturbance 조건에서 RTAB-Map과 Nav2 파라미터를 튜닝할 수 있도록 한다. Unitree Go2 실험은 최적화된 navigation stack이 ROS 2 bridge와 내장 Sport API를 통해 수동 재조정 없이 배포될 수 있음을 보였다.
+
+본 연구의 주요 기여는 learned locomotion controller의 직접 transfer가 아니라, visual navigation 및 mapping parameter를 시뮬레이션에서 물리 사족 보행 플랫폼으로 이전하기 위한 실용적 validation pipeline을 구축한 데 있다. 이러한 결과는 3DGS 기반 digital twin이 보행으로 유도되는 카메라 움직임 조건에서 RGB-D SLAM과 navigation behavior를 평가하기 위한 유용한 sandbox로 활용될 수 있음을 시사한다.
+
+\section*{ACKNOWLEDGEMENT}
+This research was supported by the National Research Foundation of Korea (NRF) grant funded by the Korean government (MSIT) (No. RS-2025-24683458).
+
+\section*{USE OF AI TOOLS}
+During the preparation of this work, the authors used Gemini (developed by Google) for grammar editing and style improvement of the manuscript. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the final text of the paper.
+
+\begin{thebibliography}{99}
+
+\bibitem{ref1}
+J. Hwangbo, J. Lee, A. Dosovitskiy, D. Bellicoso, V. Tsounis, V. Koltun, and M. Hutter, ``Learning agile and dynamic motor skills for legged robots,'' \textit{Science Robotics}, vol. 4, no. 26, p. eaau5872, 2019.
+
+\bibitem{ref2}
+M. Labb{\'e} and F. Michaud, ``RTAB-Map as an open-source lidar and visual simultaneous localization and mapping library for large-scale and long-term online operation,'' arXiv preprint arXiv:2403.06341, 2024.
+
+\bibitem{ref3}
+S. Macenski, T. Foote, B. Gerkey, C. Lalancette, and W. Woodall, ``Robot Operating System 2: Design, architecture, and uses in the wild,'' \textit{Science Robotics}, vol. 7, no. 66, p. eabm6074, 2022.
+
+\bibitem{ref4}
+B. Kerbl, G. Kopanas, T. Leimk{\"u}hler, and G. Drettakis, ``3D Gaussian splatting for real-time radiance field rendering,'' \textit{ACM Transactions on Graphics}, vol. 42, no. 4, pp. 1--14, 2023.
+
+\bibitem{ref5}
+S. Zhu, L. Mou, D. Li, B. Ye, R. Huang, and H. Zhao, ``VR-Robo: A real-to-sim-to-real framework for visual robot navigation and locomotion,'' \textit{IEEE Robotics and Automation Letters}, vol. 10, no. 8, pp. 7875--7882, August 2025.
+
+\bibitem{ref6}
+J. Tan, T. Zhang, E. Coumans, A. Iscen, Y. Bai, D. Hafner, S. Bohez, and V. Vanhoucke, ``Sim-to-real: Learning agile locomotion for quadruped robots,'' in \textit{Proc. RSS}, 2018.
+
+\bibitem{ref7}
+N. Rudin, D. Hoeller, P. Reist, and M. Hutter, ``Learning to walk in minutes using massively parallel deep reinforcement learning,'' in \textit{Proc. CoRL}, 2022.
+
+\bibitem{ref8}
+R. Mur-Artal and J. D. Tard{\'o}s, ``ORB-SLAM2: An open-source SLAM system for monocular, stereo, and RGB-D cameras,'' \textit{IEEE Trans. Robotics}, vol. 33, no. 5, pp. 1255--1262, 2017.
+
+\bibitem{ref9}
+J. L. Sch{\"o}nberger and J.-M. Frahm, ``Structure-from-motion revisited,'' in \textit{Proc. CVPR}, pp. 4104--4113, 2016.
+
+\bibitem{ref10}
+N. Keetha, J. Karhade, K. M. Jatavallabhula, G. Yang, S. Scherer, D. Ramanan, and J. Luiten, ``SplaTAM: Splat, track \& map 3D Gaussians for dense RGB-D SLAM,'' in \textit{Proc. CVPR}, 2024.
+
+\end{thebibliography}
+
+\end{document}

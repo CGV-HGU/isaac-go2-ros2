@@ -136,13 +136,15 @@ In simulation, the locomotion policy receives proprioceptive and exteroceptive (
 
 \begin{figure}[H]
 \begin{center}
-\includegraphics[width=0.98\linewidth]{figures/fig_sim_nav2.jpg}
+\includegraphics[width=0.98\linewidth]{figures/fig_sim_nav2.png}
 \vspace{1.5mm}
-\caption{\label{fig_sim_nav2}Autonomous navigation execution inside the reconstructed virtual environment, showing the simulated quadruped robot in Isaac Sim (left) and path planning/costmap synchronization in RViz (right).}
+\caption{\label{fig_sim_nav2}Qualitative obstacle-aware replanning in the reconstructed virtual environment. The simulated quadruped robot runs in Isaac Sim (left), while RViz shows Nav2 path planning and local costmap updates around inserted obstacles (right).}
 \end{center}
 \end{figure}
 
-The resulting mapping outputs generated during simulated navigation are shown in Fig.~\ref{fig_sim_validation}.
+We deployed the proposed framework on a physical Unitree Go2 robot to navigate the campus corridor, as shown in Fig.~\ref{fig_real_deployment}. The robot is equipped with a front-facing Intel RealSense D435i camera and an NVIDIA Jetson Orin NX computer, running the entire navigation and mapping stack locally.
+
+The resulting mapping outputs generated during real-world deployment are shown in Fig.~\ref{fig_real_mapping}.
 
 \begin{figure}[H]
 \begin{center}
@@ -150,11 +152,9 @@ The resulting mapping outputs generated during simulated navigation are shown in
 \hfill
 \includegraphics[width=0.134\linewidth, height=0.61\linewidth]{figures/fig_2d_map.png}
 \vspace{1.5mm}
-\caption{\label{fig_sim_validation}Visual mapping results in simulation. Left: Reconstructed 3D point cloud map from RTAB-Map. Right: Projected 2D occupancy grid map.}
+\caption{\label{fig_real_mapping}Visual mapping results from real-world deployment. Left: Reconstructed 3D point cloud map from RTAB-Map. Right: Projected 2D occupancy grid map.}
 \end{center}
 \end{figure}
-
-We deployed the proposed framework on a physical Unitree Go2 robot to navigate the campus corridor, as shown in Fig.~\ref{fig_real_deployment}. The robot is equipped with a front-facing Intel RealSense D435i camera and an NVIDIA Jetson Orin NX computer, running the entire navigation and mapping stack locally.
 
 To reduce computational load on the Jetson Orin NX, the RL policy is bypassed, and commands are sent to the built-in Sport API via a ROS 2 bridge, reserving onboard resources for SLAM and path planning. The camera is connected via USB 3.0.
 
