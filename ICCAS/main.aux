@@ -1,39 +1,45 @@
 \relax 
 \citation{ref1}
+\citation{ref6,ref7}
+\citation{ref8}
 \citation{ref2}
 \citation{ref3}
+\citation{ref9}
+\citation{ref4}
+\citation{ref5}
 \@writefile{toc}{\contentsline {section}{\numberline {1. \hskip -1em}Introduction}{1}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {2. \hskip -1em}Related Work}{1}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1 \hskip -1em}Reinforcement Learning for Quadrupedal Locomotion}{1}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2 \hskip -1em}Visual SLAM and Navigation Integration}{1}{}\protected@file@percent }
-\citation{ref5}
+\citation{ref9}
 \citation{ref4}
-\citation{ref4}
-\citation{ref2}
-\citation{ref5}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we reconstruct a 3DGS environment and train an RL locomotion policy to emulate camera bobbing noise. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to reduce computational load on the Jetson Orin NX.}}{2}{}\protected@file@percent }
+\newlabel{fig_system_overview}{{1}{2}{}{figure.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3. \hskip -1em}System and Locomotion Control}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1 \hskip -1em}System Architecture}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2 \hskip -1em}Locomotion Learning in Isaac Sim}{2}{}\protected@file@percent }
 \newlabel{eq_reward}{{1}{2}{}{equation.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3 \hskip -1em}3DGS Environment Construction \& Agent Deployment}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4. \hskip -1em}Autonomous Navigation}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1 \hskip -1em}Navigation System Configuration}{2}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overall architecture of the proposed Sim-to-Real quadrupedal navigation framework. (a) In the virtual validation stage, we reconstruct a 3DGS environment and train an RL locomotion policy to simulate camera bobbing noise. (b) In the physical deployment stage, the RL policy is bypassed, and commands are sent to the Unitree Sport API via a ROS 2 bridge to reduce computational load on the Jetson Orin NX.}}{3}{}\protected@file@percent }
-\newlabel{fig_system_overview}{{1}{3}{}{figure.1}{}}
+\citation{ref2}
+\citation{ref5}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: 3DGS render.}}{3}{}\protected@file@percent }
 \newlabel{fig_3dgs_mesh}{{2}{3}{}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2 \hskip -1em}Validation in 3DGS Environment}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4. \hskip -1em}Experimental Results}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1 \hskip -1em}Experimental Setup and Evaluation Methodology}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2 \hskip -1em}Results and Evaluation}{3}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Autonomous navigation execution inside the reconstructed virtual environment, showing the simulated quadruped robot in Isaac Sim (left) and path planning/costmap synchronization in RViz (right).}}{3}{}\protected@file@percent }
 \newlabel{fig_sim_nav2}{{3}{3}{}{figure.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Visual mapping results in simulation. Top: Reconstructed 3D point cloud map from RTAB-Map. Bottom: Projected 2D occupancy grid map.}}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Visual mapping results in simulation. Left: Reconstructed 3D point cloud map from RTAB-Map. Right: Projected 2D occupancy grid map.}}{3}{}\protected@file@percent }
 \newlabel{fig_sim_validation}{{4}{3}{}{figure.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3 \hskip -1em}Physical Deployment and Results}{3}{}\protected@file@percent }
 \bibcite{ref1}{1}
 \bibcite{ref2}{2}
 \bibcite{ref3}{3}
 \bibcite{ref4}{4}
 \bibcite{ref5}{5}
+\bibcite{ref6}{6}
+\bibcite{ref7}{7}
+\bibcite{ref8}{8}
+\bibcite{ref9}{9}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Real-world experimental setup. The Unitree Go2 robot is equipped with an Intel RealSense D435i and Jetson Orin NX, running the entire navigation stack on-board.}}{4}{}\protected@file@percent }
 \newlabel{fig_real_deployment}{{5}{4}{}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3 \hskip -1em}Limitations}{4}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {5. \hskip -1em}Conclusion}{4}{}\protected@file@percent }
 \gdef \@abspage@last{4}

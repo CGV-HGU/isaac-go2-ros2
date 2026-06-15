@@ -10,6 +10,22 @@
 \usepackage{float}
 \usepackage{booktabs}
 \usepackage{diagbox}
+
+\makeatletter
+\long\def\@makecaption#1#2#3{
+\ifx\figurestring#3
+    \vskip 0pt
+    \noindent\hbox to\hsize{\hfil\parbox{0.96\hsize}{\centering #1~ #2}\hfil}
+\else
+    \ifx\fnum@figure
+      \begin{center}{#1~ #2}\end{center}
+    \else
+      {#1~ #2}
+      \vskip 5pt
+    \fi
+\fi}
+\makeatother
+
 \begin{document}
 
 \title{Bridging the Sim-to-Real Gap in Quadrupedal Visual Navigation via 3D Gaussian Splatting}
@@ -49,21 +65,16 @@ However, legged visual navigation introduces two primary sim-to-real challenges.
 
 To address these challenges, we present a pipeline that decouples simulation-based parameter verification from physical deployment. Using a single front-facing RGB-D camera (Intel RealSense D435i) and offline 3DGS reconstruction from DSLR images, we align virtual and physical camera properties to reduce sensor discrepancy. In simulation, we reconstruct a digital twin of an indoor corridor. Since the robot's low-level controller is proprietary, we train an RL locomotion policy in Isaac Lab to emulate physical gait oscillations, generating representative camera noise. In this virtual environment, we optimize the RTAB-Map and Nav2 parameters. During physical deployment, the computationally intensive RL policy is bypassed, and velocity commands are routed directly to the manufacturer's Sport API via a ROS 2 bridge, conserving edge computing resources for SLAM and path planning.
 
-The contributions of this work are as follows:
-\begin{enumerate}
-    \item We integrate DSLR-based 3DGS and \textit{fVDB} reconstruction into a physics simulator, aligning virtual camera parameters with the physical sensor to establish a photorealistic validation environment.
-    \item We train an RL locomotion policy to emulate walking dynamics, generating representative camera jitter in simulation to bridge the dynamic gap.
-    \item We demonstrate that navigation and mapping parameters optimized under simulated disturbances transfer directly to a physical Unitree Go2 without recalibration.
-\end{enumerate}
+In summary, this work establishes a photorealistic validation environment by integrating DSLR-based 3DGS and \textit{fVDB} reconstruction into a physics simulator while aligning the virtual camera with the physical sensor. It further uses an RL locomotion policy to emulate legged walking dynamics and verifies on a physical Unitree Go2 that parameters optimized under simulated disturbances can transfer without recalibration.
 
 The remainder of this paper is organized as follows: Section II reviews related work. Section III describes the system architecture, locomotion learning, and environment construction. Section IV details the navigation configuration, simulated validation, and real-world deployment results. Finally, Section V concludes this paper.
 
 \section{Related Work}
-Reinforcement learning (RL) has advanced legged control \cite{ref1}, enabling robust policies without accurate dynamics models. Highly parallelized simulators like NVIDIA Isaac Sim and Isaac Lab facilitate deep RL training for sim-to-real transfer on platforms like ANYmal and Unitree Go1/Go2. However, most legged RL research focuses on gait stability, leaving visual navigation integration and sensor noise characteristics unaddressed.
+Reinforcement learning (RL) has advanced legged control \cite{ref1}. Prior studies have transferred quadrupedal policies through actuator modeling, domain randomization, and massively parallel training \cite{ref6,ref7}. However, most legged RL research focuses on gait stability, leaving visual navigation integration and sensor noise characteristics unaddressed.
 
-Mobile robot navigation has traditionally relied on LiDAR sensors, which are heavy and power-intensive for payload-constrained quadruped robots. Visual SLAM (VSLAM) using RGB-D cameras offers a lightweight alternative. Real-Time Appearance-Based Mapping (RTAB-Map) \cite{ref2} combines appearance-based loop closure detection with pose-graph optimization to minimize drift. For path planning and obstacle avoidance, the ROS 2 Navigation (Nav2) framework \cite{ref3} is widely used.
+Mobile robot navigation has traditionally relied on LiDAR sensors, which are heavy and power-intensive for payload-constrained quadruped robots. Visual SLAM (VSLAM) using RGB-D cameras offers a lightweight alternative, with ORB-SLAM2 \cite{ref8} and RTAB-Map \cite{ref2} providing practical foundations for camera-based mapping. For path planning and obstacle avoidance, the ROS 2 Navigation (Nav2) framework \cite{ref3} is widely used.
 
-Although frameworks like \mbox{VR-Robo} \cite{ref5} use 3DGS \cite{ref4} to build digital twins, they often rely on heterogeneous sensors (e.g., using an iPad for modeling and an action camera for deployment). This introduces device-level discrepancies in lens distortion and field-of-view (FOV). In contrast, our pipeline uses a DSLR camera for 3DGS reconstruction and configures the virtual camera to match the physical D435i sensor, minimizing visual discrepancies.
+Photorealistic reconstruction methods provide another route to reducing the perceptual sim-to-real gap. Structure-from-Motion pipelines such as COLMAP \cite{ref9} estimate camera poses, while 3DGS \cite{ref4} enables real-time photorealistic rendering from reconstructed scenes. Although frameworks like \mbox{VR-Robo} \cite{ref5} use 3DGS to build digital twins, they often rely on heterogeneous sensors, introducing device-level discrepancies in lens distortion and field-of-view (FOV). In contrast, our pipeline configures the virtual camera to match the physical D435i sensor, minimizing visual discrepancies.
 
 \section{System and Locomotion Control}
 \subsection{System Architecture}
@@ -93,7 +104,7 @@ where:
 \end{itemize}
 
 \subsection{3DGS Environment Construction \& Agent Deployment}
-We capture corridor images using a DSLR camera to avoid compression artifacts. These images serve as input to COLMAP for Structure-from-Motion (SfM) to resolve camera poses. Then, a 3DGS \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a PLY mesh for coarse geometry. For physical collision modeling, we integrate the scene with NVIDIA's sparse volumetric framework, \textit{fVDB}. The resulting digital twin, combining visual photorealism and physical collision boundaries, is shown in Fig.~\ref{fig_3dgs_mesh}. We utilize the high-fidelity 3DGS model for camera rendering (Fig.~\ref{fig_3dgs_mesh}, right) and the corresponding fVDB sparse volumetric mesh for collision detection and robot-environment contact simulation (Fig.~\ref{fig_3dgs_mesh}, left).
+We capture corridor images using a DSLR camera to avoid compression artifacts. These images serve as input to COLMAP \cite{ref9} for Structure-from-Motion (SfM) to resolve camera poses. Then, a 3DGS \cite{ref4} model is optimized and exported as a USDZ asset for visual rendering, alongside a PLY mesh for coarse geometry. For physical collision modeling, we integrate the scene with NVIDIA's sparse volumetric framework, \textit{fVDB}. The resulting digital twin, combining visual photorealism and physical collision boundaries, is shown in Fig.~\ref{fig_3dgs_mesh}. We utilize the high-fidelity 3DGS model for camera rendering (Fig.~\ref{fig_3dgs_mesh}, right) and the corresponding fVDB sparse volumetric mesh for collision detection and robot-environment contact simulation (Fig.~\ref{fig_3dgs_mesh}, left).
 
 \begin{figure}[!t]
 \begin{center}
@@ -182,6 +193,18 @@ B. Kerbl, G. Kopanas, T. Leimk{\"u}hler, and G. Drettakis, ``3D Gaussian splatti
 
 \bibitem{ref5}
 S. Zhu, L. Mou, D. Li, B. Ye, R. Huang, and H. Zhao, ``VR-Robo: A real-to-sim-to-real framework for visual robot navigation and locomotion,'' \textit{IEEE Robotics and Automation Letters}, vol. 10, no. 8, pp. 7875--7882, August 2025.
+
+\bibitem{ref6}
+J. Tan, T. Zhang, E. Coumans, A. Iscen, Y. Bai, D. Hafner, S. Bohez, and V. Vanhoucke, ``Sim-to-real: Learning agile locomotion for quadruped robots,'' in \textit{Proc. RSS}, 2018.
+
+\bibitem{ref7}
+N. Rudin, D. Hoeller, P. Reist, and M. Hutter, ``Learning to walk in minutes using massively parallel deep reinforcement learning,'' in \textit{Proc. CoRL}, 2022.
+
+\bibitem{ref8}
+R. Mur-Artal and J. D. Tard{\'o}s, ``ORB-SLAM2: An open-source SLAM system for monocular, stereo, and RGB-D cameras,'' \textit{IEEE Trans. Robotics}, vol. 33, no. 5, pp. 1255--1262, 2017.
+
+\bibitem{ref9}
+J. L. Sch{\"o}nberger and J.-M. Frahm, ``Structure-from-motion revisited,'' in \textit{Proc. CVPR}, pp. 4104--4113, 2016.
 
 \end{thebibliography}
 
