@@ -13,17 +13,9 @@
 
 \makeatletter
 \long\def\@makecaption#1#2#3{
-\ifx\figurestring#3
     \vskip 0pt
     \noindent\hbox to\hsize{\hfil\parbox{0.96\hsize}{\centering #1~ #2}\hfil}
-\else
-    \ifx\fnum@figure
-      \begin{center}{#1~ #2}\end{center}
-    \else
-      {#1~ #2}
-      \vskip 5pt
-    \fi
-\fi}
+}
 \makeatother
 
 \setlength{\textfloatsep}{14pt plus 2pt minus 2pt}
