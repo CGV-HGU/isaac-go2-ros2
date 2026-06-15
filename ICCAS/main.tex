@@ -26,6 +26,9 @@
 \fi}
 \makeatother
 
+\setlength{\textfloatsep}{14pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+
 \begin{document}
 
 \title{Bridging the Sim-to-Real Gap in Quadrupedal Visual Navigation via 3D Gaussian Splatting}
@@ -67,7 +70,7 @@ To address these challenges, we present a pipeline that decouples simulation-bas
 
 In summary, this work establishes a photorealistic validation environment by integrating DSLR-based 3DGS and \textit{fVDB} reconstruction into a physics simulator while aligning the virtual camera with the physical sensor. It further uses an RL locomotion policy to emulate legged walking dynamics and verifies on a physical Unitree Go2 that parameters optimized under simulated disturbances can transfer without recalibration.
 
-The remainder of this paper is organized as follows: Section II reviews related work. Section III describes the system architecture, locomotion learning, and environment construction. Section IV details the navigation configuration, simulated validation, and real-world deployment results. Finally, Section V concludes this paper.
+The remainder of this paper is organized as follows: Section 2 reviews related work. Section 3 describes the system architecture, locomotion learning, and environment construction. Section 4 details the navigation configuration, simulated validation, and real-world deployment results. Finally, Section 5 concludes this paper.
 
 \section{Related Work}
 Reinforcement learning (RL) has advanced legged control \cite{ref1}. Prior studies have transferred quadrupedal policies through actuator modeling, domain randomization, and massively parallel training \cite{ref6,ref7}. However, most legged RL research focuses on gait stability, leaving visual navigation integration and sensor noise characteristics unaddressed.
@@ -111,6 +114,7 @@ We capture corridor images using a DSLR camera to avoid compression artifacts. T
 \includegraphics[width=0.98\linewidth]{figures/fig_3dgs_mesh.jpg}
 \vspace{1.5mm}
 \caption{\label{fig_3dgs_mesh}Digital twin representation of the campus corridor. Left: Sparse volumetric collision mesh generated using fVDB. Right: 3DGS render.}
+\vspace{-2mm}
 \end{center}
 \end{figure}
 
@@ -183,7 +187,7 @@ During the preparation of this work, the authors used Gemini (developed by Googl
 J. Hwangbo, J. Lee, A. Dosovitskiy, D. Bellicoso, V. Tsounis, V. Koltun, and M. Hutter, ``Learning agile and dynamic motor skills for legged robots,'' \textit{Science Robotics}, vol. 4, no. 26, p. eaau5872, 2019.
 
 \bibitem{ref2}
-M. Labb{\'e} and F. Pomerleau, ``Online global loop closure detection for large-scale multi-session graph-based SLAM,'' \textit{Autonomous Robots}, vol. 34, no. 3, pp. 183--200, 2013.
+M. Labb{\'e} and F. Michaud, ``RTAB-Map as an open-source lidar and visual simultaneous localization and mapping library for large-scale and long-term online operation,'' arXiv preprint arXiv:2403.06341, 2024.
 
 \bibitem{ref3}
 S. Macenski, T. Foote, B. Gerkey, C. Lalancette, and W. Woodall, ``Robot Operating System 2: Design, architecture, and uses in the wild,'' \textit{Science Robotics}, vol. 7, no. 66, p. eabm6074, 2022.
