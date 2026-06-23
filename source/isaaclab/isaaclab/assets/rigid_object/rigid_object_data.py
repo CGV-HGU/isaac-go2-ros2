@@ -7,7 +7,7 @@ import weakref
 
 import torch
 
-import omni.physics.tensors.impl.api as physx
+import omni.physx.tensors.impl.api as physx
 
 import isaaclab.utils.math as math_utils
 from isaaclab.sim.utils.stage import get_current_stage_id

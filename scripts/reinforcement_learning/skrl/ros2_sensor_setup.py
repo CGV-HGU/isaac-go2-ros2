@@ -9,10 +9,12 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
     """
     print("[INFO] Setting up ROS 2 Bridge and Sensor OmniGraphs...")
 
-    # Enable required extensions for Isaac Sim 5.1.0
+    # Enable required extensions for Isaac Sim 6.0.0+
     ext_manager = omni.kit.app.get_app().get_extension_manager()
     ext_manager.set_extension_enabled_immediate("isaacsim.core.nodes", True)
+    ext_manager.set_extension_enabled_immediate("isaacsim.ros2.core", True)
     ext_manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
+    ext_manager.set_extension_enabled_immediate("isaacsim.ros2.nodes", True)
 
     # 1. Create Camera Prim attached to the robot's base
     if not stage.GetPrimAtPath(camera_path).IsValid():
@@ -38,6 +40,8 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2CameraInfoDepth", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
                 ("ComputeOdometry", "isaacsim.core.nodes.IsaacComputeOdometry"),
                 ("ROS2Odometry", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
+                ("ComputeTF_World", "isaacsim.core.nodes.IsaacComputeTransformTree"),
+                ("ComputeTF_Base", "isaacsim.core.nodes.IsaacComputeTransformTree"),
                 ("ROS2TF_World", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
                 ("ROS2TF_Base", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
                 ("ROS2CmdVel", "isaacsim.ros2.bridge.ROS2SubscribeTwist"),
@@ -68,14 +72,14 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ROS2Odometry.inputs:chassisFrameId", "base"),
                 ("ROS2Odometry.inputs:topicName", "/odom"),
 
-                # TF Tree 1 (world -> base)
-                ("ROS2TF_World.inputs:parentPrim", "/World"),
-                ("ROS2TF_World.inputs:targetPrims", [robot_base_path]),
+                # TF Tree 1 (world -> base) using Compute Node
+                ("ComputeTF_World.inputs:parentPrim", "/World"),
+                ("ComputeTF_World.inputs:targetPrims", [robot_base_path]),
                 ("ROS2TF_World.inputs:topicName", "/tf"),
 
-                # TF Tree 2 (base -> front_cam)
-                ("ROS2TF_Base.inputs:parentPrim", robot_base_path),
-                ("ROS2TF_Base.inputs:targetPrims", [camera_path]),
+                # TF Tree 2 (base -> front_cam) using Compute Node
+                ("ComputeTF_Base.inputs:parentPrim", robot_base_path),
+                ("ComputeTF_Base.inputs:targetPrims", [camera_path]),
                 ("ROS2TF_Base.inputs:topicName", "/tf"),
 
                 # Cmd_vel Subscriber
@@ -104,10 +108,22 @@ def setup_ros2_sensors(stage, robot_base_path="/World/envs/env_0/Robot/base", ca
                 ("ComputeOdometry.outputs:angularVelocity", "ROS2Odometry.inputs:angularVelocity"),
                 ("ReadSimTime.outputs:simulationTime", "ROS2Odometry.inputs:timeStamp"),
 
-                ("OnTick.outputs:tick", "ROS2TF_World.inputs:execIn"),
+                # Connect TF Tree 1 (world -> base)
+                ("OnTick.outputs:tick", "ComputeTF_World.inputs:execIn"),
+                ("ComputeTF_World.outputs:execOut", "ROS2TF_World.inputs:execIn"),
+                ("ComputeTF_World.outputs:parentFrames", "ROS2TF_World.inputs:parentFrames"),
+                ("ComputeTF_World.outputs:childFrames", "ROS2TF_World.inputs:childFrames"),
+                ("ComputeTF_World.outputs:translations", "ROS2TF_World.inputs:translations"),
+                ("ComputeTF_World.outputs:orientations", "ROS2TF_World.inputs:orientations"),
                 ("ReadSimTime.outputs:simulationTime", "ROS2TF_World.inputs:timeStamp"),
 
-                ("OnTick.outputs:tick", "ROS2TF_Base.inputs:execIn"),
+                # Connect TF Tree 2 (base -> front_cam)
+                ("OnTick.outputs:tick", "ComputeTF_Base.inputs:execIn"),
+                ("ComputeTF_Base.outputs:execOut", "ROS2TF_Base.inputs:execIn"),
+                ("ComputeTF_Base.outputs:parentFrames", "ROS2TF_Base.inputs:parentFrames"),
+                ("ComputeTF_Base.outputs:childFrames", "ROS2TF_Base.inputs:childFrames"),
+                ("ComputeTF_Base.outputs:translations", "ROS2TF_Base.inputs:translations"),
+                ("ComputeTF_Base.outputs:orientations", "ROS2TF_Base.inputs:orientations"),
                 ("ReadSimTime.outputs:simulationTime", "ROS2TF_Base.inputs:timeStamp"),
 
                 ("OnTick.outputs:tick", "ROS2CmdVel.inputs:execIn"),

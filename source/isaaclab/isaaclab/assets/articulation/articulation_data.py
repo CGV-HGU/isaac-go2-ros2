@@ -8,7 +8,7 @@ import weakref
 
 import torch
 
-import omni.physics.tensors.impl.api as physx
+import omni.physx.tensors.impl.api as physx
 from isaacsim.core.simulation_manager import SimulationManager
 
 import isaaclab.utils.math as math_utils

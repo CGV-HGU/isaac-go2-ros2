@@ -200,57 +200,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # ==========================================
     # [추가됨] ROS2 RGB & Depth 카메라 퍼블리셔 세팅
     # ==========================================
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "skrl")))
+    import ros2_sensor_setup
+    
     import omni
-    ext_manager = omni.kit.app.get_app().get_extension_manager()
-    ext_manager.set_extension_enabled_immediate("omni.isaac.ros2_bridge", True)
-    
-    import omni.graph.core as og
-    from pxr import UsdGeom, Gf
-    
-    camera_path = "/World/envs/env_0/Robot/base/front_cam"
-    
-    # 1. 로봇의 base(몸통) 아래에 카메라 Prim 생성 (앞쪽을 바라보도록 위치/회전 설정)
-    if not env.unwrapped.scene.stage.GetPrimAtPath(camera_path).IsValid():
-        cam = UsdGeom.Camera.Define(env.unwrapped.scene.stage, camera_path)
-        # 로봇 머리 위(X축 0.15m, Z축 0.25m) 위치로 수정. 
-        cam.AddTranslateOp().Set(Gf.Vec3d(0.15, 0.0, 0.25))
-        # 카메라 렌즈 방향(기본 -Z)을 앞쪽(+X)으로 회전 (Pitch 90도)
-        cam.AddRotateXYZOp().Set(Gf.Vec3d(90, 0, 90))
-        cam.GetFocalLengthAttr().Set(24.0)
-
-    # 2. ROS2 Bridge (RGB & Depth) OmniGraph 생성
-    og.Controller.edit(
-        {"graph_path": "/World/ROS2_Camera_Graph", "evaluator_name": "execution"},
-        {
-            og.Controller.Keys.CREATE_NODES: [
-                ("OnTick", "omni.graph.action.OnPlaybackTick"),
-                ("RenderProduct", "omni.isaac.core_nodes.IsaacCreateRenderProduct"),
-                ("ROS2CameraRGB", "omni.isaac.ros2_bridge.ROS2CameraHelper"),
-                ("ROS2CameraDepth", "omni.isaac.ros2_bridge.ROS2CameraHelper"),
-            ],
-            og.Controller.Keys.SET_VALUES: [
-                ("RenderProduct.inputs:cameraPrim", camera_path),
-                ("RenderProduct.inputs:resolution", [640, 480]),
-                
-                # RGB 설정
-                ("ROS2CameraRGB.inputs:type", "rgb"),
-                ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb"),
-                ("ROS2CameraRGB.inputs:frameId", "go2_front_cam"),
-                
-                # Depth 설정
-                ("ROS2CameraDepth.inputs:type", "depth"),
-                ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth"),
-                ("ROS2CameraDepth.inputs:frameId", "go2_front_cam"),
-            ],
-            og.Controller.Keys.CONNECT: [
-                ("OnTick.outputs:tick", "RenderProduct.inputs:execIn"),
-                ("RenderProduct.outputs:execOut", "ROS2CameraRGB.inputs:execIn"),
-                ("RenderProduct.outputs:renderProductPath", "ROS2CameraRGB.inputs:renderProductPath"),
-                ("RenderProduct.outputs:execOut", "ROS2CameraDepth.inputs:execIn"),
-                ("RenderProduct.outputs:renderProductPath", "ROS2CameraDepth.inputs:renderProductPath"),
-            ],
-        },
-    )
+    stage = omni.usd.get_context().get_stage()
+    ros2_sensor_setup.setup_ros2_sensors(stage)
     # ==========================================
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
@@ -310,13 +266,28 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         start_time = time.time()
         # run everything in inference mode
         with torch.inference_mode():
-            # keyboard -> base_velocity
+            # Get velocity from ROS 2 Twist Subscriber node (Nav2)
+            nav_x, nav_y, nav_yaw = 0.0, 0.0, 0.0
+            try:
+                import omni.graph.core as og
+                cmd_node = og.Controller.node("/World/ROS2_Camera_Graph/ROS2CmdVel")
+                if cmd_node.is_valid():
+                    lin_vel = og.Controller.get(og.Controller.attribute("outputs:linearVelocity", cmd_node))
+                    ang_vel = og.Controller.get(og.Controller.attribute("outputs:angularVelocity", cmd_node))
+                    if lin_vel is not None and ang_vel is not None:
+                        nav_x, nav_y, nav_yaw = float(lin_vel[0]), float(lin_vel[1]), float(ang_vel[2])
+            except Exception:
+                pass
+
+            # keyboard -> base_velocity (Keyboard override Nav2)
+            kb_x, kb_y, kb_yaw = keyboard_state["forward"], keyboard_state["side"], keyboard_state["yaw"]
+            
+            final_x = kb_x if kb_x != 0.0 else nav_x
+            final_y = kb_y if kb_y != 0.0 else nav_y
+            final_yaw = kb_yaw if kb_yaw != 0.0 else nav_yaw
+
             cmd = torch.tensor(
-                [
-                    keyboard_state["forward"],
-                    keyboard_state["side"],
-                    keyboard_state["yaw"],
-                ],
+                [final_x, final_y, final_yaw],
                 device=env.unwrapped.device,
                 dtype=torch.float32,
             )
