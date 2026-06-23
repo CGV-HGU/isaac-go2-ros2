@@ -15,6 +15,12 @@ try:
     import omni.physics.tensors.impl.api as physx
 except ImportError:
     import omni.physics.tensors.api as physx
+
+# Fallback type definitions for Isaac Sim 6.0+ compatibility
+if not hasattr(physx, "SoftBodyView"):
+    physx.SoftBodyView = physx.DeformableBodyView
+if not hasattr(physx, "SoftBodyMaterialView"):
+    physx.SoftBodyMaterialView = physx.DeformableMaterialView
 from isaacsim.core.simulation_manager import SimulationManager
 from pxr import PhysxSchema, UsdShade
 
@@ -327,7 +333,10 @@ class DeformableObject(AssetBase):
         root_prim_path = root_prim.GetPath().pathString
         root_prim_path_expr = self.cfg.prim_path + root_prim_path[len(template_prim_path) :]
         # -- object view
-        self._root_physx_view = self._physics_sim_view.create_soft_body_view(root_prim_path_expr.replace(".*", "*"))
+        if hasattr(self._physics_sim_view, "create_soft_body_view"):
+            self._root_physx_view = self._physics_sim_view.create_soft_body_view(root_prim_path_expr.replace(".*", "*"))
+        else:
+            self._root_physx_view = self._physics_sim_view.create_volume_deformable_body_view(root_prim_path_expr.replace(".*", "*"))
 
         # Return if the asset is not found
         if self._root_physx_view._backend is None:
@@ -344,9 +353,14 @@ class DeformableObject(AssetBase):
             else:
                 material_prim_path_expr = material_prim_path
             # -- material view
-            self._material_physx_view = self._physics_sim_view.create_soft_body_material_view(
-                material_prim_path_expr.replace(".*", "*")
-            )
+            if hasattr(self._physics_sim_view, "create_soft_body_material_view"):
+                self._material_physx_view = self._physics_sim_view.create_soft_body_material_view(
+                    material_prim_path_expr.replace(".*", "*")
+                )
+            else:
+                self._material_physx_view = self._physics_sim_view.create_deformable_material_view(
+                    material_prim_path_expr.replace(".*", "*")
+                )
         else:
             self._material_physx_view = None
 

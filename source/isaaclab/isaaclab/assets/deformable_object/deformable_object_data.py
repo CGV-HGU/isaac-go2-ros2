@@ -12,6 +12,12 @@ try:
 except ImportError:
     import omni.physics.tensors.api as physx
 
+# Fallback type definitions for Isaac Sim 6.0+ compatibility
+if not hasattr(physx, "SoftBodyView"):
+    physx.SoftBodyView = physx.DeformableBodyView
+if not hasattr(physx, "SoftBodyMaterialView"):
+    physx.SoftBodyMaterialView = physx.DeformableMaterialView
+
 import isaaclab.utils.math as math_utils
 from isaaclab.utils.buffers import TimestampedBuffer
 
