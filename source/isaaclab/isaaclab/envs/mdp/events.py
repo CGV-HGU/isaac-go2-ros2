@@ -22,7 +22,10 @@ from typing import TYPE_CHECKING, Literal
 import torch
 
 import carb
-import omni.physics.tensors.impl.api as physx
+try:
+    import omni.physics.tensors.impl.api as physx
+except ImportError:
+    import omni.physics.tensors.api as physx
 from isaacsim.core.utils.extensions import enable_extension
 from pxr import Gf, Sdf, UsdGeom, Vt
 

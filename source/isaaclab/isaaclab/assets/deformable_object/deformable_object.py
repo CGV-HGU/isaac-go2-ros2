@@ -11,7 +11,10 @@ from typing import TYPE_CHECKING
 
 import torch
 
-import omni.physics.tensors.impl.api as physx
+try:
+    import omni.physics.tensors.impl.api as physx
+except ImportError:
+    import omni.physics.tensors.api as physx
 from isaacsim.core.simulation_manager import SimulationManager
 from pxr import PhysxSchema, UsdShade
 

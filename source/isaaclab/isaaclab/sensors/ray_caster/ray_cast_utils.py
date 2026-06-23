@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import torch
 
-import omni.physics.tensors.impl.api as physx
+try:
+    import omni.physics.tensors.impl.api as physx
+except ImportError:
+    import omni.physics.tensors.api as physx
 
 from isaaclab.sim.views import XformPrimView
 from isaaclab.utils.math import convert_quat
