@@ -33,7 +33,7 @@ controller_server:
     controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.001
-    min_theta_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.05
     controller_plugins: ["FollowPath"]
     progress_checker_plugin: "progress_checker"
     goal_checker_plugin: "goal_checker"
@@ -45,8 +45,8 @@ controller_server:
 
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.3
+      yaw_goal_tolerance: 0.5
       stateful: True
 
     FollowPath:
@@ -73,19 +73,20 @@ controller_server:
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.5
-      xy_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.3
+      yaw_goal_tolerance: 0.5
       trans_stopped_velocity: 0.25
       short_circuit_trajectory_evaluation: True
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      BaseObstacle.scale: 0.02
-      PathAlign.scale: 32.0
+      BaseObstacle.scale: 2.0
+      PathAlign.scale: 16.0
       PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 24.0
+      GoalAlign.scale: 12.0
       GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 32.0
-      GoalDist.scale: 24.0
-      RotateToGoal.scale: 32.0
+      PathDist.scale: 16.0
+      GoalDist.scale: 12.0
+      RotateToGoal.scale: 16.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 
@@ -127,7 +128,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.55
+        inflation_radius: 0.6
         inflate_around_unknown: false
         inflate_unknown: false
       always_send_full_costmap: true
@@ -163,8 +164,8 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.45
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.6
 
 planner_server:
   ros__parameters:
@@ -174,7 +175,7 @@ planner_server:
     GridBased:
       plugin: "nav2_navfn_planner::NavfnPlanner"
       tolerance: 0.5
-      use_astar: false
+      use_astar: true
       allow_unknown: true
 
 behavior_server:
@@ -208,14 +209,22 @@ collision_monitor:
     dummy_scan:
       type: "scan"
       topic: "/scan"
-    polygons: ["dummy_polygon"]
-    dummy_polygon:
+    polygons: ["stop_polygon", "slowdown_polygon"]
+    stop_polygon:
       type: "polygon"
-      points: "[[0.1, 0.1], [0.1, -0.1], [-0.1, -0.1], [-0.1, 0.1]]"
+      points: "[[0.45, 0.32], [0.45, -0.32], [-0.45, -0.32], [-0.45, 0.32]]"
       action_type: "stop"
       min_points: 4
-      visualize: False
+      visualize: True
       polygon_pub_topic: "polygon_stop"
+    slowdown_polygon:
+      type: "polygon"
+      points: "[[1.0, 0.6], [1.0, -0.6], [-1.0, -0.6], [-1.0, 0.6]]"
+      action_type: "slowdown"
+      slowdown_ratio: 0.5
+      min_points: 4
+      visualize: True
+      polygon_pub_topic: "polygon_slowdown"
 
 velocity_smoother:
   ros__parameters:

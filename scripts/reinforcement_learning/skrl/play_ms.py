@@ -136,10 +136,10 @@ def main(env_cfg, agent_cfg):
             robot_asset = env.unwrapped.scene["robot"]
             env.unwrapped.command_manager.get_command("base_velocity")[:] = 0.0
             root_state = robot_asset.data.default_root_state.clone()
-            start_x, start_y = -5.0, 1.0 # 위치는 롤백 상태
+            start_x, start_y = -4.5, 1.0 # 위치는 롤백 상태
             root_state[:, 0], root_state[:, 1], root_state[:, 2] = start_x, start_y, 0.28
-            # 목적지 방향에 150도 회전 추가
-            yaw = math.atan2(GOAL_Y - start_y, GOAL_X - start_x) + math.radians(150)
+            # 목적지 방향 정렬 (회전 제거)
+            yaw = math.atan2(GOAL_Y - start_y, GOAL_X - start_x)
             root_state[:, 3], root_state[:, 6] = math.cos(yaw / 2.0), math.sin(yaw / 2.0)
 
             root_state[:, 7:] = 0.0

@@ -4,6 +4,7 @@ from rclpy.action import ActionClient
 from nav2_msgs.action import NavigateToPose
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 import time
+import math
 
 class PersistentGoalSender(Node):
     def __init__(self):
@@ -17,8 +18,8 @@ class PersistentGoalSender(Node):
         self.nav_to_pose_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
         
         # 3. 상태 및 설정 변수
-        self.goal_x, self.goal_y = 2.0, -1.0  
-        self.start_x, self.start_y = -5.0, 0.0 
+        self.goal_x, self.goal_y = 2.0, -1.5 
+        self.start_x, self.start_y = -6.0, 0.0 
         
         self.is_goal_active = False
         self.user_goal_locked = False
@@ -38,11 +39,13 @@ class PersistentGoalSender(Node):
             msg.header.frame_id = 'map'
             msg.pose.pose.position.x = self.start_x
             msg.pose.pose.position.y = self.start_y
-            # 150도 회전 (Yaw = 150 deg) -> Quaternion z=sin(75), w=cos(75)
-            msg.pose.pose.orientation.z = 0.9659
-            msg.pose.pose.orientation.w = 0.2588
-            # 공분산(Covariance) 값을 작게 주어 위치가 확실함을 Nav2에 알림
-            msg.pose.covariance = [0.1] * 36
+            # 목적지를 향하도록 방향 설정 (play_ms.py와 동일하게)
+            goal_x, goal_y = 2.0, 0.0 # play_ms.py의 GOAL_X, GOAL_Y
+            yaw = math.atan2(goal_y - self.start_y, goal_x - self.start_x)
+            msg.pose.pose.orientation.z = math.sin(yaw / 2.0)
+            msg.pose.pose.orientation.w = math.cos(yaw / 2.0)
+            # 공분산(Covariance)을 0으로 설정하여 위치가 완벽함을 알림 (회전 방지)
+            msg.pose.covariance = [0.0] * 36
             
             self.init_pub.publish(msg)
             self.localization_attempts += 1
