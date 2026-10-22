@@ -3,7 +3,7 @@
 Complete A0 Academic Poster Generator for ICCAS 2026
 Paper Title: Bridging the Sim-to-Real Gap in Quadrupedal Visual Navigation via 3D Gaussian Splatting
 Authors: Minseok Lee, Seongyu Han, Heejae Moon, and Sung Soo Hwang*
-Organization: CGV Lab, Handong Global University
+Organization: Computer Graphics and Vision Lab (CGV), Handong Global University
 """
 
 import os
@@ -21,12 +21,15 @@ from pptx.enum.text import PP_ALIGN, MSO_ANCHOR, MSO_AUTO_SIZE
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.oxml.ns import qn
 
-# --- Paths ---
-BASE_DIR = "/root/isaac-go2-ros2/ICCAS"
+# --- Paths (Dynamic & Fully Portable) ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+POSTER_DIR = SCRIPT_DIR
+ICCAS_DIR = os.path.dirname(POSTER_DIR)
+BASE_DIR = ICCAS_DIR
 FIG_DIR = os.path.join(BASE_DIR, "figures")
-ASSETS_DIR = os.path.join(BASE_DIR, "poster", "assets")
+ASSETS_DIR = os.path.join(POSTER_DIR, "assets")
 TEMPLATE_PATH = os.path.join(BASE_DIR, "ICCAS2026_Poster-Sample.pptx")
-OUTPUT_PPTX = os.path.join(BASE_DIR, "poster", "ICCAS2026_Poster_Quadruped.pptx")
+OUTPUT_PPTX = os.path.join(POSTER_DIR, "ICCAS2026_Poster_Quadruped.pptx")
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
 # --- Configuration & Theme Colors ---
@@ -87,7 +90,6 @@ def parse_runs(text):
             r["text"] = part[2:-2]
             r["bold"] = True
         elif part.startswith("{{c:"):
-            # {{c:HEX}} -> length of prefix is 12 chars
             r["color"] = RGBColor.from_string(part[4:10])
             r["text"] = part[12:-6]
             r["bold"] = True
@@ -154,7 +156,7 @@ def create_textbox(slide, x, y, w, h, inset=0.0):
     tf.margin_bottom = Cm(inset)
     return tf
 
-def add_tag_badge(slide, x, y, text, bg_color, pt=22, text_color=COLOR_WHITE):
+def add_tag_badge(slide, x, y, text, bg_color, pt=20, text_color=COLOR_WHITE):
     approx_w = len(text) * (pt * 0.024) + 0.8
     h = (pt * 0.042) + 0.32
     shp = add_rect(slide, x, y, approx_w, h, bg_color, line_color=None, shape_type=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.4)
@@ -183,51 +185,68 @@ def draw_card(slide, x, y, w, h, title, title_color, bg_color, border_color=None
     tf.margin_left = Cm(0.8)
     tf.margin_right = Cm(0.8)
     tf.margin_top = tf.margin_bottom = Cm(0)
-    add_paragraph(tf, title, pt=38, bold=True, color=COLOR_WHITE, align=PP_ALIGN.LEFT, space_after=0, is_first=True)
+    add_paragraph(tf, title, pt=36, bold=True, color=COLOR_WHITE, align=PP_ALIGN.LEFT, space_after=0, is_first=True)
     
     pad = 0.6
     return (x + pad, y + header_h + pad, w - 2*pad, h - header_h - 2*pad)
 
-# --- Asset Processing ---
+# --- Asset Processing with Optimized Crops ---
 def prepare_all_assets():
-    print("[INFO] Preparing high-resolution poster assets...")
+    print("[INFO] Preparing high-resolution cropped assets...")
     assets = {}
+    Image.MAX_IMAGE_PIXELS = None
     
-    # 1. System Overview (high resolution)
+    # 1. System Overview (Hero Card) - Crop 200px borders and scale
     src_overview = os.path.join(FIG_DIR, "fig_system_overview.png")
-    dst_overview = os.path.join(ASSETS_DIR, "system_overview.png")
-    if not os.path.exists(dst_overview):
-        im = Image.open(src_overview).convert("RGB")
-        im.resize((8000, 3000), Image.LANCZOS).save(dst_overview, optimize=True)
+    dst_overview = os.path.join(ASSETS_DIR, "system_overview_tight.png")
+    im = Image.open(src_overview).convert("RGB")
+    # Content bounding box: (200, 200, 15800, 5800) -> 15600 x 5600 (aspect 2.7857)
+    crop_ov = im.crop((200, 200, 15800, 5800))
+    crop_ov.resize((7800, int(7800 / 2.7857)), Image.LANCZOS).save(dst_overview, optimize=True)
     assets["overview"] = dst_overview
 
-    # 2. 3DGS & Mesh
-    assets["mesh"] = os.path.join(FIG_DIR, "fig_3dgs_mesh.png")
+    # 2. 3DGS & Mesh - Crop top/bottom margins to focus on corridor geometry
+    src_mesh = os.path.join(FIG_DIR, "fig_3dgs_mesh.png")
+    dst_mesh = os.path.join(ASSETS_DIR, "3dgs_mesh_crop.png")
+    im_m = Image.open(src_mesh).convert("RGB")
+    Wm, Hm = im_m.size
+    crop_m = im_m.crop((0, int(Hm * 0.08), Wm, int(Hm * 0.92)))
+    crop_m.save(dst_mesh, quality=95)
+    assets["mesh"] = dst_mesh
 
-    # 3. Nav2 Replanning
-    assets["simnav"] = os.path.join(FIG_DIR, "fig_sim_nav2.png")
+    # 3. Nav2 Replanning - Crop screen borders & margins
+    src_sim = os.path.join(FIG_DIR, "fig_sim_nav2.png")
+    dst_sim = os.path.join(ASSETS_DIR, "sim_nav2_crop.png")
+    im_s = Image.open(src_sim).convert("RGB")
+    Ws, Hs = im_s.size
+    crop_s = im_s.crop((int(Ws * 0.02), int(Hs * 0.05), int(Ws * 0.98), int(Hs * 0.95)))
+    crop_s.save(dst_sim, quality=95)
+    assets["simnav"] = dst_sim
 
-    # 4. Robot Crop
+    # 4. Robot Crop - Tight centered crop on Go2 + Orin NX + D435i camera
     src_robot = os.path.join(FIG_DIR, "fig_real_robot.jpg")
-    dst_robot = os.path.join(ASSETS_DIR, "real_robot_crop.jpg")
-    if not os.path.exists(dst_robot):
-        im = Image.open(src_robot).convert("RGB")
-        W, H = im.size
-        cw = int(H * 0.85)
-        cx = int(W * 0.485)
-        x0 = max(0, min(W - cw, cx - cw // 2))
-        im.crop((x0, 0, x0 + cw, H)).save(dst_robot, quality=95)
+    dst_robot = os.path.join(ASSETS_DIR, "real_robot_tight.jpg")
+    im_r = Image.open(src_robot).convert("RGB")
+    # Centered at x in [620, 1300], y in [320, 1020] -> 680x700
+    crop_r = im_r.crop((620, 320, 1300, 1020))
+    crop_r.save(dst_robot, quality=96)
     assets["robot"] = dst_robot
 
-    # 5. 3D Point Cloud Map
-    assets["map3d"] = os.path.join(FIG_DIR, "fig_3d_map.png")
+    # 5. 3D Point Cloud Map - Tight crop eliminating empty dark gray background
+    src_3d = os.path.join(FIG_DIR, "fig_3d_map.png")
+    dst_3d = os.path.join(ASSETS_DIR, "map3d_crop.png")
+    im_3d = Image.open(src_3d).convert("RGB")
+    crop_3d = im_3d.crop((220, 60, 1600, 1160)) # 1380 x 1100 (aspect 1.2545)
+    crop_3d.save(dst_3d, quality=95)
+    assets["map3d"] = dst_3d
 
-    # 6. 2D Occupancy Grid Map
+    # 6. 2D Occupancy Grid Map - Crop unknown borders and upscale 8x
     src_map2d = os.path.join(FIG_DIR, "fig_2d_map.png")
-    dst_map2d = os.path.join(ASSETS_DIR, "map2d_x8.png")
-    if not os.path.exists(dst_map2d):
-        im = Image.open(src_map2d).convert("RGB")
-        im.resize((im.size[0] * 8, im.size[1] * 8), Image.NEAREST).save(dst_map2d)
+    dst_map2d = os.path.join(ASSETS_DIR, "map2d_crop_x8.png")
+    im_2d = Image.open(src_map2d).convert("RGB")
+    # Crop to content bbox (11, 10, 88, 436)
+    crop_2d = im_2d.crop((11, 10, 88, 436))
+    crop_2d.resize((crop_2d.size[0] * 8, crop_2d.size[1] * 8), Image.NEAREST).save(dst_map2d)
     assets["map2d"] = dst_map2d
 
     # 7. QR Code to Repository
@@ -258,9 +277,9 @@ def generate_iccas_poster():
     CONTENT_W = PAGE_W - 2 * MARGIN_X # 80.1 cm
     
     # =========================================================================
-    # 1. TOP HEADER BANNER (Y: 0.0 to 16.0 cm)
+    # 1. TOP HEADER BANNER (Y: 0.0 to 11.5 cm)
     # =========================================================================
-    HEADER_H = 16.0
+    HEADER_H = 11.5
     
     # Background Gradient (Deep Navy to Academic Blue)
     hdr_bg = add_rect(slide, 0, 0, PAGE_W, HEADER_H, COLOR_NAVY)
@@ -272,170 +291,182 @@ def generate_iccas_poster():
     hdr_bg.fill.gradient_stops[1].position = 1.0
 
     # Top Sub-bar (Session code & Organization)
-    SUB_BAR_H = 1.5
+    SUB_BAR_H = 1.3
     add_rect(slide, 0, 0, PAGE_W, SUB_BAR_H, COLOR_NAVY_DARK)
     
     # Session Badge
-    add_tag_badge(slide, MARGIN_X, 0.32, f"ICCAS 2026 Poster  [ {SESSION_CODE} ]", COLOR_GOLD, pt=26, text_color=COLOR_NAVY_DARK)
+    add_tag_badge(slide, MARGIN_X, 0.22, f"ICCAS 2026 Poster  [ {SESSION_CODE} ]", COLOR_GOLD, pt=24, text_color=COLOR_NAVY_DARK)
     
-    # Lab Info Right
-    tf_top_r = create_textbox(slide, MARGIN_X + 40.0, 0.32, CONTENT_W - 40.0, 1.0)
-    add_paragraph(tf_top_r, "Computer Graphics & Virtual Reality Lab (CGV)  \u00b7  Handong Global University", 
-                  pt=26, bold=True, color=COLOR_LIGHT_BLUE, align=PP_ALIGN.RIGHT, is_first=True)
+    # Lab Info Right (Accurate: Computer Graphics and Vision Lab)
+    tf_top_r = create_textbox(slide, MARGIN_X + 35.0, 0.22, CONTENT_W - 35.0, 0.9)
+    add_paragraph(tf_top_r, "Computer Graphics and Vision Lab (CGV)  \u00b7  Handong Global University", 
+                  pt=25, bold=True, color=COLOR_LIGHT_BLUE, align=PP_ALIGN.RIGHT, is_first=True)
 
-    # Paper Title (Arial 74pt Bold, White, 2 Lines, Centered)
-    tf_title = create_textbox(slide, MARGIN_X, SUB_BAR_H + 0.3, CONTENT_W, 5.8)
+    # Paper Title (Arial 66pt Bold, White, 2 Lines, Centered)
+    tf_title = create_textbox(slide, MARGIN_X, SUB_BAR_H + 0.2, CONTENT_W, 4.6)
     add_paragraph(tf_title, "Bridging the Sim-to-Real Gap in Quadrupedal Visual Navigation via 3D Gaussian Splatting", 
-                  pt=74, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER, is_first=True)
+                  pt=66, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER, is_first=True)
 
-    # Authors (Clear separation from Title)
-    tf_authors = create_textbox(slide, MARGIN_X, SUB_BAR_H + 6.6, CONTENT_W, 1.8)
+    # Authors
+    tf_authors = create_textbox(slide, MARGIN_X, SUB_BAR_H + 5.0, CONTENT_W, 1.4)
     add_paragraph(tf_authors, "Minseok Lee^1^,  Seongyu Han^1^,  Heejae Moon^1^,  and  Sung Soo Hwang^1*^", 
-                  pt=42, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER, space_after=2, is_first=True)
+                  pt=38, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER, space_after=1, is_first=True)
     
     # Affiliations & Contact
-    tf_affil = create_textbox(slide, MARGIN_X, SUB_BAR_H + 8.5, CONTENT_W, 1.6)
+    tf_affil = create_textbox(slide, MARGIN_X, SUB_BAR_H + 6.6, CONTENT_W, 1.3)
     add_paragraph(tf_affil, "^1^School of Artificial Intelligence, Computer and Electrical Engineering, Handong Global University, Pohang 37554, Korea   \u00b7   ^*^sshwang@handong.edu", 
-                  pt=28, color=COLOR_LIGHT_BLUE, align=PP_ALIGN.CENTER, space_after=0, is_first=True)
+                  pt=24, color=COLOR_LIGHT_BLUE, align=PP_ALIGN.CENTER, space_after=0, is_first=True)
 
     # Gold Accent Stripe
     add_rect(slide, 0, HEADER_H, PAGE_W, 0.35, COLOR_GOLD)
 
     # =========================================================================
-    # 2. HERO SECTION: SYSTEM ARCHITECTURE BANNER (Y: 16.9 to 39.8 cm, H = 22.9 cm)
+    # 2. HERO SECTION: SYSTEM ARCHITECTURE BANNER (Y: 12.3 to 43.5 cm, H = 31.2 cm)
+    # Fits card box width beautifully (75.5 cm wide content inside 78.9 cm card)
     # =========================================================================
-    HERO_Y = 16.8
-    HERO_H = 22.6
+    HERO_Y = 12.3
+    HERO_H = 31.2
     cx, cy, cw, ch = draw_card(slide, MARGIN_X, HERO_Y, CONTENT_W, HERO_H, 
                                "Sim-to-Real Quadrupedal Visual Navigation Architecture", 
                                COLOR_NAVY, COLOR_WHITE, border_color=COLOR_NAVY)
 
-    # Place Fig 1 System Overview Image (Centered)
-    # Aspect ratio = 2.67. Height = 15.5 cm -> Width = 15.5 * 2.67 = 41.4 cm.
-    img_h = 15.4
-    img_w = img_h * 2.67
+    # Place Fig 1 System Overview Image: Fills card width!
+    # Aspect ratio = 2.7857. Setting width = 75.5 cm -> Height = 27.10 cm.
+    img_w = 75.5
+    img_h = img_w / 2.7857
     img_x = cx + (cw - img_w) / 2.0
     slide.shapes.add_picture(assets["overview"], Cm(img_x), Cm(cy + 0.1), Cm(img_w), Cm(img_h))
     
-    # Subtitle Pill / Takeaway Caption
-    tf_hero_cap = create_textbox(slide, cx, cy + img_h + 0.3, cw, 1.6)
+    # Subtitle / Takeaway Caption
+    tf_hero_cap = create_textbox(slide, cx, cy + img_h + 0.2, cw, 1.3)
     add_paragraph(tf_hero_cap, 
                   "**Core Sim-to-Real Methodology:** Virtual parameters optimized under simulated 3DGS photorealism & RL gait bobbing noise (Phase B) transfer directly to the physical Unitree Go2 (Phase C). Hardware control routes commands to the built-in Sport API via a ROS 2 bridge, bypassing heavy RL computation on the Jetson Orin NX.", 
-                  pt=25, color=COLOR_TEXT_SUB, align=PP_ALIGN.CENTER, is_first=True)
+                  pt=23, color=COLOR_TEXT_SUB, align=PP_ALIGN.CENTER, is_first=True)
 
     # =========================================================================
-    # 3. TWO-COLUMN MAIN BODY (Y: 40.2 to 111.4 cm, Total Available Height = 71.2 cm)
+    # 3. TWO-COLUMN MAIN BODY (Y: 44.3 to 109.0 cm, Total Height = 64.7 cm)
+    # Left Column: C1 (14.0) + C2 (24.6) + C3 (24.6) + 1.5 = 64.7 cm
+    # Right Column: C4 (24.6) + C5 (24.6) + C6 (14.0) + 1.5 = 64.7 cm
+    # Perfectly symmetrical & aligned!
     # =========================================================================
-    BODY_Y = 40.2
+    BODY_Y = 44.3
     COL_GAP = 1.1
     COL_W = (CONTENT_W - COL_GAP) / 2.0 # 39.5 cm
     COL_LEFT_X = MARGIN_X
     COL_RIGHT_X = MARGIN_X + COL_W + COL_GAP
+    GAP_Y = 0.75
 
     # -------------------------------------------------------------------------
     # LEFT COLUMN: Motivation -> Digital Twin -> Virtual Replanning
     # -------------------------------------------------------------------------
     
     # Card 1: Motivation & Sim-to-Real Gap
-    C1_H = 17.6
+    C1_H = 14.0
     c1_x, c1_y, c1_w, c1_h = draw_card(slide, COL_LEFT_X, BODY_Y, COL_W, C1_H,
                                        "1. Motivation & Sim-to-Real Gap", COLOR_GRAY, COLOR_GRAY_BG)
     tf_c1 = create_textbox(slide, c1_x, c1_y, c1_w, c1_h)
     add_paragraph(tf_c1, "**LiDAR-Free Quadruped Autonomy:** Single RGB-D camera replaces heavy, power-hungry LiDAR on legged robots.",
-                  pt=28, bullet=True, bullet_color=COLOR_GRAY, space_after=4, is_first=True)
+                  pt=26, bullet=True, bullet_color=COLOR_GRAY, space_after=3, is_first=True)
     add_paragraph(tf_c1, "{{c:E66A00}}Perceptual Sim-to-Real Gap:{{/c}} Simulators lack photorealistic textures, causing V-SLAM feature tracking to fail in real environments.",
-                  pt=28, bullet=True, bullet_color=COLOR_GRAY, space_after=4)
+                  pt=26, bullet=True, bullet_color=COLOR_GRAY, space_after=3)
     add_paragraph(tf_c1, "{{c:E66A00}}Dynamic Gait Bobbing Noise:{{/c}} Locomotion induces periodic camera jitter (pitch/roll/vertical), generating severe motion blur and false phantom obstacles.",
-                  pt=28, bullet=True, bullet_color=COLOR_GRAY, space_after=4)
+                  pt=26, bullet=True, bullet_color=COLOR_GRAY, space_after=3)
     add_paragraph(tf_c1, "**Hardware Safety Bottleneck:** Physical trial-and-error tuning carries high collision risks and severe battery runtime limits.",
-                  pt=28, bullet=True, bullet_color=COLOR_GRAY, space_after=0)
+                  pt=26, bullet=True, bullet_color=COLOR_GRAY, space_after=0)
 
     # Card 2: 3DGS Digital Twin & Collision Mesh
-    C2_Y = BODY_Y + C1_H + 0.8
-    C2_H = 25.8
+    C2_Y = BODY_Y + C1_H + GAP_Y
+    C2_H = 24.6
     c2_x, c2_y, c2_w, c2_h = draw_card(slide, COL_LEFT_X, C2_Y, COL_W, C2_H,
                                        "2. 3DGS Digital Twin & Collision Mesh", COLOR_BLUE, COLOR_BLUE_BG)
     
-    # Place Fig 2: 3DGS & fVDB Mesh
-    m_h = 11.5
-    m_w = m_h * 1.81
+    # Place Fig 2: 3DGS & fVDB Mesh (Cropped)
+    # Aspect ratio = 2.155. Width = 28.0 cm -> Height = 13.0 cm
+    m_w = 28.0
+    m_h = m_w / 2.155 # 12.99 cm
     m_x = c2_x + (c2_w - m_w) / 2.0
     slide.shapes.add_picture(assets["mesh"], Cm(m_x), Cm(c2_y), Cm(m_w), Cm(m_h))
     
     # Badges on image
-    add_tag_badge(slide, m_x + 0.35, c2_y + 0.3, "fVDB Collision Mesh", COLOR_GRAY, pt=20)
-    add_tag_badge(slide, m_x + m_w / 2.0 + 0.35, c2_y + 0.3, "3DGS Photorealistic Render", COLOR_BLUE, pt=20)
+    add_tag_badge(slide, m_x + 0.35, c2_y + 0.25, "fVDB Collision Mesh", COLOR_GRAY, pt=19)
+    add_tag_badge(slide, m_x + m_w / 2.0 + 0.35, c2_y + 0.25, "3DGS Photorealistic Render", COLOR_BLUE, pt=19)
 
-    tf_c2 = create_textbox(slide, c2_x, c2_y + m_h + 0.35, c2_w, c2_h - m_h - 0.35)
+    tf_c2 = create_textbox(slide, c2_x, c2_y + m_h + 0.3, c2_w, c2_h - m_h - 0.3)
     add_paragraph(tf_c2, "**Offline Digital Twin Modeling:** Reconstructed from DSLR images via COLMAP Structure-from-Motion (SfM) and 3D Gaussian Splatting (3DGS) exported to USDZ format.",
-                  pt=28, bullet=True, bullet_color=COLOR_BLUE, space_after=4, is_first=True)
+                  pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=3, is_first=True)
     add_paragraph(tf_c2, "**NVIDIA fVDB Sparse Volumetric Mesh:** Integrated into Isaac Sim 5.1.0 to compute accurate contact geometry and collision boundaries for quadruped foot placement.",
-                  pt=28, bullet=True, bullet_color=COLOR_BLUE, space_after=4)
+                  pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=3)
     add_paragraph(tf_c2, "**Sensor Profile Alignment:** Virtual camera FOV, resolution (640x480), and optical center strictly match the physical Intel RealSense D435i sensor to eliminate hardware discrepancies.",
-                  pt=28, bullet=True, bullet_color=COLOR_BLUE, space_after=0)
+                  pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=0)
 
     # Card 3: Virtual Validation & Replanning
-    C3_Y = C2_Y + C2_H + 0.8
-    C3_H = 25.8
+    C3_Y = C2_Y + C2_H + GAP_Y
+    C3_H = 24.6
     c3_x, c3_y, c3_w, c3_h = draw_card(slide, COL_LEFT_X, C3_Y, COL_W, C3_H,
                                        "3. Virtual Validation & Replanning", COLOR_BLUE, COLOR_BLUE_BG)
     
-    # Place Fig 3: Nav2 Obstacle Replanning
-    sim_w = c3_w
-    sim_h = sim_w / 3.56
-    slide.shapes.add_picture(assets["simnav"], Cm(c3_x), Cm(c3_y), Cm(sim_w), Cm(sim_h))
-    add_tag_badge(slide, c3_x + 0.35, c3_y + 0.3, "Isaac Sim Quadruped Model", COLOR_BLUE, pt=20)
-    add_tag_badge(slide, c3_x + sim_w * 0.5 + 0.35, c3_y + 0.3, "RViz Nav2 Costmap & Global Path", COLOR_NAVY, pt=20)
+    # Place Fig 3: Nav2 Obstacle Replanning (Cropped)
+    # Aspect ratio = 3.80. Width = 37.0 cm -> Height = 9.74 cm
+    sim_w = 37.0
+    sim_h = sim_w / 3.80
+    sim_x = c3_x + (c3_w - sim_w) / 2.0
+    slide.shapes.add_picture(assets["simnav"], Cm(sim_x), Cm(c3_y), Cm(sim_w), Cm(sim_h))
+    add_tag_badge(slide, sim_x + 0.35, c3_y + 0.25, "Isaac Sim Quadruped Model", COLOR_BLUE, pt=19)
+    add_tag_badge(slide, sim_x + sim_w * 0.5 + 0.35, c3_y + 0.25, "RViz Nav2 Costmap & Global Path", COLOR_NAVY, pt=19)
 
-    tf_c3 = create_textbox(slide, c3_x, c3_y + sim_h + 0.35, c3_w, c3_h - sim_h - 0.35)
+    tf_c3 = create_textbox(slide, c3_x, c3_y + sim_h + 0.3, c3_w, c3_h - sim_h - 0.3)
     add_paragraph(tf_c3, "**Gait Oscillation Emulation:** RL policy (PPO in Isaac Lab 2.3.2) trained with domain randomization (mass \u00b13kg, friction 0.6\u20130.8) reproduces realistic camera bobbing dynamics.",
-                  pt=28, bullet=True, bullet_color=COLOR_BLUE, space_after=4, is_first=True)
+                  pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=3, is_first=True)
     add_paragraph(tf_c3, "**RTAB-Map V-SLAM Optimization:** Point cloud registration and loop closure thresholds tuned to withstand simulated locomotion pitch/roll oscillations without tracking loss.",
-                  pt=28, bullet=True, bullet_color=COLOR_BLUE, space_after=4)
+                  pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=3)
     add_paragraph(tf_c3, "**Nav2 Local Replanning:** DWB local planner dynamically computes collision-free trajectories around inserted obstacles in the 80 m \u00d7 2.5 m digital corridor.",
-                  pt=28, bullet=True, bullet_color=COLOR_BLUE, space_after=0)
+                  pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=0)
 
     # -------------------------------------------------------------------------
     # RIGHT COLUMN: Physical Deployment -> Key Results -> Conclusion
     # -------------------------------------------------------------------------
     
     # Card 4: Physical Deployment (Unitree Go2)
-    C4_H = 26.5
+    C4_H = 24.6
     c4_x, c4_y, c4_w, c4_h = draw_card(slide, COL_RIGHT_X, BODY_Y, COL_W, C4_H,
                                        "4. Physical Deployment (Unitree Go2)", COLOR_GREEN, COLOR_GREEN_BG)
 
-    # Image Row: Go2 Crop (r=0.8) + 3D Map (r=1.36) + 2D Map (r=0.22)
-    row_h = 12.0
-    r_rob = row_h * 0.80
-    r_3d  = row_h * 1.36
-    r_2d  = row_h * 0.22
-    total_row_w = r_rob + r_3d + r_2d + 1.2
+    # Image Row: Go2 Tight Crop (r=0.971) + 3D Map Tight Crop (r=1.255) + 2D Map (r=0.181)
+    row_h = 11.5
+    r_rob = row_h * 0.9714 # 11.17 cm
+    r_3d  = row_h * 1.2545 # 14.43 cm
+    r_2d  = row_h * 0.1808 # 2.08 cm
+    gap_img = 0.6
+    total_row_w = r_rob + r_3d + r_2d + 2 * gap_img
     start_rx = c4_x + (c4_w - total_row_w) / 2.0
     
+    # Robot image (Tight crop: fills frame with robot, front D435i, Orin NX)
     slide.shapes.add_picture(assets["robot"], Cm(start_rx), Cm(c4_y), Cm(r_rob), Cm(row_h))
-    add_tag_badge(slide, start_rx + 0.2, c4_y + 0.2, "Go2 + Orin NX", COLOR_GREEN, pt=18)
+    add_tag_badge(slide, start_rx + 0.2, c4_y + 0.2, "Go2 + Orin NX", COLOR_GREEN, pt=17)
 
-    slide.shapes.add_picture(assets["map3d"], Cm(start_rx + r_rob + 0.6), Cm(c4_y), Cm(r_3d), Cm(row_h))
-    add_tag_badge(slide, start_rx + r_rob + 0.8, c4_y + 0.2, "RTAB-Map 3D", COLOR_GREEN, pt=18)
+    # 3D Point Cloud Map (Tight crop: zooms into corridor structure)
+    slide.shapes.add_picture(assets["map3d"], Cm(start_rx + r_rob + gap_img), Cm(c4_y), Cm(r_3d), Cm(row_h))
+    add_tag_badge(slide, start_rx + r_rob + gap_img + 0.2, c4_y + 0.2, "RTAB-Map 3D", COLOR_GREEN, pt=17)
 
-    slide.shapes.add_picture(assets["map2d"], Cm(start_rx + r_rob + r_3d + 1.2), Cm(c4_y), Cm(r_2d), Cm(row_h))
-    add_tag_badge(slide, start_rx + r_rob + r_3d + 1.2, c4_y + 0.2, "2D", COLOR_GREEN, pt=16)
+    # 2D Occupancy Grid Map (Cleanly cropped)
+    slide.shapes.add_picture(assets["map2d"], Cm(start_rx + r_rob + r_3d + 2 * gap_img), Cm(c4_y), Cm(r_2d), Cm(row_h))
+    add_tag_badge(slide, start_rx + r_rob + r_3d + 2 * gap_img - 0.2, c4_y + 0.2, "2D", COLOR_GREEN, pt=15)
 
     tf_c4 = create_textbox(slide, c4_x, c4_y + row_h + 0.35, c4_w, c4_h - row_h - 0.35)
     add_paragraph(tf_c4, "**Fully Onboard Edge Computing:** Intel RealSense D435i connected via USB 3.0 to an NVIDIA Jetson Orin NX, executing RTAB-Map and Nav2 autonomously in real time.",
-                  pt=28, bullet=True, bullet_color=COLOR_GREEN, space_after=4, is_first=True)
+                  pt=25, bullet=True, bullet_color=COLOR_GREEN, space_after=4, is_first=True)
     add_paragraph(tf_c4, "**Decoupled Locomotion Control:** To conserve edge compute for SLAM, the heavy RL policy is bypassed on physical hardware; Nav2 velocity commands route directly to the built-in Sport API via a lightweight ROS 2 bridge.",
-                  pt=28, bullet=True, bullet_color=COLOR_GREEN, space_after=0)
+                  pt=25, bullet=True, bullet_color=COLOR_GREEN, space_after=0)
 
     # Card 5: Experimental Results & Quantitative Metrics
-    C5_Y = BODY_Y + C4_H + 0.8
-    C5_H = 25.0
+    C5_Y = BODY_Y + C4_H + GAP_Y
+    C5_H = 24.6
     c5_x, c5_y, c5_w, c5_h = draw_card(slide, COL_RIGHT_X, C5_Y, COL_W, C5_H,
                                        "5. Experimental Results & Verification", COLOR_GREEN, COLOR_GREEN_BG)
 
     # 4 Big Metric Stat Tiles (2x2 Grid)
     tile_w = (c5_w - 0.8) / 2.0
-    tile_h = 5.0
+    tile_h = 4.6
     
     stats_data = [
         ("80 m", "3DGS Corridor Digital Twin", COLOR_BLUE),
@@ -448,44 +479,44 @@ def generate_iccas_poster():
         row = idx // 2
         col_idx = idx % 2
         tx = c5_x + col_idx * (tile_w + 0.8)
-        ty = c5_y + row * (tile_h + 0.5)
+        ty = c5_y + row * (tile_h + 0.4)
         
         # Tile background box
-        add_rect(slide, tx, ty, tile_w, tile_h, COLOR_WHITE, line_color=col, line_width=3, shape_type=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.14)
+        add_rect(slide, tx, ty, tile_w, tile_h, COLOR_WHITE, line_color=col, line_width=2.5, shape_type=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.14)
         
-        tf_stat = create_textbox(slide, tx + 0.2, ty + 0.15, tile_w - 0.4, tile_h - 0.3)
-        add_paragraph(tf_stat, val, pt=56, bold=True, color=col, align=PP_ALIGN.CENTER, space_after=1, is_first=True)
-        add_paragraph(tf_stat, lbl, pt=24, bold=True, color=COLOR_TEXT_MAIN, align=PP_ALIGN.CENTER, space_after=0)
+        tf_stat = create_textbox(slide, tx + 0.2, ty + 0.1, tile_w - 0.4, tile_h - 0.2)
+        add_paragraph(tf_stat, val, pt=50, bold=True, color=col, align=PP_ALIGN.CENTER, space_after=1, is_first=True)
+        add_paragraph(tf_stat, lbl, pt=22, bold=True, color=COLOR_TEXT_MAIN, align=PP_ALIGN.CENTER, space_after=0)
 
     # Findings text below tiles
-    tf_c5_text = create_textbox(slide, c5_x, c5_y + 2 * tile_h + 1.2, c5_w, c5_h - 2 * tile_h - 1.2)
+    tf_c5_text = create_textbox(slide, c5_x, c5_y + 2 * tile_h + 1.0, c5_w, c5_h - 2 * tile_h - 1.0)
     add_paragraph(tf_c5_text, "**Direct Parameter Migration:** Parameters optimized under simulated camera bobbing transferred seamlessly across ROS distributions (Jazzy on sim \u2192 Foxy on robot) without physical retuning.",
-                  pt=28, bullet=True, bullet_color=COLOR_GREEN, space_after=4, is_first=True)
+                  pt=25, bullet=True, bullet_color=COLOR_GREEN, space_after=4, is_first=True)
     add_paragraph(tf_c5_text, "**Robust Visual Mapping:** RTAB-Map successfully extracted features and detected global loop closures throughout the 80 m corridor, eliminating phantom obstacles.",
-                  pt=28, bullet=True, bullet_color=COLOR_GREEN, space_after=0)
+                  pt=25, bullet=True, bullet_color=COLOR_GREEN, space_after=0)
 
     # Card 6: Conclusion & Future Outlook
-    C6_Y = C5_Y + C5_H + 0.8
-    C6_H = 16.9
+    C6_Y = C5_Y + C5_H + GAP_Y
+    C6_H = 14.0
     c6_x, c6_y, c6_w, c6_h = draw_card(slide, COL_RIGHT_X, C6_Y, COL_W, C6_H,
                                        "6. Conclusion & Future Outlook", COLOR_NAVY, COLOR_GRAY_BG)
 
     tf_c6 = create_textbox(slide, c6_x, c6_y, c6_w, c6_h)
     add_paragraph(tf_c6, "**Practical Virtual Sandbox:** Demonstrates that pairing a photorealistic 3DGS digital twin with RL-generated gait dynamics provides an effective, risk-free testbed for visual quadruped navigation.",
-                  pt=28, bullet=True, bullet_color=COLOR_NAVY, space_after=4, is_first=True)
+                  pt=25, bullet=True, bullet_color=COLOR_NAVY, space_after=3, is_first=True)
     add_paragraph(tf_c6, "**Decoupled Edge Efficiency:** Separating simulation-based parameter discovery from onboard execution enables lightweight real-world deployment on resource-constrained Jetson platforms.",
-                  pt=28, bullet=True, bullet_color=COLOR_NAVY, space_after=4)
+                  pt=25, bullet=True, bullet_color=COLOR_NAVY, space_after=3)
     add_paragraph(tf_c6, "**Future Research:** Expanding from static corridors to dynamic obstacle avoidance benchmarks, multi-floor terrain transitions, and direct neural policy deployment.",
-                  pt=28, bullet=True, bullet_color=COLOR_NAVY, space_after=0)
+                  pt=25, bullet=True, bullet_color=COLOR_NAVY, space_after=0)
 
     # =========================================================================
-    # 4. BOTTOM FOOTER: REFERENCES, ACKNOWLEDGEMENT & QR (Y: 111.8 to 116.8 cm)
+    # 4. BOTTOM FOOTER: REFERENCES, ACKNOWLEDGEMENT & QR (Y: 110.2 to 115.4 cm)
     # =========================================================================
-    FOOTER_Y = 111.8
-    FOOTER_H = 4.8
+    FOOTER_Y = 110.2
+    FOOTER_H = 5.2
     
     # Separator line
-    add_rect(slide, MARGIN_X, FOOTER_Y - 0.2, CONTENT_W, 0.08, COLOR_NAVY)
+    add_rect(slide, MARGIN_X, 109.6, CONTENT_W, 0.08, COLOR_NAVY)
 
     # Left: References & Acknowledgement
     QR_SIZE = 4.4
