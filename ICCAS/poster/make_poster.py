@@ -205,40 +205,51 @@ def prepare_all_assets():
     crop_ov.resize((7800, int(7800 / 2.7857)), Image.LANCZOS).save(dst_overview, optimize=True)
     assets["overview"] = dst_overview
 
-    # 2. 3DGS & Mesh - Crop top/bottom margins to focus on corridor geometry
+    # 2. 3DGS & Mesh - Trim ceiling/floor (rows 150-902) so the corridor walls fill the card width
     src_mesh = os.path.join(FIG_DIR, "fig_3dgs_mesh.png")
     dst_mesh = os.path.join(ASSETS_DIR, "3dgs_mesh_crop.png")
     im_m = Image.open(src_mesh).convert("RGB")
     Wm, Hm = im_m.size
-    crop_m = im_m.crop((0, int(Hm * 0.08), Wm, int(Hm * 0.92)))
+    crop_m = im_m.crop((0, 150, Wm, 902))  # 1972 x 752 (aspect ~2.62)
     crop_m.save(dst_mesh, quality=95)
     assets["mesh"] = dst_mesh
+    assets["mesh_ar"] = crop_m.size[0] / crop_m.size[1]
 
-    # 3. Nav2 Replanning - Crop screen borders & margins
+    # 3. Nav2 Replanning - Crop each panel separately and re-join:
+    #    Isaac Sim panel: drop left door/wall; RViz panel: drop empty scan cone, keep replanning region
     src_sim = os.path.join(FIG_DIR, "fig_sim_nav2.png")
     dst_sim = os.path.join(ASSETS_DIR, "sim_nav2_crop.png")
     im_s = Image.open(src_sim).convert("RGB")
-    Ws, Hs = im_s.size
-    crop_s = im_s.crop((int(Ws * 0.02), int(Hs * 0.05), int(Ws * 0.98), int(Hs * 0.95)))
-    crop_s.save(dst_sim, quality=95)
+    p_isaac = im_s.crop((280, 40, 1640, 830))     # 1360 x 790
+    p_rviz  = im_s.crop((2150, 40, 3336, 830))    # 1186 x 790
+    sep = 12
+    joined = Image.new("RGB", (p_isaac.size[0] + sep + p_rviz.size[0], 790), (255, 255, 255))
+    joined.paste(p_isaac, (0, 0))
+    joined.paste(p_rviz, (p_isaac.size[0] + sep, 0))
+    joined.save(dst_sim, quality=95)
     assets["simnav"] = dst_sim
+    assets["simnav_ar"] = joined.size[0] / joined.size[1]
+    assets["simnav_split"] = (p_isaac.size[0] + sep) / joined.size[0]
 
-    # 4. Robot Crop - Tight centered crop on Go2 + Orin NX + D435i camera
+    # 4. Robot Crop - Go2 body sits at x 840-1015, y 445-675 in the raw frame.
+    #    Crop a 460x470 window centred on it so the robot fills ~half the frame height.
     src_robot = os.path.join(FIG_DIR, "fig_real_robot.jpg")
     dst_robot = os.path.join(ASSETS_DIR, "real_robot_tight.jpg")
     im_r = Image.open(src_robot).convert("RGB")
-    # Centered at x in [620, 1300], y in [320, 1020] -> 680x700
-    crop_r = im_r.crop((620, 320, 1300, 1020))
+    crop_r = im_r.crop((698, 345, 1158, 815))
+    crop_r = crop_r.resize((crop_r.size[0] * 2, crop_r.size[1] * 2), Image.LANCZOS)
     crop_r.save(dst_robot, quality=96)
     assets["robot"] = dst_robot
+    assets["robot_ar"] = crop_r.size[0] / crop_r.size[1]
 
-    # 5. 3D Point Cloud Map - Tight crop eliminating empty dark gray background
+    # 5. 3D Point Cloud Map - Crop to the diagonal point-cloud extent (x 240-1560, y 20-1195)
     src_3d = os.path.join(FIG_DIR, "fig_3d_map.png")
     dst_3d = os.path.join(ASSETS_DIR, "map3d_crop.png")
     im_3d = Image.open(src_3d).convert("RGB")
-    crop_3d = im_3d.crop((220, 60, 1600, 1160)) # 1380 x 1100 (aspect 1.2545)
+    crop_3d = im_3d.crop((240, 20, 1560, 1195))
     crop_3d.save(dst_3d, quality=95)
     assets["map3d"] = dst_3d
+    assets["map3d_ar"] = crop_3d.size[0] / crop_3d.size[1]
 
     # 6. 2D Occupancy Grid Map - Crop unknown borders and upscale 8x
     src_map2d = os.path.join(FIG_DIR, "fig_2d_map.png")
@@ -248,6 +259,7 @@ def prepare_all_assets():
     crop_2d = im_2d.crop((11, 10, 88, 436))
     crop_2d.resize((crop_2d.size[0] * 8, crop_2d.size[1] * 8), Image.NEAREST).save(dst_map2d)
     assets["map2d"] = dst_map2d
+    assets["map2d_ar"] = crop_2d.size[0] / crop_2d.size[1]
 
     # 7. QR Code to Repository
     qr_path = os.path.join(ASSETS_DIR, "qr_repo.png")
@@ -302,18 +314,19 @@ def generate_iccas_poster():
     add_paragraph(tf_top_r, "Computer Graphics and Vision Lab (CGV)  \u00b7  Handong Global University", 
                   pt=25, bold=True, color=COLOR_LIGHT_BLUE, align=PP_ALIGN.RIGHT, is_first=True)
 
-    # Paper Title (Arial 66pt Bold, White, 2 Lines, Centered)
-    tf_title = create_textbox(slide, MARGIN_X, SUB_BAR_H + 0.2, CONTENT_W, 4.6)
+    # Paper Title (Arial 64pt Bold, White, 2 Lines, Centered)
+    # Two lines of 64pt occupy ~5.8 cm in LibreOffice/PowerPoint -> authors start below 7.5 cm
+    tf_title = create_textbox(slide, MARGIN_X, 1.6, CONTENT_W, 5.8)
     add_paragraph(tf_title, "Bridging the Sim-to-Real Gap in Quadrupedal Visual Navigation via 3D Gaussian Splatting", 
-                  pt=66, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER, is_first=True)
+                  pt=64, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER, is_first=True)
 
     # Authors
-    tf_authors = create_textbox(slide, MARGIN_X, SUB_BAR_H + 5.0, CONTENT_W, 1.4)
+    tf_authors = create_textbox(slide, MARGIN_X, 7.6, CONTENT_W, 1.6)
     add_paragraph(tf_authors, "Minseok Lee^1^,  Seongyu Han^1^,  Heejae Moon^1^,  and  Sung Soo Hwang^1*^", 
                   pt=38, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER, space_after=1, is_first=True)
     
     # Affiliations & Contact
-    tf_affil = create_textbox(slide, MARGIN_X, SUB_BAR_H + 6.6, CONTENT_W, 1.3)
+    tf_affil = create_textbox(slide, MARGIN_X, 9.4, CONTENT_W, 1.2)
     add_paragraph(tf_affil, "^1^School of Artificial Intelligence, Computer and Electrical Engineering, Handong Global University, Pohang 37554, Korea   \u00b7   ^*^sshwang@handong.edu", 
                   pt=24, color=COLOR_LIGHT_BLUE, align=PP_ALIGN.CENTER, space_after=0, is_first=True)
 
@@ -331,17 +344,17 @@ def generate_iccas_poster():
                                COLOR_NAVY, COLOR_WHITE, border_color=COLOR_NAVY)
 
     # Place Fig 1 System Overview Image: Fills card width!
-    # Aspect ratio = 2.7857. Setting width = 75.5 cm -> Height = 27.10 cm.
-    img_w = 75.5
+    # Aspect ratio = 2.7857. Width = 74.5 cm -> Height = 26.74 cm (leaves room for a 1-line caption)
+    img_w = 74.5
     img_h = img_w / 2.7857
     img_x = cx + (cw - img_w) / 2.0
     slide.shapes.add_picture(assets["overview"], Cm(img_x), Cm(cy + 0.1), Cm(img_w), Cm(img_h))
     
-    # Subtitle / Takeaway Caption
-    tf_hero_cap = create_textbox(slide, cx, cy + img_h + 0.2, cw, 1.3)
+    # Subtitle / Takeaway Caption (single line so it stays inside the card border)
+    tf_hero_cap = create_textbox(slide, cx, cy + img_h + 0.25, cw, 1.0)
     add_paragraph(tf_hero_cap, 
-                  "**Core Sim-to-Real Methodology:** Virtual parameters optimized under simulated 3DGS photorealism & RL gait bobbing noise (Phase B) transfer directly to the physical Unitree Go2 (Phase C). Hardware control routes commands to the built-in Sport API via a ROS 2 bridge, bypassing heavy RL computation on the Jetson Orin NX.", 
-                  pt=23, color=COLOR_TEXT_SUB, align=PP_ALIGN.CENTER, is_first=True)
+                  "**Key idea:** RTAB-Map & Nav2 parameters tuned in the photorealistic 3DGS twin under RL gait bobbing (B) migrate directly to the physical Go2 (C) without retuning.", 
+                  pt=24, color=COLOR_TEXT_SUB, align=PP_ALIGN.CENTER, is_first=True)
 
     # =========================================================================
     # 3. TWO-COLUMN MAIN BODY (Y: 44.3 to 109.0 cm, Total Height = 64.7 cm)
@@ -382,8 +395,8 @@ def generate_iccas_poster():
     
     # Place Fig 2: 3DGS & fVDB Mesh (Cropped)
     # Aspect ratio = 2.155. Width = 28.0 cm -> Height = 13.0 cm
-    m_w = 28.0
-    m_h = m_w / 2.155 # 12.99 cm
+    m_w = 36.5
+    m_h = m_w / assets["mesh_ar"]  # ~13.9 cm
     m_x = c2_x + (c2_w - m_w) / 2.0
     slide.shapes.add_picture(assets["mesh"], Cm(m_x), Cm(c2_y), Cm(m_w), Cm(m_h))
     
@@ -407,12 +420,12 @@ def generate_iccas_poster():
     
     # Place Fig 3: Nav2 Obstacle Replanning (Cropped)
     # Aspect ratio = 3.80. Width = 37.0 cm -> Height = 9.74 cm
-    sim_w = 37.0
-    sim_h = sim_w / 3.80
+    sim_w = c3_w
+    sim_h = sim_w / assets["simnav_ar"]  # ~11.8 cm
     sim_x = c3_x + (c3_w - sim_w) / 2.0
     slide.shapes.add_picture(assets["simnav"], Cm(sim_x), Cm(c3_y), Cm(sim_w), Cm(sim_h))
     add_tag_badge(slide, sim_x + 0.35, c3_y + 0.25, "Isaac Sim Quadruped Model", COLOR_BLUE, pt=19)
-    add_tag_badge(slide, sim_x + sim_w * 0.5 + 0.35, c3_y + 0.25, "RViz Nav2 Costmap & Global Path", COLOR_NAVY, pt=19)
+    add_tag_badge(slide, sim_x + sim_w * assets["simnav_split"] + 0.35, c3_y + 0.25, "RViz Nav2 Costmap & Global Path", COLOR_NAVY, pt=19)
 
     tf_c3 = create_textbox(slide, c3_x, c3_y + sim_h + 0.3, c3_w, c3_h - sim_h - 0.3)
     add_paragraph(tf_c3, "**Gait Oscillation Emulation:** RL policy (PPO in Isaac Lab 2.3.2) trained with domain randomization (mass \u00b13kg, friction 0.6\u20130.8) reproduces realistic camera bobbing dynamics.",
@@ -420,39 +433,41 @@ def generate_iccas_poster():
     add_paragraph(tf_c3, "**RTAB-Map V-SLAM Optimization:** Point cloud registration and loop closure thresholds tuned to withstand simulated locomotion pitch/roll oscillations without tracking loss.",
                   pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=3)
     add_paragraph(tf_c3, "**Nav2 Local Replanning:** DWB local planner dynamically computes collision-free trajectories around inserted obstacles in the 80 m \u00d7 2.5 m digital corridor.",
-                  pt=24, bullet=True, bullet_color=COLOR_BLUE, space_after=0)
+                  pt=25, bullet=True, bullet_color=COLOR_BLUE, space_after=0)
 
     # -------------------------------------------------------------------------
     # RIGHT COLUMN: Physical Deployment -> Key Results -> Conclusion
     # -------------------------------------------------------------------------
     
     # Card 4: Physical Deployment (Unitree Go2)
-    C4_H = 24.6
+    C4_H = 26.4
     c4_x, c4_y, c4_w, c4_h = draw_card(slide, COL_RIGHT_X, BODY_Y, COL_W, C4_H,
                                        "4. Physical Deployment (Unitree Go2)", COLOR_GREEN, COLOR_GREEN_BG)
 
-    # Image Row: Go2 Tight Crop (r=0.971) + 3D Map Tight Crop (r=1.255) + 2D Map (r=0.181)
-    row_h = 11.5
-    r_rob = row_h * 0.9714 # 11.17 cm
-    r_3d  = row_h * 1.2545 # 14.43 cm
-    r_2d  = row_h * 0.1808 # 2.08 cm
-    gap_img = 0.6
+    # Image Row: Go2 crop + 3D point cloud crop + 2D grid (aspect ratios measured from crops)
+    row_h = 16.0
+    gap_img = 0.5
+    r_rob = row_h * assets["robot_ar"]
+    r_3d  = row_h * assets["map3d_ar"]
+    lbl_h = 1.0                      # space above the thin 2D strip for its label
+    h_2d  = row_h - lbl_h
+    r_2d  = h_2d * assets["map2d_ar"]
     total_row_w = r_rob + r_3d + r_2d + 2 * gap_img
     start_rx = c4_x + (c4_w - total_row_w) / 2.0
-    
-    # Robot image (Tight crop: fills frame with robot, front D435i, Orin NX)
+    x_3d = start_rx + r_rob + gap_img
+    x_2d = x_3d + r_3d + gap_img
+
     slide.shapes.add_picture(assets["robot"], Cm(start_rx), Cm(c4_y), Cm(r_rob), Cm(row_h))
-    add_tag_badge(slide, start_rx + 0.2, c4_y + 0.2, "Go2 + Orin NX", COLOR_GREEN, pt=17)
+    add_tag_badge(slide, start_rx + 0.25, c4_y + 0.25, "Go2 + D435i + Orin NX", COLOR_GREEN, pt=18)
 
-    # 3D Point Cloud Map (Tight crop: zooms into corridor structure)
-    slide.shapes.add_picture(assets["map3d"], Cm(start_rx + r_rob + gap_img), Cm(c4_y), Cm(r_3d), Cm(row_h))
-    add_tag_badge(slide, start_rx + r_rob + gap_img + 0.2, c4_y + 0.2, "RTAB-Map 3D", COLOR_GREEN, pt=17)
+    slide.shapes.add_picture(assets["map3d"], Cm(x_3d), Cm(c4_y), Cm(r_3d), Cm(row_h))
+    add_tag_badge(slide, x_3d + 0.25, c4_y + 0.25, "RTAB-Map 3D Point Cloud", COLOR_GREEN, pt=18)
 
-    # 2D Occupancy Grid Map (Cleanly cropped)
-    slide.shapes.add_picture(assets["map2d"], Cm(start_rx + r_rob + r_3d + 2 * gap_img), Cm(c4_y), Cm(r_2d), Cm(row_h))
-    add_tag_badge(slide, start_rx + r_rob + r_3d + 2 * gap_img - 0.2, c4_y + 0.2, "2D", COLOR_GREEN, pt=15)
+    slide.shapes.add_picture(assets["map2d"], Cm(x_2d), Cm(c4_y + lbl_h), Cm(r_2d), Cm(h_2d))
+    bw = len("2D") * (16 * 0.024) + 0.8
+    add_tag_badge(slide, x_2d + (r_2d - bw) / 2.0, c4_y + 0.1, "2D", COLOR_GREEN, pt=16)
 
-    tf_c4 = create_textbox(slide, c4_x, c4_y + row_h + 0.35, c4_w, c4_h - row_h - 0.35)
+    tf_c4 = create_textbox(slide, c4_x, c4_y + row_h + 0.4, c4_w, c4_h - row_h - 0.4)
     add_paragraph(tf_c4, "**Fully Onboard Edge Computing:** Intel RealSense D435i connected via USB 3.0 to an NVIDIA Jetson Orin NX, executing RTAB-Map and Nav2 autonomously in real time.",
                   pt=25, bullet=True, bullet_color=COLOR_GREEN, space_after=4, is_first=True)
     add_paragraph(tf_c4, "**Decoupled Locomotion Control:** To conserve edge compute for SLAM, the heavy RL policy is bypassed on physical hardware; Nav2 velocity commands route directly to the built-in Sport API via a lightweight ROS 2 bridge.",
@@ -460,13 +475,13 @@ def generate_iccas_poster():
 
     # Card 5: Experimental Results & Quantitative Metrics
     C5_Y = BODY_Y + C4_H + GAP_Y
-    C5_H = 24.6
+    C5_H = 22.8
     c5_x, c5_y, c5_w, c5_h = draw_card(slide, COL_RIGHT_X, C5_Y, COL_W, C5_H,
                                        "5. Experimental Results & Verification", COLOR_GREEN, COLOR_GREEN_BG)
 
     # 4 Big Metric Stat Tiles (2x2 Grid)
     tile_w = (c5_w - 0.8) / 2.0
-    tile_h = 4.6
+    tile_h = 5.2
     
     stats_data = [
         ("80 m", "3DGS Corridor Digital Twin", COLOR_BLUE),
@@ -484,9 +499,9 @@ def generate_iccas_poster():
         # Tile background box
         add_rect(slide, tx, ty, tile_w, tile_h, COLOR_WHITE, line_color=col, line_width=2.5, shape_type=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.14)
         
-        tf_stat = create_textbox(slide, tx + 0.2, ty + 0.1, tile_w - 0.4, tile_h - 0.2)
-        add_paragraph(tf_stat, val, pt=50, bold=True, color=col, align=PP_ALIGN.CENTER, space_after=1, is_first=True)
-        add_paragraph(tf_stat, lbl, pt=22, bold=True, color=COLOR_TEXT_MAIN, align=PP_ALIGN.CENTER, space_after=0)
+        tf_stat = create_textbox(slide, tx + 0.2, ty + 0.25, tile_w - 0.4, tile_h - 0.4)
+        add_paragraph(tf_stat, val, pt=56, bold=True, color=col, align=PP_ALIGN.CENTER, space_after=1, is_first=True)
+        add_paragraph(tf_stat, lbl, pt=24, bold=True, color=COLOR_TEXT_MAIN, align=PP_ALIGN.CENTER, space_after=0)
 
     # Findings text below tiles
     tf_c5_text = create_textbox(slide, c5_x, c5_y + 2 * tile_h + 1.0, c5_w, c5_h - 2 * tile_h - 1.0)
