@@ -34,7 +34,7 @@ os.makedirs(ASSETS_DIR, exist_ok=True)
 
 # --- Configuration & Theme Colors ---
 FONT_FAMILY = "Arial"
-SESSION_CODE = "Session Code [TuP...]"
+SESSION_CODE = "FrPo6P.32"
 REPO_URL = "https://github.com/CGV-HGU/isaac-go2-ros2"
 
 # Color Palette (Matching Fig 1 & Academic Standard)
