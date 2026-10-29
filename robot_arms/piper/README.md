@@ -118,14 +118,24 @@ except KeyboardInterrupt:
 
 ---
 
-## 4. 빠른 환경 구축 (`setup_piper.sh`)
+## 4. 빠른 환경 구축 및 Isaac Sim 6.2.0 실행
 
-`As2` 브랜치 내 `robot_arms/piper/` 폴더에서 제공하는 자동화 스크립트를 통해 필요한 패키지 및 자산을 원클릭으로 클론할 수 있습니다:
-
+### 4.1. Isaac Sim 6.2.0 데모 즉시 실행
 ```bash
-cd robot_arms/piper
-./setup_piper.sh
+# Go2 + PiPER 모바일 매니퓰레이터 시뮬레이션 실행
+./spawn_go2_piper.sh
+
+# 단독 PiPER 로봇 암 실행
+./spawn_go2_piper.sh --standalone_arm
 ```
+
+### 4.2. Isaac Lab 강화학습 (RL Loco-manipulation)
+```bash
+# RSL-RL PPO 기반 강화학습 실행
+./train_go2_piper.sh
+```
+
+자세한 서버 배포 및 최신 Isaac Sim 6.2.0 설정은 [docs/isaac_sim_6_2_go2_piper_guide.md](../../docs/isaac_sim_6_2_go2_piper_guide.md) 문서를 참고하십시오.
 
 ---
 
