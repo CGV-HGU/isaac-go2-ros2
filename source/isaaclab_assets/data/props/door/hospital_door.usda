@@ -1,0 +1,127 @@
+#usda 1.0
+(
+    defaultPrim = "HospitalDoor"
+    metersPerUnit = 1.0
+    upAxis = "Z"
+)
+
+def Xform "HospitalDoor" (
+    prepend apiSchemas = ["PhysicsArticulationRootAPI", "PhysxArticulationAPI"]
+)
+{
+    def Xform "DoorFrame" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        bool physics:kinematicEnabled = true
+        point3f physics:centerOfMass = (0.45, 0.0, 1.05)
+        float physics:mass = 30.0
+
+        def Cube "LeftPost" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            float3 xformOp:scale = (0.03, 0.05, 1.05)
+            double3 xformOp:translate = (-0.03, 0.0, 1.05)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            color3f[] primvars:displayColor = [(0.85, 0.85, 0.88)]
+        }
+
+        def Cube "RightPost" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            float3 xformOp:scale = (0.03, 0.05, 1.05)
+            double3 xformOp:translate = (0.93, 0.0, 1.05)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            color3f[] primvars:displayColor = [(0.85, 0.85, 0.88)]
+        }
+
+        def Cube "TopLintel" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            float3 xformOp:scale = (0.51, 0.05, 0.025)
+            double3 xformOp:translate = (0.45, 0.0, 2.125)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            color3f[] primvars:displayColor = [(0.85, 0.85, 0.88)]
+        }
+    }
+
+    def Xform "DoorLeaf" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        double3 xformOp:translate = (0.0, 0.0, 0.02)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        point3f physics:centerOfMass = (0.45, 0.0, 1.0)
+        float physics:mass = 12.0
+
+        def Cube "Panel" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            float3 xformOp:scale = (0.45, 0.02, 1.0)
+            double3 xformOp:translate = (0.45, 0.0, 1.0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            color3f[] primvars:displayColor = [(0.25, 0.55, 0.70)]
+        }
+
+        def Cube "Window" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            float3 xformOp:scale = (0.14, 0.022, 0.30)
+            double3 xformOp:translate = (0.45, 0.0, 1.45)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            color3f[] primvars:displayColor = [(0.75, 0.90, 0.95)]
+        }
+
+        def Xform "DoorHandle" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+        )
+        {
+            double3 xformOp:translate = (0.80, -0.04, 0.95)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+            float physics:mass = 0.5
+
+            def Cylinder "HandleLever" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                uniform token axis = "X"
+                double height = 0.12
+                double radius = 0.015
+                double3 xformOp:translate = (-0.06, 0.0, 0.0)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+                color3f[] primvars:displayColor = [(0.85, 0.85, 0.85)]
+            }
+        }
+    }
+
+    def PhysicsRevoluteJoint "door_hinge"
+    {
+        rel physics:body0 = </HospitalDoor/DoorFrame>
+        rel physics:body1 = </HospitalDoor/DoorLeaf>
+        uniform token physics:axis = "Z"
+        point3f physics:localPos0 = (0.0, 0.0, 0.02)
+        point3f physics:localPos1 = (0.0, 0.0, 0.0)
+        float physics:lowerLimit = 0.0
+        float physics:upperLimit = 1.6
+        float physxJoint:damping = 3.0
+        float physxJoint:friction = 0.5
+    }
+
+    def PhysicsRevoluteJoint "door_handle_joint"
+    {
+        rel physics:body0 = </HospitalDoor/DoorLeaf>
+        rel physics:body1 = </HospitalDoor/DoorLeaf/DoorHandle>
+        uniform token physics:axis = "Y"
+        point3f physics:localPos0 = (0.80, -0.04, 0.95)
+        point3f physics:localPos1 = (0.0, 0.0, 0.0)
+        float physics:lowerLimit = 0.0
+        float physics:upperLimit = 0.6
+        float physxJoint:stiffness = 15.0
+        float physxJoint:damping = 0.5
+    }
+}
