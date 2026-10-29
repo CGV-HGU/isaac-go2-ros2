@@ -17,7 +17,7 @@ class UnitreeAS2PiperRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.scene.robot = AS2_PIPER_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
 
-        # Terrain scaling for AS2 (larger than Go1/Go2, 95 Nm torque)
+        # Terrain scaling for AS2 (industrial quadruped, 95 Nm peak torque)
         self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.03, 0.12)
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.08)
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.015

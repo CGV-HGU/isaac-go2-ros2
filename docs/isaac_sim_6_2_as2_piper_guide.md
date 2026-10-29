@@ -46,7 +46,7 @@ flowchart TD
 
     subgraph Simulation["NVIDIA Isaac Sim 6.2.0 Engine"]
         PhysX["PhysX 5 High-Precision Articulation Solver"]
-        USD["as2_piper.usd / Nucleus Go2/AS2 Asset"]
+        USD["as2_piper.usd / Unitree AS2 USD Asset"]
         ROS2Bridge["ROS 2 Humble Bridge Extension"]
     end
 

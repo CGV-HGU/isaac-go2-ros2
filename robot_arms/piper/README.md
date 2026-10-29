@@ -15,15 +15,16 @@ aliases:
 # AgileX PiPER 로봇 암 (Robotic Arm) 연동 가이드
 
 > [!summary]
-> 본 문서는 로아스(ROAS) 기술지원팀을 통해 도입된 **AgileX PiPER(파이퍼) 경량 로봇 암**을 `isaac-go2-ros2` 프로젝트(브랜치: `As2`) 및 Unitree Go2 4족 보행 로봇과 통합 운용하기 위한 종합 기술 가이드입니다.
+> 본 문서는 로아스(ROAS) 기술지원팀을 통해 도입된 **AgileX PiPER(파이퍼) 경량 로봇 암**을 `isaac-go2-ros2` 프로젝트(브랜치: `As2`) 및 **Unitree AS2 산업용 4족 보행 로봇**과 통합 운용하기 위한 종합 기술 가이드입니다.
 
 ---
 
 ## 1. 하드웨어 및 기술지원 자료 개요
 
 * **제조사 / 공급사**: AgileX Robotics / (주)로아스 (ROAS) 기술지원팀
-* **로봇 모델**: **AgileX PiPER** (6자유도 경량 매니퓰레이터 + 전동 그리퍼)
-* **주요 용도**: Unitree Go2 상단 마운트를 통한 모바일 매니퓰레이션(Mobile Manipulation), Isaac Sim 시뮬레이션, ROS 2 기반 원격 티칭 및 자율 작업
+* **로봇 암 모델**: **AgileX PiPER** (6자유도 경량 매니퓰레이터 + 전동 그리퍼)
+* **베이스 로봇 모델**: **Unitree AS2** (유니트리 AS2 산업용 사족보행 로봇, 피크 토크 95 N·m)
+* **주요 용도**: Unitree AS2 상단 마운트를 통한 모바일 매니퓰레이션(Mobile Manipulation), Isaac Sim 6.2.0 시뮬레이션, ROS 2 기반 원격 제어 및 자율 작업
 
 ### 공식 리소스 링크
 - **AgileX 공식 GitHub**: [https://github.com/agilexrobotics](https://github.com/agilexrobotics)
@@ -50,7 +51,7 @@ flowchart TD
         D <--> E[PiPER Python SDK: piper_sdk]
         D <--> F[ROS 2 Humble: piper_ros]
         F <--> G[MoveIt 2 모션 플래닝]
-        H[NVIDIA Isaac Sim / IsaacLab] <-->|USD / URDF| I[Go2 + PiPER Mobile Manipulator]
+        H[NVIDIA Isaac Sim / IsaacLab] <-->|USD / URDF| I[Unitree AS2 + PiPER Mobile Manipulator]
     end
 ```
 
@@ -142,8 +143,8 @@ except KeyboardInterrupt:
 
 ---
 
-## 5. CGV Lab 연구 로드맵: Go2 + PiPER 통합
+## 5. CGV Lab 연구 로드맵: Unitree AS2 + PiPER 통합
 
 1. **Phase 1: 단독 하드웨어 검증**: Windows `ArmRobotUA` 및 `piper_sdk`를 통한 캘리브레이션 및 기본 모션 검증.
-2. **Phase 2: ROS 2 기반 통합 제어**: ROS 2 Humble 환경에서 Go2 제어기(`unitree_ros2`)와 `piper_ros` 동시 구동.
-3. **Phase 3: IsaacLab 복합 시뮬레이션**: Go2 4족 로봇 상단에 PiPER URDF/USD를 결합하여 모바일 매니퓰레이션 강화학습(Loco-manipulation RL) 환경 구축.
+2. **Phase 2: ROS 2 기반 통합 제어**: ROS 2 Humble 환경에서 AS2 제어기(`unitree_ros2`)와 `piper_ros` 동시 구동.
+3. **Phase 3: IsaacLab 복합 시뮬레이션**: Unitree AS2 사족 로봇 상단에 PiPER URDF/USD를 결합하여 모바일 매니퓰레이션 강화학습(Loco-manipulation RL) 환경 구축.

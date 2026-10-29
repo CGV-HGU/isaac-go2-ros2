@@ -96,9 +96,15 @@ PIPER_ARM_CFG = ArticulationCfg(
 # Unitree AS2 Base Configuration (Industrial Quadruped, ~18-20kg, 95 N.m torque)
 ##
 
+# Unitree AS2 USD Asset resolution: allows overriding with custom local AS2 USD via UNITREE_AS2_USD_PATH
+UNITREE_AS2_USD_PATH = os.getenv(
+    "UNITREE_AS2_USD_PATH",
+    f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd",
+)
+
 UNITREE_AS2_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd",
+        usd_path=UNITREE_AS2_USD_PATH,
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -149,7 +155,7 @@ UNITREE_AS2_CFG = ArticulationCfg(
 
 AS2_PIPER_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd",
+        usd_path=UNITREE_AS2_USD_PATH,
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -225,5 +231,3 @@ AS2_PIPER_CFG = ArticulationCfg(
 )
 """Configuration of Unitree AS2 quadruped with AgileX PiPER 6-DOF arm."""
 
-# Backward-compatibility alias
-GO2_PIPER_CFG = AS2_PIPER_CFG

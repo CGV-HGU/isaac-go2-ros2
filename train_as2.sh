@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Launch Unitree Go2 + AgileX PiPER in NVIDIA Isaac Sim 6.2.0 / Isaac Lab
+# Train Standalone Unitree AS2 with RSL-RL in Isaac Lab (Isaac Sim 6.2.0)
 # Computer Graphics and Vision Lab (CGV)
 # ==============================================================================
 
@@ -8,12 +8,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "======================================================================"
-echo " Starting Unitree Go2 + AgileX PiPER in Isaac Sim 6.2.0..."
+echo " Starting Standalone Unitree AS2 RL Training (Isaac Lab / RSL-RL)..."
 echo "======================================================================"
 
-# If isaaclab.sh exists, use it; otherwise fallback to python
 if [ -f "./isaaclab.sh" ]; then
-    ./isaaclab.sh -p scripts/demos/spawn_go2_piper.py "$@"
+    ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py \
+        --task Isaac-Velocity-Flat-Unitree-AS2-v0 \
+        --headless "$@"
 else
-    python scripts/demos/spawn_go2_piper.py "$@"
+    python scripts/reinforcement_learning/rsl_rl/train.py \
+        --task Isaac-Velocity-Flat-Unitree-AS2-v0 \
+        --headless "$@"
 fi

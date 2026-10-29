@@ -52,8 +52,8 @@ def main():
     robot_xform = UsdGeom.Xform.Define(stage, robot_prim_path)
     stage.SetDefaultPrim(robot_xform.GetPrim())
 
-    # 2. Reference Unitree AS2 Base
-    as2_usd_path = f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd"
+    # 2. Reference Unitree AS2 Base (can be overridden with UNITREE_AS2_USD_PATH)
+    as2_usd_path = os.getenv("UNITREE_AS2_USD_PATH", f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd")
     print(f"[INFO] Referencing AS2 base from: {as2_usd_path}")
     as2_prim = stage.DefinePrim(f"{robot_prim_path}/AS2")
     as2_prim.GetReferences().AddReference(as2_usd_path)

@@ -234,13 +234,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 
                 # RGB 설정
                 ("ROS2CameraRGB.inputs:type", "rgb"),
-                ("ROS2CameraRGB.inputs:topicName", "/go2_camera/rgb"),
-                ("ROS2CameraRGB.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraRGB.inputs:topicName", "/as2_camera/rgb"),
+                ("ROS2CameraRGB.inputs:frameId", "as2_front_cam"),
                 
                 # Depth 설정
                 ("ROS2CameraDepth.inputs:type", "depth"),
-                ("ROS2CameraDepth.inputs:topicName", "/go2_camera/depth"),
-                ("ROS2CameraDepth.inputs:frameId", "go2_front_cam"),
+                ("ROS2CameraDepth.inputs:topicName", "/as2_camera/depth"),
+                ("ROS2CameraDepth.inputs:frameId", "as2_front_cam"),
             ],
             og.Controller.Keys.CONNECT: [
                 ("OnTick.outputs:tick", "RenderProduct.inputs:execIn"),
