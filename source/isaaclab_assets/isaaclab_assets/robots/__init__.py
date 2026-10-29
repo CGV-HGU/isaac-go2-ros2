@@ -18,7 +18,7 @@ from .cassie import *
 from .fourier import *
 from .franka import *
 from .galbot import *
-from .go2_piper import *
+from .as2_piper import *
 from .humanoid import *
 from .humanoid_28 import *
 from .kinova import *

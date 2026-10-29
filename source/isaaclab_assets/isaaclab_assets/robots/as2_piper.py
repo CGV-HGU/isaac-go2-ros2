@@ -3,15 +3,16 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Configuration for Unitree Go2 quadruped equipped with AgileX PiPER robotic arm.
+"""Configuration for Unitree AS2 quadruped equipped with AgileX PiPER robotic arm.
 
 The following configurations are available:
 
-* :obj:`GO2_PIPER_CFG`: Unitree Go2 quadruped with AgileX PiPER 6-DOF arm and 2-finger gripper
+* :obj:`UNITREE_AS2_CFG`: Unitree AS2 industrial quadruped robot (95 N.m torque)
+* :obj:`AS2_PIPER_CFG`: Unitree AS2 quadruped with AgileX PiPER 6-DOF arm and 2-finger gripper
 * :obj:`PIPER_ARM_CFG`: Standalone AgileX PiPER robotic arm
 
 Reference:
-- Go2: https://github.com/unitreerobotics/unitree_ros
+- Unitree AS2: https://www.unitree.com (Supplied by ROAS)
 - AgileX PiPER: https://github.com/agilexrobotics/piper_ros
 """
 
@@ -92,10 +93,10 @@ PIPER_ARM_CFG = ArticulationCfg(
 
 
 ##
-# Unitree Go2 + AgileX PiPER Composite Mobile Manipulator Configuration
+# Unitree AS2 Base Configuration (Industrial Quadruped, ~18-20kg, 95 N.m torque)
 ##
 
-GO2_PIPER_CFG = ArticulationCfg(
+UNITREE_AS2_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd",
         activate_contact_sensors=True,
@@ -115,16 +116,67 @@ GO2_PIPER_CFG = ArticulationCfg(
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.42),
+        pos=(0.0, 0.0, 0.45),
         rot=(1.0, 0.0, 0.0, 0.0),
         joint_pos={
-            # Go2 legs in stable standing posture
             ".*L_hip_joint": 0.1,
             ".*R_hip_joint": -0.1,
             "F[L,R]_thigh_joint": 0.8,
             "R[L,R]_thigh_joint": 1.0,
             ".*_calf_joint": -1.5,
-            # PiPER arm in tucked/ready posture
+        },
+        joint_vel={".*": 0.0},
+    ),
+    soft_joint_pos_limit_factor=0.9,
+    actuators={
+        "base_legs": DCMotorCfg(
+            joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
+            effort_limit=95.0,  # Unitree AS2 Industrial peak torque (95 N.m)
+            saturation_effort=95.0,
+            velocity_limit=30.0,
+            stiffness=40.0,
+            damping=1.5,
+            friction=0.0,
+        ),
+    },
+)
+"""Configuration of Unitree AS2 industrial quadruped robot."""
+
+
+##
+# Unitree AS2 + AgileX PiPER Composite Mobile Manipulator Configuration
+##
+
+AS2_PIPER_CFG = ArticulationCfg(
+    spawn=sim_utils.UsdFileCfg(
+        usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd",
+        activate_contact_sensors=True,
+        rigid_props=sim_utils.RigidBodyPropertiesCfg(
+            disable_gravity=False,
+            retain_accelerations=False,
+            linear_damping=0.0,
+            angular_damping=0.0,
+            max_linear_velocity=1000.0,
+            max_angular_velocity=1000.0,
+            max_depenetration_velocity=1.0,
+        ),
+        articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+            enabled_self_collisions=False,
+            solver_position_iteration_count=8,
+            solver_velocity_iteration_count=0,
+        ),
+    ),
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.45),
+        rot=(1.0, 0.0, 0.0, 0.0),
+        joint_pos={
+            # Unitree AS2 legs in stable standing posture
+            ".*L_hip_joint": 0.1,
+            ".*R_hip_joint": -0.1,
+            "F[L,R]_thigh_joint": 0.8,
+            "R[L,R]_thigh_joint": 1.0,
+            ".*_calf_joint": -1.5,
+            # AgileX PiPER arm in tucked/ready posture
             "joint1": 0.0,
             "joint2": 0.6,
             "joint3": -1.2,
@@ -141,11 +193,11 @@ GO2_PIPER_CFG = ArticulationCfg(
     actuators={
         "base_legs": DCMotorCfg(
             joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
-            effort_limit=23.5,
-            saturation_effort=23.5,
+            effort_limit=95.0,  # AS2 High-torque leg motors
+            saturation_effort=95.0,
             velocity_limit=30.0,
-            stiffness=28.0,
-            damping=0.7,
+            stiffness=45.0,
+            damping=1.5,
             friction=0.0,
         ),
         "arm_shoulder": ImplicitActuatorCfg(
@@ -171,4 +223,7 @@ GO2_PIPER_CFG = ArticulationCfg(
         ),
     },
 )
-"""Configuration of Unitree Go2 quadruped with AgileX PiPER 6-DOF arm."""
+"""Configuration of Unitree AS2 quadruped with AgileX PiPER 6-DOF arm."""
+
+# Backward-compatibility alias
+GO2_PIPER_CFG = AS2_PIPER_CFG

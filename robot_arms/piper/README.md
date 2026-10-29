@@ -122,20 +122,23 @@ except KeyboardInterrupt:
 
 ### 4.1. Isaac Sim 6.2.0 데모 즉시 실행
 ```bash
-# Go2 + PiPER 모바일 매니퓰레이터 시뮬레이션 실행
-./spawn_go2_piper.sh
+# Unitree AS2 + AgileX PiPER 모바일 매니퓰레이터 시뮬레이션 실행
+./spawn_as2_piper.sh
 
 # 단독 PiPER 로봇 암 실행
-./spawn_go2_piper.sh --standalone_arm
+./spawn_as2_piper.sh --standalone_arm
+
+# 단독 Unitree AS2 사족보행 로봇 실행
+./spawn_as2_piper.sh --standalone_as2
 ```
 
 ### 4.2. Isaac Lab 강화학습 (RL Loco-manipulation)
 ```bash
-# RSL-RL PPO 기반 강화학습 실행
-./train_go2_piper.sh
+# RSL-RL PPO 기반 AS2 + PiPER 강화학습 실행
+./train_as2_piper.sh
 ```
 
-자세한 서버 배포 및 최신 Isaac Sim 6.2.0 설정은 [docs/isaac_sim_6_2_go2_piper_guide.md](../../docs/isaac_sim_6_2_go2_piper_guide.md) 문서를 참고하십시오.
+자세한 서버 배포 및 최신 Isaac Sim 6.2.0 설정은 [docs/isaac_sim_6_2_as2_piper_guide.md](../../docs/isaac_sim_6_2_as2_piper_guide.md) 문서를 참고하십시오.
 
 ---
 
