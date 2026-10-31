@@ -35,3 +35,7 @@ class UnitreeAS2FlatEnvCfg_PLAY(UnitreeAS2FlatEnvCfg):
         self.observations.policy.enable_corruption = False
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        # Disable heading overwrite & command resampling so WASD + Q/E teleop works directly
+        self.commands.base_velocity.heading_command = False
+        self.commands.base_velocity.rel_standing_envs = 0.0
+        self.commands.base_velocity.resampling_time_range = (1.0e9, 1.0e9)

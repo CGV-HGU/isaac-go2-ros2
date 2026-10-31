@@ -1,0 +1,18 @@
+vision_door_detector:
+  ros__parameters:
+    rgb_topic: "/as2_camera/rgb"
+    depth_topic: "/as2_camera/depth"
+    camera_info_topic: "/as2_camera/camera_info"
+    lidar_scan_topic: "/as2_lidar/scan"
+    lidar_pc_topic: "/as2_lidar/point_cloud"
+    min_dist_m: 0.28
+    max_dist_m: 0.90
+    max_yaw_deg: 60.0
+
+as2_piper_sim2real_bridge:
+  ros__parameters:
+    onnx_policy_path: ""
+    door_type: "lever_push"
+    control_rate_hz: 50.0
+    enable_piper_can: false
+    piper_can_port: "can0"

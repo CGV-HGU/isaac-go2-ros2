@@ -111,10 +111,10 @@ git submodule update --init --recursive
 
 | 구분 | 파일 경로 | 설명 |
 | :--- | :--- | :--- |
-| **Articulation 설정** | [`source/isaaclab_assets/isaaclab_assets/robots/as2_piper.py`](file:///sdcard/Documents/github/isaac-go2-ros2/source/isaaclab_assets/isaaclab_assets/robots/as2_piper.py) | `AS2_PIPER_CFG`, `UNITREE_AS2_CFG`, `PIPER_ARM_CFG`, `HOSPITAL_DOOR_CFG` |
-| **URDF / Xacro** | [`robot_arms/piper/descriptions/as2_piper.urdf`](file:///sdcard/Documents/github/isaac-go2-ros2/robot_arms/piper/descriptions/as2_piper.urdf) | AS2 본체 + PiPER 암 통합 기구학 정의 |
-| **도어 에셋** | [`source/isaaclab_assets/data/props/door/hospital_door.urdf`](file:///sdcard/Documents/github/isaac-go2-ros2/source/isaaclab_assets/data/props/door/hospital_door.urdf) | 병원 개폐 도어 및 손잡이 Articulation 모델 |
-| **실행 스크립트** | [`spawn_as2_piper.sh`](file:///sdcard/Documents/github/isaac-go2-ros2/spawn_as2_piper.sh) | Isaac Sim 6.2.0 원클릭 인터랙티브 스폰 스크립트 |
-| **병원 시뮬레이션** | [`spawn_as2_piper_hospital.sh`](file:///sdcard/Documents/github/isaac-go2-ros2/spawn_as2_piper_hospital.sh) | hospital.usd 및 문 열기/닫기 모바일 매니퓰레이션 스크립트 |
-| **RL 학습 스크립트** | [`train_as2_piper.sh`](file:///sdcard/Documents/github/isaac-go2-ros2/train_as2_piper.sh) | `Isaac-Velocity-Flat-Unitree-AS2-Piper-v0` 학습 스크립트 |
-| **USD 합성 도구** | [`scripts/tools/compose_as2_piper_usd.py`](file:///sdcard/Documents/github/isaac-go2-ros2/scripts/tools/compose_as2_piper_usd.py) | 복합 USD 단일 파일 빌드 도구 |
+| **Articulation 설정** | [`source/isaaclab_assets/isaaclab_assets/robots/as2_piper.py`](source/isaaclab_assets/isaaclab_assets/robots/as2_piper.py) | `AS2_PIPER_CFG`, `UNITREE_AS2_CFG`, `PIPER_ARM_CFG`, `HOSPITAL_DOOR_CFG` |
+| **URDF / Xacro** | [`robot_arms/piper/descriptions/as2_piper.urdf`](robot_arms/piper/descriptions/as2_piper.urdf) | AS2 본체 + PiPER 암 통합 기구학 정의 |
+| **도어 에셋** | [`source/isaaclab_assets/data/props/door/hospital_door.urdf`](source/isaaclab_assets/data/props/door/hospital_door.urdf) | 병원 개폐 도어 및 손잡이 Articulation 모델 |
+| **실행 스크립트** | [`spawn_as2_piper.sh`](spawn_as2_piper.sh) | Isaac Sim 6.2.0 원클릭 인터랙티브 스폰 스크립트 |
+| **병원 시뮬레이션** | [`spawn_as2_piper_hospital.sh`](spawn_as2_piper_hospital.sh) | hospital.usd 및 문 열기/닫기 모바일 매니퓰레이션 스크립트 |
+| **RL 학습 스크립트** | [`train_as2_piper.sh`](train_as2_piper.sh) | `Isaac-Velocity-Flat-Unitree-AS2-Piper-v0` 학습 스크립트 |
+| **USD 합성 도구** | [`scripts/tools/compose_as2_piper_usd.py`](scripts/tools/compose_as2_piper_usd.py) | 복합 USD 단일 파일 빌드 도구 |

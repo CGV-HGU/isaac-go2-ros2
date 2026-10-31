@@ -99,7 +99,9 @@ def Xform "HospitalDoor" (
         }
     }
 
-    def PhysicsRevoluteJoint "door_hinge"
+    def PhysicsRevoluteJoint "door_hinge" (
+        prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+    )
     {
         rel physics:body0 = </HospitalDoor/DoorFrame>
         rel physics:body1 = </HospitalDoor/DoorLeaf>
@@ -107,12 +109,15 @@ def Xform "HospitalDoor" (
         point3f physics:localPos0 = (0.0, 0.0, 0.02)
         point3f physics:localPos1 = (0.0, 0.0, 0.0)
         float physics:lowerLimit = 0.0
-        float physics:upperLimit = 1.6
-        float physxJoint:damping = 3.0
-        float physxJoint:friction = 0.5
+        float physics:upperLimit = 91.6732
+        float drive:angular:physics:damping = 4.0
+        float drive:angular:physics:stiffness = 0.5
+        float physxJoint:jointFriction = 0.5
     }
 
-    def PhysicsRevoluteJoint "door_handle_joint"
+    def PhysicsRevoluteJoint "door_handle_joint" (
+        prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+    )
     {
         rel physics:body0 = </HospitalDoor/DoorLeaf>
         rel physics:body1 = </HospitalDoor/DoorLeaf/DoorHandle>
@@ -120,8 +125,9 @@ def Xform "HospitalDoor" (
         point3f physics:localPos0 = (0.80, -0.04, 0.95)
         point3f physics:localPos1 = (0.0, 0.0, 0.0)
         float physics:lowerLimit = 0.0
-        float physics:upperLimit = 0.6
-        float physxJoint:stiffness = 15.0
-        float physxJoint:damping = 0.5
+        float physics:upperLimit = 34.3775
+        float drive:angular:physics:stiffness = 15.0
+        float drive:angular:physics:damping = 1.0
+        float physxJoint:jointFriction = 0.1
     }
 }

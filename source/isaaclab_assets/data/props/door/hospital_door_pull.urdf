@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="hospital_door_pull">
+  <!-- Fixed world frame anchor -->
+  <link name="door_world_anchor"/>
+
+  <joint name="anchor_to_frame_joint" type="fixed">
+    <parent link="door_world_anchor"/>
+    <child link="door_frame"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Door Outer Frame (Fixed) -->
+  <link name="door_frame">
+    <inertial>
+      <mass value="25.0"/>
+      <origin xyz="0.45 0 1.05" rpy="0 0 0"/>
+      <inertia ixx="1.0" ixy="0" ixz="0" iyy="1.0" iyz="0" izz="1.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.03 0 1.05" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.10 2.10"/></geometry>
+      <material name="frame_mat"><color rgba="0.85 0.85 0.88 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="-0.03 0 1.05" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.10 2.10"/></geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.93 0 1.05" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.10 2.10"/></geometry>
+      <material name="frame_mat"><color rgba="0.85 0.85 0.88 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0.93 0 1.05" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.10 2.10"/></geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.45 0 2.12" rpy="0 0 0"/>
+      <geometry><box size="1.02 0.10 0.05"/></geometry>
+      <material name="frame_mat"><color rgba="0.85 0.85 0.88 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0.45 0 2.12" rpy="0 0 0"/>
+      <geometry><box size="1.02 0.10 0.05"/></geometry>
+    </collision>
+  </link>
+
+  <!-- Pull Hinge Joint (Z-axis rotation toward -Y approach side: -1.5 to 0.0 rad) -->
+  <joint name="door_hinge" type="revolute">
+    <parent link="door_frame"/>
+    <child link="door_leaf"/>
+    <origin xyz="0.0 0 0.02" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.5" upper="0.0" effort="80.0" velocity="2.5"/>
+    <dynamics damping="3.0" friction="0.2"/>
+  </joint>
+
+  <link name="door_leaf">
+    <inertial>
+      <mass value="12.0"/>
+      <origin xyz="0.45 0 1.0" rpy="0 0 0"/>
+      <inertia ixx="4.2" ixy="0" ixz="0" iyy="0.8" iyz="0" izz="5.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.45 0 1.0" rpy="0 0 0"/>
+      <geometry><box size="0.90 0.04 2.0"/></geometry>
+      <material name="door_mat"><color rgba="0.35 0.62 0.48 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0.45 0 1.0" rpy="0 0 0"/>
+      <geometry><box size="0.90 0.04 2.0"/></geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.45 0 1.45" rpy="0 0 0"/>
+      <geometry><box size="0.28 0.045 0.60"/></geometry>
+      <material name="glass_mat"><color rgba="0.75 0.90 0.95 0.7"/></material>
+    </visual>
+  </link>
+
+  <!-- Lever Handle Joint -->
+  <joint name="door_handle_joint" type="revolute">
+    <parent link="door_leaf"/>
+    <child link="door_handle"/>
+    <origin xyz="0.80 -0.04 0.95" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="0.0" upper="0.6" effort="10.0" velocity="5.0"/>
+    <dynamics damping="0.5" friction="0.1"/>
+  </joint>
+
+  <link name="door_handle">
+    <inertial>
+      <mass value="0.4"/>
+      <origin xyz="-0.06 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.02 0" rpy="1.570796 0 0"/>
+      <geometry><cylinder radius="0.012" length="0.04"/></geometry>
+      <material name="handle_silver"><color rgba="0.85 0.85 0.85 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 -0.02 0" rpy="1.570796 0 0"/>
+      <geometry><cylinder radius="0.012" length="0.04"/></geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.06 -0.04 0" rpy="0 1.570796 0"/>
+      <geometry><cylinder radius="0.012" length="0.14"/></geometry>
+      <material name="handle_silver"><color rgba="0.85 0.85 0.85 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="-0.06 -0.04 0" rpy="0 1.570796 0"/>
+      <geometry><cylinder radius="0.012" length="0.14"/></geometry>
+    </collision>
+  </link>
+</robot>

@@ -16,11 +16,25 @@ Reference:
 - AgileX PiPER: https://github.com/agilexrobotics/piper_ros
 """
 
+import logging
 import os
+
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import DCMotorCfg, ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
+
+logger = logging.getLogger(__name__)
+
+_REPO_ROOT = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "../../../..",
+    )
+)
+_PIPER_STANDALONE_USD_PATH = os.path.join(
+    _REPO_ROOT, "robot_arms", "piper", "piper_isaac_sim", "USD", "piper_v1.usd"
+)
 
 ##
 # AgileX PiPER Standalone Configuration
@@ -28,12 +42,7 @@ from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 PIPER_ARM_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "../../../../../robot_arms/piper/piper_isaac_sim/USD/piper_v1.usd",
-            )
-        ),
+        usd_path=_PIPER_STANDALONE_USD_PATH,
         activate_contact_sensors=False,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -45,6 +54,7 @@ PIPER_ARM_CFG = ArticulationCfg(
             max_depenetration_velocity=1.0,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+            fix_root_link=True,
             enabled_self_collisions=False,
             solver_position_iteration_count=8,
             solver_velocity_iteration_count=0,
@@ -68,39 +78,43 @@ PIPER_ARM_CFG = ArticulationCfg(
     actuators={
         "arm_shoulder": ImplicitActuatorCfg(
             joint_names_expr=["joint[1-3]"],
-            effort_limit=100.0,
-            velocity_limit=5.0,
+            effort_limit_sim=100.0,
+            velocity_limit_sim=5.0,
             stiffness=400.0,
             damping=40.0,
         ),
         "arm_wrist": ImplicitActuatorCfg(
             joint_names_expr=["joint[4-6]"],
-            effort_limit=100.0,
-            velocity_limit=5.0,
+            effort_limit_sim=100.0,
+            velocity_limit_sim=5.0,
             stiffness=300.0,
             damping=30.0,
         ),
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=["joint[7-8]"],
-            effort_limit=20.0,
-            velocity_limit=1.0,
+            effort_limit_sim=20.0,
+            velocity_limit_sim=1.0,
             stiffness=1000.0,
             damping=50.0,
         ),
     },
 )
-"""Configuration for standalone AgileX PiPER 6-DOF robotic arm."""
+"""Configuration for standalone AgileX PiPER 6-DOF robotic arm (fixed base)."""
 
 
 ##
-# Unitree AS2 Base Configuration (Industrial Quadruped, ~18-20kg, 95 N.m torque)
+# Unitree AS2 Base Configuration (Industrial Quadruped, ~18.5kg, 95 N.m torque)
 ##
 
-# Unitree AS2 USD Asset resolution: allows overriding with custom local AS2 USD via UNITREE_AS2_USD_PATH
-UNITREE_AS2_USD_PATH = os.getenv(
-    "UNITREE_AS2_USD_PATH",
-    f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd",
-)
+_CUSTOM_AS2_USD = os.getenv("UNITREE_AS2_USD_PATH")
+if _CUSTOM_AS2_USD:
+    UNITREE_AS2_USD_PATH = _CUSTOM_AS2_USD
+else:
+    UNITREE_AS2_USD_PATH = f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go2/go2.usd"
+    logger.warning(
+        "UNITREE_AS2_USD_PATH is not set; UNITREE_AS2_CFG will use Nucleus Go2 USD geometry "
+        "with AS2 95 N.m actuator parameters. Set UNITREE_AS2_USD_PATH when official AS2 USD is available."
+    )
 
 UNITREE_AS2_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
@@ -140,7 +154,7 @@ UNITREE_AS2_CFG = ArticulationCfg(
             effort_limit=95.0,  # Unitree AS2 Industrial peak torque (95 N.m)
             saturation_effort=95.0,
             velocity_limit=30.0,
-            stiffness=40.0,
+            stiffness=45.0,
             damping=1.5,
             friction=0.0,
         ),
@@ -153,24 +167,59 @@ UNITREE_AS2_CFG = ArticulationCfg(
 # Unitree AS2 + AgileX PiPER Composite Mobile Manipulator Configuration
 ##
 
+_AS2_PIPER_DESCRIPTIONS_DIR = os.path.join(_REPO_ROOT, "robot_arms", "piper", "descriptions")
+_AS2_PIPER_URDF_PATH = os.path.join(_AS2_PIPER_DESCRIPTIONS_DIR, "as2_piper.urdf")
+# Only load a pre-composed USD if explicitly requested via AS2_PIPER_USD_PATH and valid on disk.
+_EXPLICIT_COMPOSITE_USD = os.getenv("AS2_PIPER_USD_PATH", "")
+AS2_PIPER_USD_PATH = _EXPLICIT_COMPOSITE_USD if (_EXPLICIT_COMPOSITE_USD and os.path.isfile(_EXPLICIT_COMPOSITE_USD)) else ""
+
 AS2_PIPER_CFG = ArticulationCfg(
-    spawn=sim_utils.UsdFileCfg(
-        usd_path=UNITREE_AS2_USD_PATH,
-        activate_contact_sensors=True,
-        rigid_props=sim_utils.RigidBodyPropertiesCfg(
-            disable_gravity=False,
-            retain_accelerations=False,
-            linear_damping=0.0,
-            angular_damping=0.0,
-            max_linear_velocity=1000.0,
-            max_angular_velocity=1000.0,
-            max_depenetration_velocity=1.0,
-        ),
-        articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=False,
-            solver_position_iteration_count=8,
-            solver_velocity_iteration_count=0,
-        ),
+    spawn=(
+        sim_utils.UsdFileCfg(
+            usd_path=AS2_PIPER_USD_PATH,
+            activate_contact_sensors=True,
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=False,
+                retain_accelerations=False,
+                linear_damping=0.0,
+                angular_damping=0.0,
+                max_linear_velocity=1000.0,
+                max_angular_velocity=1000.0,
+                max_depenetration_velocity=1.0,
+            ),
+            articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+                enabled_self_collisions=False,
+                solver_position_iteration_count=8,
+                solver_velocity_iteration_count=0,
+            ),
+        )
+        if AS2_PIPER_USD_PATH
+        else sim_utils.UrdfFileCfg(
+            asset_path=_AS2_PIPER_URDF_PATH,
+            fix_base=False,
+            # Foot joints carry dont_collapse="true" in URDF, so feet remain distinct bodies
+            # while zero-mass helper links are safely merged into parent rigid bodies.
+            merge_fixed_joints=True,
+            make_instanceable=True,
+            activate_contact_sensors=True,
+            joint_drive=sim_utils.UrdfConverterCfg.JointDriveCfg(
+                gains=sim_utils.UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=0.0, damping=0.0)
+            ),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=False,
+                retain_accelerations=False,
+                linear_damping=0.0,
+                angular_damping=0.0,
+                max_linear_velocity=1000.0,
+                max_angular_velocity=1000.0,
+                max_depenetration_velocity=1.0,
+            ),
+            articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+                enabled_self_collisions=False,
+                solver_position_iteration_count=8,
+                solver_velocity_iteration_count=0,
+            ),
+        )
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.45),
@@ -189,7 +238,7 @@ AS2_PIPER_CFG = ArticulationCfg(
             "joint4": 0.0,
             "joint5": 0.6,
             "joint6": 0.0,
-            # Gripper fingers
+            # Gripper fingers (joint7: [0, 0.035], joint8: [-0.035, 0])
             "joint7": 0.0,
             "joint8": 0.0,
         },
@@ -208,26 +257,25 @@ AS2_PIPER_CFG = ArticulationCfg(
         ),
         "arm_shoulder": ImplicitActuatorCfg(
             joint_names_expr=["joint[1-3]"],
-            effort_limit=100.0,
-            velocity_limit=5.0,
+            effort_limit_sim=100.0,
+            velocity_limit_sim=5.0,
             stiffness=400.0,
             damping=40.0,
         ),
         "arm_wrist": ImplicitActuatorCfg(
             joint_names_expr=["joint[4-6]"],
-            effort_limit=100.0,
-            velocity_limit=5.0,
+            effort_limit_sim=100.0,
+            velocity_limit_sim=5.0,
             stiffness=300.0,
             damping=30.0,
         ),
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=["joint[7-8]"],
-            effort_limit=20.0,
-            velocity_limit=1.0,
+            effort_limit_sim=20.0,
+            velocity_limit_sim=1.0,
             stiffness=1000.0,
             damping=50.0,
         ),
     },
 )
 """Configuration of Unitree AS2 quadruped with AgileX PiPER 6-DOF arm."""
-

@@ -11,6 +11,7 @@
 # No USD files allowed in the repo
 **/*.usd
 **/*.usda
+!source/isaaclab_assets/data/props/door/hospital_door.usda
 **/*.usdc
 **/*.usdz
 
@@ -65,7 +66,7 @@ _build
 /datasets/
 
 # Tests
-tests/
+# tests/ tracked for regression suite
 
 # Docker history
 .isaac-lab-docker-history
@@ -73,3 +74,8 @@ tests/
 # TacSL sensor
 **/tactile_record/*
 **/gelsight_r15_data/*
+
+# ROS 2 colcon workspace build artifacts (ros2_ws/src is tracked)
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
