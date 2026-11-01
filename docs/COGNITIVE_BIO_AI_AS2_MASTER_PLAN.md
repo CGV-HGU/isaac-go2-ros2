@@ -138,7 +138,40 @@ graph TD
 
 ---
 
-## 5. 논문 작성 가이드라인 (Reviewer 방어 전략)
+## 5. 연구실 통합 비전: 'One Modulation System for Every Driving Situation'
+**지도교수님의 마스터 비전: 모든 주행 상황을 아우르는 CGV 연구실 표준 모듈형 아키텍처**
+
+본 연구실(CGV Lab)의 궁극적인 목표는 특정 하드웨어나 단순 자율주행차에 국한되지 않고, **어떤 주행 상황(도심 도로, 험지 계단, 협소 복도 도어 조작 등)에서도 블록처럼 결합하여 사용할 수 있는 '표준 모듈레이션 시스템(Universal Modulation System)'**을 구축하는 것입니다.
+
+```mermaid
+graph TD
+    subgraph Lab_Modules ["CGV 연구실 3대 핵심 표준 모듈 (Core Modules)"]
+        M1["🧠 [기억·인지 모듈] DAMP Memory\n(현우 연구원: 3D Scene Graph Pruning)\n메모리 84% 절감 & 12ms 초고속 쿼리"]
+        M2["⚡ [정책·제어 모듈] S2E Policy\n(건민 연구원: Latent Trajectory Controller)\n50Hz 지연 보상 & 전신 모빌리티 궤적 생성"]
+        M3["🦾 [물리·검증 플랫폼] AS2 + PiPER Testbed\n(CGV Lab Physical AI Platform)\n고난도 사족보행 로코-매니퓰레이션 실증"]
+    end
+
+    subgraph Scenarios ["적용 주행 시나리오 (Every Situation in Driving)"]
+        S1["도심 장거리 고속 주행 (Autonomous Car)"]
+        S2["불규칙 험지 및 계단 극복 주행 (Quadruped Robot)"]
+        S3["복도 이동 및 도어 개방·조작 (Mobile Manipulator)"]
+        S4["VLM 자연어 음성 지시 수행 (Semantic Agent)"]
+    end
+
+    M1 & M2 & M3 ==> Scenarios
+```
+
+### 모듈 간 상호작용 및 표준 인터페이스 규격 (Standardized Interface)
+1. **DAMP Memory $\rightarrow$ S2E Policy**:
+   * DAMP가 프루닝을 통해 불필요한 배경을 제거한 핵심 장애물 및 주행 가능 구역 노드($\mathcal{G}'_{\text{local}}$)를 건민 연구원의 S2E 정책 모듈에 $20\text{ Hz}$로 전달합니다.
+2. **S2E Policy $\rightarrow$ AS2 Robot Base**:
+   * S2E 정책이 잠재 공간(Latent Space)에서 계산한 최적의 $50\text{ Hz}$ SE(2) 속도 벡터 $(\dot{x}, \dot{y}, \dot{\theta})$ 및 관절 보정치를 AS2 모터 제어기에 직접 스트리밍합니다.
+3. **AS2 + PiPER $\rightarrow$ DAMP & S2E**:
+   * 전방 RGB-D 및 3D LiDAR 포인트 클라우드와 오도메트리 피드백을 DAMP 메모리 버퍼와 S2E 지연 보상 큐에 실시간으로 공급합니다.
+
+---
+
+## 6. 논문 작성 가이드라인 (Reviewer 방어 전략)
 
 > [!TIP]
 > **성공적인 논문 서술을 위한 핵심 팁**
@@ -154,7 +187,7 @@ graph TD
 
 ---
 
-## 6. 재현 및 검증 코드 실행
+## 7. 재현 및 검증 코드 실행
 
 ```bash
 # 1. 연구실 표준 경로 진입
