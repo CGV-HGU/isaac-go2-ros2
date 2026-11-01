@@ -65,34 +65,78 @@ bash robot_arms/piper/setup_piper.sh
 
 ---
 
-## 4. 디렉터리 구조 (Repository Structure)
+## 4. 디렉터리 구조 및 폴더 가이드 (Repository Structure & Navigation)
 
+방문자와 연구원이 저장소를 쉽게 탐색할 수 있도록 기능별로 직관적인 폴더링 체계를 제공합니다.
+
+### 1) 디렉터리 트리 맵 (Directory Tree Map)
 ```text
 isaac-go2-ros2/
-├── docs/
+├── launchers/                                 # 🚀 [원클릭 실행 스크립트 모음]
+│   ├── train_as2_piper.sh                     # AS2 + PiPER 전신 보행 강화학습 (--flat / --rough)
+│   ├── train_as2.sh                           # AS2 단독 보행 강화학습
+│   ├── play_as2_piper.sh                      # 동시 원격조종 + [1]키 도어 개방 시연
+│   ├── spawn_as2_piper.sh                     # 단일 로봇 스폰 및 기구학 확인
+│   ├── spawn_as2_piper_hospital.sh            # 병원 월드 + 4종 도어 환경 스폰
+│   └── README.md                              # 런처 상세 사용법
+│
+├── docs/                                      # 📚 [연구 및 기술 문서 허브]
+│   ├── COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md    # 🌟 DAMP 프루닝 & 생체 모사 인지 마스터 플랜 (RA-L)
 │   ├── TRAINING_RUNBOOK.md                    # GPU 서버 학습·센서·시연 Step-by-Step 런북
-│   └── isaac_sim_6_2_as2_piper_guide.md       # 연구실 서버 및 Isaac Sim 종합 기술 매뉴얼
-├── robot_arms/piper/
-│   ├── descriptions/as2_piper.urdf(.xacro)    # 20-DOF 통합 URDF + RGB-D/3D LiDAR 센서 마운트
-│   └── piper_isaac_sim/                       # AgileX 공식 Isaac Sim USD/Mesh 서브모듈
-├── ros2_ws/src/as2_piper_bringup/             # ROS 2 Humble 비전/LiDAR 문 인식 & Sim-to-Real 패키지
-├── scripts/
-│   ├── demos/spawn_as2_piper(_hospital).py    # 기본 및 병원 도어 모바일 매니퓰레이션 데모
-│   ├── reinforcement_learning/rsl_rl/play.py  # 동시 원격조종 + [1]키 자동 문열기 + ROS 2 센서 브리지
-│   └── tools/
-│       ├── preflight_check.py                 # 5초 학습 환경 사전 진단 도구
-│       └── evaluate_loco_manipulation.py      # 논문/캡스톤 정량 벤치마크 자동 산출 도구
-├── source/
+│   ├── isaac_sim_6_2_as2_piper_guide.md       # 연구실 서버 및 Isaac Sim 종합 기술 매뉴얼
+│   ├── plans/                                 # 세부 연구 기획 및 논문 로드맵
+│   ├── guides/                                # 시뮬레이션 및 센서 상세 매뉴얼
+│   └── README.md                              # 문서 디렉토리 색인
+│
+├── robot_arms/piper/                          # 🦾 [하드웨어 로봇 암 에셋]
+│   ├── descriptions/as2_piper.urdf(.xacro)    # 20-DOF 통합 URDF + RGB-D/3D LiDAR 마운트
+│   ├── piper_isaac_sim/                       # AgileX 공식 Isaac Sim USD/Mesh 서브모듈
+│   └── setup_piper.sh                         # PiPER 에셋 초기화 스크립트
+│
+├── ros2_ws/src/as2_piper_bringup/             # 🤖 [ROS 2 Humble 패키지]
+│   ├── launch/as2_piper_bringup.launch.py     # 비전 검출 + Sim-to-Real 브릿지 통합 런치
+│   └── as2_piper_bringup/
+│       ├── vision_door_detector.py            # RGB-D + 3D LiDAR 도어/손잡이 인식 노드
+│       └── sim2real_bridge_node.py            # ONNX 정책 + piper_sdk CAN 통합 제어기
+│
+├── source/                                    # 🧠 [핵심 시뮬레이션 로직 - Isaac Lab 패키지]
 │   ├── isaaclab_assets/isaaclab_assets/robots/
-│   │   ├── as2_piper.py                       # AS2_PIPER_CFG, UNITREE_AS2_CFG, PIPER_ARM_CFG
-│   │   ├── as2_sensors.py                     # RGB 카메라, Depth 카메라, 3D LiDAR 통합 설정
-│   │   ├── door_manipulation.py               # 6축 DLS IK, 동시 텔레옵, 4종 도어 자동 개방 상태머신
+│   │   ├── as2_piper.py                       # AS2_PIPER_CFG (20-DOF 일체형 로봇 설정)
+│   │   ├── as2_sensors.py                     # RGB-D 카메라 + 3D LiDAR 센서 텐서 및 ROS 2 발행
+│   │   ├── door_manipulation.py               # 6축 DLS IK, 동시 텔레옵, 4종 도어 자동 개방 FSM
 │   │   └── hospital_door.py                   # 4종 도어 Articulation 팩토리
 │   └── isaaclab_tasks/.../velocity/config/
 │       ├── as2/                               # AS2 단독 보행 RL 설정
 │       └── as2_piper/                         # AS2 + PiPER 팔 스윙 적응 전신 RL 설정
-└── tests/test_as2_piper_audit.py              # 오프라인 전체 기구학·센서·ROS 2·상태머신 회귀 테스트 (20개)
+│
+├── scripts/                                   # 🛠️ [실행 및 유틸리티 도구]
+│   ├── demos/                                 # 인터랙티브 데모 파이썬 스크립트
+│   ├── reinforcement_learning/rsl_rl/         # RSL-RL 학습(train.py) 및 플레이(play.py)
+│   └── tools/
+│       ├── preflight_check.py                 # 5초 학습 환경 사전 진단 도구
+│       └── evaluate_loco_manipulation.py      # 논문/캡스톤 정량 벤치마크 자동 산출 도구
+│
+├── tools/                                     # ⚙️ [CI/CD 인프라 및 환경 도구]
+│   ├── run_all_tests.py                       # 전체 테스트 일괄 실행
+│   └── install_deps.py                        # 파이썬 의존성 설치
+│
+└── tests/                                     # 🧪 [무결성 감사 테스트]
+    └── test_as2_piper_audit.py                # 20개 전방위 기구학·센서·도어 FSM 무결성 테스트
 ```
+
+### 2) 목적별 폴더 내비게이션 (Directory Cheat Sheet)
+
+| 하고자 하는 작업 (Goal) | 찾아가야 할 위치 (Path) | 주요 파일 / 스크립트 |
+| :--- | :--- | :--- |
+| **강화학습을 바로 돌리고 싶다** | `launchers/` 또는 루트 `./` | [`train_as2_piper.sh`](launchers/train_as2_piper.sh) |
+| **로봇을 키보드로 조종하고 문을 열어보고 싶다** | `launchers/` 또는 루트 `./` | [`play_as2_piper.sh`](launchers/play_as2_piper.sh) |
+| **DAMP 메모리 프루닝 논문/연구 계획을 보고 싶다** | `docs/` | [`COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](docs/COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md) |
+| **GPU 서버 학습 및 센서 설정법을 보고 싶다** | `docs/` | [`TRAINING_RUNBOOK.md`](docs/TRAINING_RUNBOOK.md) |
+| **로봇 센서(RGB-D/LiDAR) 또는 문 조작 FSM을 수정하고 싶다** | `source/isaaclab_assets/.../` | [`as2_sensors.py`](source/isaaclab_assets/isaaclab_assets/robots/as2_sensors.py), [`door_manipulation.py`](source/isaaclab_assets/isaaclab_assets/robots/door_manipulation.py) |
+| **강화학습 보상 함수 및 보행 환경을 수정하고 싶다** | `source/isaaclab_tasks/.../` | `as2_piper/velocity_env_cfg.py` |
+| **ROS 2 문 검출 노드 또는 실물 로봇 제어기를 수정하고 싶다** | `ros2_ws/src/as2_piper_bringup/` | [`vision_door_detector.py`](ros2_ws/src/as2_piper_bringup/as2_piper_bringup/vision_door_detector.py) |
+| **로봇 3D CAD/URDF 메쉬를 확인하고 싶다** | `robot_arms/piper/descriptions/` | [`as2_piper.urdf`](robot_arms/piper/descriptions/as2_piper.urdf) |
+| **실행 전 환경에 이상이 없는지 5초 진단하고 싶다** | `scripts/tools/` | [`preflight_check.py`](scripts/tools/preflight_check.py) |
 
 ---
 
