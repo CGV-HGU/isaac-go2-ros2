@@ -8,8 +8,10 @@
 ## 📚 주요 문서 바로가기 (Quick Links)
 
 ### 1. 연구 및 마스터 플랜 (Research & Master Plans)
-* **[`COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md) / [`plans/`](plans/)**:  
-  현우 학생의 **DAMP (Safety-Preserving 3D Scene Graph Pruning)** 알고리즘과 생체 모사 인지 아키텍처, IEEE RA-L 타겟 연구 마스터 플랜.
+* **[`BIO_INSPIRED_DAMP_STRATEGY.md`](BIO_INSPIRED_DAMP_STRATEGY.md) / [`plans/`](plans/)**:  
+  🌟 **[핵심 전략]** 파리의 시각 반사(Fly) + 쥐의 해마 프루닝(Rat) 기반 2단계 수학적 인지 아키텍처 및 IEEE RA-L 기고 전략.
+* **[`COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md)**:  
+  DAMP와 건민 연구원의 S2E, AS2-PiPER 사족보행 모바일 매니퓰레이터 통합 마스터 플랜.
 
 ### 2. 가이드 및 런북 (Guides & Runbooks)
 * **[`TRAINING_RUNBOOK.md`](TRAINING_RUNBOOK.md) / [`guides/`](guides/)**:  
