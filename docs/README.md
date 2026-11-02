@@ -15,7 +15,7 @@
 * **[`TRAINING_RUNBOOK.md`](TRAINING_RUNBOOK.md) / [`guides/`](guides/)**:  
   GPU 서버에서의 강화학습(RSL-RL Flat $\rightarrow$ Rough), 체크포인트 평가, 온보드 센서(RGB-D/3D LiDAR), 도어 조작 시연 단계별 매뉴얼.
 * **[`isaac_sim_6_2_as2_piper_guide.md`](isaac_sim_6_2_as2_piper_guide.md)**:  
-  NVIDIA Isaac Sim 6.2.0 / Isaac Lab v2.3 환경 설정 및 문제 해결(Troubleshooting) 가이드.
+  NVIDIA Isaac Sim 6.2.0 & Isaac Lab 3.0 환경 설정 및 문제 해결(Troubleshooting) 가이드.
 
 ---
 

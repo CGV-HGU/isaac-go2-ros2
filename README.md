@@ -1,9 +1,9 @@
 # Unitree AS2 + AgileX PiPER Mobile Manipulator
-## NVIDIA Isaac Sim 6.2.0 & Isaac Lab Simulation Framework
+## NVIDIA Isaac Sim 6.2.0 & Isaac Lab 3.0 Simulation Framework
 ### Computer Graphics and Vision Lab (CGV)
 
 [![Isaac Sim](https://img.shields.io/badge/Isaac%20Sim-6.2.0-76B900.svg?logo=nvidia)](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)
-[![Isaac Lab](https://img.shields.io/badge/Isaac%20Lab-v2.3+-blue.svg)](https://isaac-sim.github.io/IsaacLab)
+[![Isaac Lab](https://img.shields.io/badge/Isaac%20Lab-3.0-blue.svg)](https://isaac-sim.github.io/IsaacLab)
 [![ROS 2](https://img.shields.io/badge/ROS%202-Humble-22314E.svg?logo=ros)](https://docs.ros.org/en/humble/)
 [![Branch](https://img.shields.io/badge/Branch-As2-green.svg)](https://github.com/CGV-HGU/isaac-go2-ros2/tree/As2)
 [![Base Robot](https://img.shields.io/badge/Base%20Robot-Unitree%20AS2%20(95Nm)-orange.svg)](https://www.unitree.com)
@@ -13,7 +13,7 @@
 
 ## 1. 개요 (Overview)
 
-본 저장소의 **`As2`** 브랜치는 CGV 연구실(Computer Graphics and Vision Lab)에 새로 도입된 **Unitree AS2 산업용 4족 보행 로봇**과 **AgileX PiPER 6자유도 경량 로봇 암**(공급사: (주)로아스 ROAS)을 결합한 모바일 매니퓰레이터(Mobile Manipulator)를 최신 **NVIDIA Isaac Sim 6.2.0 / 5.x** 및 **Isaac Lab** 환경에서 구동·학습하기 위한 연구 플랫폼입니다.
+본 저장소의 **`As2`** 브랜치는 CGV 연구실(Computer Graphics and Vision Lab)에 새로 도입된 **Unitree AS2 산업용 4족 보행 로봇**과 **AgileX PiPER 6자유도 경량 로봇 암**(공급사: (주)로아스 ROAS)을 결합한 모바일 매니퓰레이터(Mobile Manipulator)를 최신 **NVIDIA Isaac Sim 6.2.0** 및 **Isaac Lab 3.0** 가상 시뮬레이션 환경에서 구동·학습하기 위한 연구 플랫폼입니다.
 
 온보드 **RGB 카메라 + Depth 카메라 + 3D LiDAR** 센서 스위트, 왼손 보행(`WASD/QE`) + 오른손 6축 팔 동시 조종, `[1]`번 키 근접 조건부 4종 도어 자동 개방, 그리고 **ROS 2 Humble 비전/LiDAR 문 인식 및 Sim-to-Real 제어 패키지(`ros2_ws/src/as2_piper_bringup`)**가 통합되어 있습니다.
 

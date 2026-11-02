@@ -11,10 +11,10 @@ aliases:
   - Isaac Sim 6.2.0 AS2 Guide
 ---
 
-# NVIDIA Isaac Sim 6.2.0 & Isaac Lab 가이드: Unitree AS2 + AgileX PiPER
+# NVIDIA Isaac Sim 6.2.0 & Isaac Lab 3.0 가이드: Unitree AS2 + AgileX PiPER
 
 > [!summary]
-> 본 문서는 Computer Graphics and Vision Lab (CGV)의 연구실 서버 환경에서 최신 **NVIDIA Isaac Sim 6.2.0** 및 **Isaac Lab**을 기반으로 **Unitree AS2 산업용 4족 보행 로봇 + AgileX PiPER 6자유도 로봇 암(Mobile Manipulator)**을 시뮬레이션 및 강화학습(RL)으로 운용하기 위한 종합 기술 가이드입니다.
+> 본 문서는 Computer Graphics and Vision Lab (CGV)의 연구실 서버 환경에서 최신 **NVIDIA Isaac Sim 6.2.0** 및 **Isaac Lab 3.0**을 기반으로 **Unitree AS2 산업용 4족 보행 로봇 + AgileX PiPER 6자유도 로봇 암(Mobile Manipulator)**을 시뮬레이션 및 강화학습(RL)으로 운용하기 위한 종합 기술 가이드입니다.
 
 ---
 
