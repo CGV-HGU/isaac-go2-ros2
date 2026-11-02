@@ -10,7 +10,7 @@
 | [`play_as2_piper.sh`](play_as2_piper.sh) | 학습된 정책 플레이 (키보드 조종 + 자동 문 열기) | `./launchers/play_as2_piper.sh --spawn_door --door_type lever_push --real-time` |
 | [`spawn_as2_piper.sh`](spawn_as2_piper.sh) | 기본 환경 로봇 스폰 및 기구학 확인 | `./launchers/spawn_as2_piper.sh` |
 | [`spawn_as2_piper_hospital.sh`](spawn_as2_piper_hospital.sh) | 병원(`hospital.usd`) 환경 로봇 + 센서 구동 | `./launchers/spawn_as2_piper_hospital.sh` |
-| [`run_piper_ball_demo.sh`](run_piper_ball_demo.sh) | **AgileX PiPER 공 파지 & 다이내믹 외란 모션 사전 검증 데모** | `./launchers/run_piper_ball_demo.sh` |
+| [`run_piper_ball_demo.sh`](run_piper_ball_demo.sh) | **AgileX PiPER 공 파지 & 다이내믹 외란 모션 사전 검증 데모** (`experiments/bird_strike/`) | `./launchers/run_piper_ball_demo.sh` |
 
 ---
 > [!TIP]

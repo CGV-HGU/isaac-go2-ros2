@@ -8,9 +8,9 @@ AgileX PiPER 6-DOF Robotic Arm - Ball Grasping & Dynamic Motion Demonstration.
 Pre-flight Sim-to-Real verification for object gripping, lifting, and vibration/impact shake motion.
 
 Usage:
-    ./isaaclab.sh -p scripts/demos/piper_ball_pick_and_move.py
-    ./isaaclab.sh -p scripts/demos/piper_ball_pick_and_move.py --as2_mounted
-    ./isaaclab.sh -p scripts/demos/piper_ball_pick_and_move.py --ball_radius 0.025
+    ./isaaclab.sh -p experiments/bird_strike/sim_piper_ball_pick_and_move.py
+    ./isaaclab.sh -p experiments/bird_strike/sim_piper_ball_pick_and_move.py --as2_mounted
+    ./isaaclab.sh -p experiments/bird_strike/sim_piper_ball_pick_and_move.py --ball_radius 0.025
 """
 
 import argparse

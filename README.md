@@ -78,7 +78,15 @@ isaac-go2-ros2/
 │   ├── play_as2_piper.sh                      # 동시 원격조종 + [1]키 도어 개방 시연
 │   ├── spawn_as2_piper.sh                     # 단일 로봇 스폰 및 기구학 확인
 │   ├── spawn_as2_piper_hospital.sh            # 병원 월드 + 4종 도어 환경 스폰
+│   ├── run_piper_ball_demo.sh                 # PiPER 공 파지 & 다이내믹 외란 모션 검증
 │   └── README.md                              # 런처 상세 사용법
+│
+├── experiments/                               # 🔬 [정량 검증 및 전문 실험 패키지]
+│   └── bird_strike/                           # 🦅 버드 스트라이크 & 외란 재현성 벤치마크 패키지
+│       ├── run_sim_check.sh                   # Isaac Sim 사전 검증 런처
+│       ├── sim_piper_ball_pick_and_move.py    # 공 파지 및 다이내믹 쉐이크 시뮬레이터 검증 코드
+│       ├── trajectories/                      # 실물 PiPER 드래그 티칭 궤적 저장소 (.csv)
+│       └── README.md                          # 실험 설계 및 티칭 플레이백 가이드
 │
 ├── docs/                                      # 📚 [연구 및 기술 문서 허브]
 │   ├── COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md    # 🌟 DAMP 프루닝 & 생체 모사 인지 마스터 플랜 (RA-L)

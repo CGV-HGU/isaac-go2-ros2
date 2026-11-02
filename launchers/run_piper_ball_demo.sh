@@ -45,7 +45,7 @@ for arg in "$@"; do
 done
 
 if [[ "${ISAACLAB_EXE}" == *"isaaclab.sh"* ]]; then
-    exec "${ISAACLAB_EXE}" -p scripts/demos/piper_ball_pick_and_move.py "${EXTRA_ARGS[@]}"
+    exec "${ISAACLAB_EXE}" -p experiments/bird_strike/sim_piper_ball_pick_and_move.py "${EXTRA_ARGS[@]}"
 else
-    exec "${ISAACLAB_EXE}" scripts/demos/piper_ball_pick_and_move.py "${EXTRA_ARGS[@]}"
+    exec "${ISAACLAB_EXE}" experiments/bird_strike/sim_piper_ball_pick_and_move.py "${EXTRA_ARGS[@]}"
 fi
