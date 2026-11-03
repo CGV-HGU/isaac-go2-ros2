@@ -22,9 +22,14 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="AgileX PiPER Ball Grasping and Shake Motion Demo in Isaac Sim.")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of simulation environments.")
-parser.add_argument("--as2_mounted", action="store_true", default=False, help="Spawn PiPER arm mounted on Unitree AS2 quadruped.")
-parser.add_argument("--ball_radius", type=float, default=0.022, help="Radius of the target ball in meters (default: 0.022m / 4.4cm).")
-parser.add_argument("--ball_mass", type=float, default=0.045, help="Mass of the ball in kg (default: 0.045kg).")
+parser.add_argument("--as2_mounted", action="store_true", default=False,
+                    help="Spawn PiPER arm mounted on Unitree AS2 quadruped (Deprecated for BS rig; use standalone pedestal).")
+parser.add_argument("--ball_radius", type=float, default=0.020,
+                    help="Radius of target ball in meters (default: 0.020m = 4.0cm diameter).")
+parser.add_argument("--ball_mass", type=float, default=0.035,
+                    help="Mass of target ball in kg (default: 0.035kg).")
+parser.add_argument("--trajectory_csv", type=str, default="",
+                    help="Optional path to trajectory CSV (e.g. trajectories/trajectory_t1_step.csv) to replay in Isaac Sim.")
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -106,7 +111,7 @@ class BallGraspSceneCfg(InteractiveSceneCfg):
                 torsional_patch_radius=0.01,
             ),
             visual_material=sim_utils.PreviewSurfaceCfg(
-                diffuse_color=(1.0, 0.35, 0.05), # Bright high-visibility orange
+                diffuse_color=(0.95, 0.05, 0.05), # High-visibility bright red for vision tracker
                 metallic=0.1,
                 roughness=0.3,
             ),
@@ -181,89 +186,120 @@ def main():
     current_arm_target = POSE_HOME.copy()
     current_gripper_target = GRIPPER_OPEN.copy()
 
+    # Optional CSV trajectory playback
+    csv_trajectory = []
+    if args_cli.trajectory_csv:
+        if os.path.isfile(args_cli.trajectory_csv):
+            import csv
+            with open(args_cli.trajectory_csv, mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    csv_trajectory.append({
+                        "timestamp": float(row["timestamp"]),
+                        "arm_rad": [
+                            float(row.get("j1_rad", math.radians(float(row["j1_deg"])))),
+                            float(row.get("j2_rad", math.radians(float(row["j2_deg"])))),
+                            float(row.get("j3_rad", math.radians(float(row["j3_deg"])))),
+                            float(row.get("j4_rad", math.radians(float(row["j4_deg"])))),
+                            float(row.get("j5_rad", math.radians(float(row["j5_deg"])))),
+                            float(row.get("j6_rad", math.radians(float(row["j6_deg"])))),
+                        ],
+                        "gripper_rad": [0.013, -0.013],
+                    })
+            print(f"[INFO] Replaying {len(csv_trajectory)} frames from CSV: {args_cli.trajectory_csv}")
+        else:
+            print(f"[WARNING] Trajectory CSV file not found: {args_cli.trajectory_csv}. Falling back to default 5-phase demo.")
+
     while simulation_app.is_running():
         sim_time = step_count * sim.get_physics_dt()
         dt = sim.get_physics_dt()
         phase_timer += dt
 
-        # ---------------------------------------------------------
-        # State Machine: 5-Phase Grasping & Moving
-        # ---------------------------------------------------------
-        if phase == 0:
-            # Phase 0: Home -> Hover (2.0s)
-            t_ratio = phase_timer / 2.0
-            current_arm_target = interpolate_pose(POSE_HOME, POSE_HOVER, t_ratio)
-            current_gripper_target = GRIPPER_OPEN
-            if phase_timer >= 2.0:
-                phase = 1
-                phase_timer = 0.0
-                print(f"[Cycle {cycle_count}] Phase 1: Descending towards Ball...")
+        if csv_trajectory:
+            # CSV Playback Mode (repeating loop)
+            total_duration = csv_trajectory[-1]["timestamp"]
+            t_loop = sim_time % max(total_duration, 0.01)
+            frame_dt = csv_trajectory[1]["timestamp"] - csv_trajectory[0]["timestamp"] if len(csv_trajectory) > 1 else 0.02
+            idx = min(int(round(t_loop / max(frame_dt, 1e-4))), len(csv_trajectory) - 1)
+            current_arm_target = csv_trajectory[idx]["arm_rad"]
+            current_gripper_target = csv_trajectory[idx]["gripper_rad"]
+        else:
+            # Default State Machine: 5-Phase Grasping & Moving
+            if phase == 0:
+                # Phase 0: Home -> Hover (2.0s)
+                t_ratio = phase_timer / 2.0
+                current_arm_target = interpolate_pose(POSE_HOME, POSE_HOVER, t_ratio)
+                current_gripper_target = GRIPPER_OPEN
+                if phase_timer >= 2.0:
+                    phase = 1
+                    phase_timer = 0.0
+                    print(f"[Cycle {cycle_count}] Phase 1: Descending towards Ball...")
 
-        elif phase == 1:
-            # Phase 1: Hover -> Grasp Position (1.5s)
-            t_ratio = phase_timer / 1.5
-            current_arm_target = interpolate_pose(POSE_HOVER, POSE_GRASP, t_ratio)
-            current_gripper_target = GRIPPER_OPEN
-            if phase_timer >= 1.5:
-                phase = 2
-                phase_timer = 0.0
-                print(f"[Cycle {cycle_count}] Phase 2: Gripping the Ball...")
+            elif phase == 1:
+                # Phase 1: Hover -> Grasp Position (1.5s)
+                t_ratio = phase_timer / 1.5
+                current_arm_target = interpolate_pose(POSE_HOVER, POSE_GRASP, t_ratio)
+                current_gripper_target = GRIPPER_OPEN
+                if phase_timer >= 1.5:
+                    phase = 2
+                    phase_timer = 0.0
+                    print(f"[Cycle {cycle_count}] Phase 2: Gripping the Ball...")
 
-        elif phase == 2:
-            # Phase 2: Close Gripper around Ball (1.2s)
-            t_ratio = phase_timer / 1.2
-            current_arm_target = POSE_GRASP
-            current_gripper_target = interpolate_pose(GRIPPER_OPEN, GRIPPER_CLOSED_BALL, t_ratio)
-            if phase_timer >= 1.2:
-                phase = 3
-                phase_timer = 0.0
-                print(f"[Cycle {cycle_count}] Phase 3: Lifting Ball into air...")
-
-        elif phase == 3:
-            # Phase 3: Grasp -> Lift (1.5s)
-            t_ratio = phase_timer / 1.5
-            current_arm_target = interpolate_pose(POSE_GRASP, POSE_LIFT, t_ratio)
-            current_gripper_target = GRIPPER_CLOSED_BALL
-            if phase_timer >= 1.5:
-                phase = 4
-                phase_timer = 0.0
-                print(f"[Cycle {cycle_count}] Phase 4: Dynamic Moving & Shake Scene (Camera Jitter / Bird-Strike Simulation)...")
-
-        elif phase == 4:
-            # Phase 4: Dynamic Motion with Ball in Gripper (4.5s)
-            # Simulating Bird-Strike shock, yaw sweep, wrist tilt and vibration!
-            t = phase_timer
-            shake_j1 = POSE_LIFT[0] + 0.35 * math.sin(2.5 * t)              # Base Yaw Sweep
-            shake_j2 = POSE_LIFT[1] + 0.15 * math.sin(3.0 * t)              # Shoulder Pitch Wave
-            shake_j3 = POSE_LIFT[2] + 0.10 * math.cos(3.0 * t)              # Elbow Pitch
-            shake_j4 = POSE_LIFT[3] + 0.40 * math.sin(4.0 * t)              # Wrist Roll Shake
-            shake_j5 = POSE_LIFT[4] + 0.25 * math.cos(5.0 * t)              # Wrist Pitch Vibration
-            shake_j6 = POSE_LIFT[5] + 0.50 * math.sin(6.0 * t)              # Wrist Tip Impact Spin
-
-            current_arm_target = [shake_j1, shake_j2, shake_j3, shake_j4, shake_j5, shake_j6]
-            current_gripper_target = GRIPPER_CLOSED_BALL
-
-            if phase_timer >= 4.5:
-                phase = 5
-                phase_timer = 0.0
-                print(f"[Cycle {cycle_count}] Phase 5: Lowering Ball and Releasing...")
-
-        elif phase == 5:
-            # Phase 5: Return to Pedestal & Open Gripper (2.0s)
-            t_ratio = phase_timer / 2.0
-            if t_ratio < 0.6:
-                current_arm_target = interpolate_pose(POSE_LIFT, POSE_GRASP, t_ratio / 0.6)
-                current_gripper_target = GRIPPER_CLOSED_BALL
-            else:
-                release_ratio = (t_ratio - 0.6) / 0.4
+            elif phase == 2:
+                # Phase 2: Close Gripper around Ball (1.2s)
+                t_ratio = phase_timer / 1.2
                 current_arm_target = POSE_GRASP
-                current_gripper_target = interpolate_pose(GRIPPER_CLOSED_BALL, GRIPPER_OPEN, release_ratio)
+                current_gripper_target = interpolate_pose(GRIPPER_OPEN, GRIPPER_CLOSED_BALL, t_ratio)
+                if phase_timer >= 1.2:
+                    phase = 3
+                    phase_timer = 0.0
+                    print(f"[Cycle {cycle_count}] Phase 3: Lifting Ball into air...")
 
-            if phase_timer >= 2.0:
-                phase = 0
-                phase_timer = 0.0
-                cycle_count += 1
-                print(f"[SUCCESS] Cycle {cycle_count - 1} completed! Resetting to Home...")
+            elif phase == 3:
+                # Phase 3: Grasp -> Lift (1.5s)
+                t_ratio = phase_timer / 1.5
+                current_arm_target = interpolate_pose(POSE_GRASP, POSE_LIFT, t_ratio)
+                current_gripper_target = GRIPPER_CLOSED_BALL
+                if phase_timer >= 1.5:
+                    phase = 4
+                    phase_timer = 0.0
+                    print(f"[Cycle {cycle_count}] Phase 4: Dynamic Moving & Shake Scene (Camera Jitter / Bird-Strike Simulation)...")
+
+            elif phase == 4:
+                # Phase 4: Dynamic Motion with Ball in Gripper (4.5s)
+                # Simulating Bird-Strike shock, yaw sweep, wrist tilt and vibration!
+                t = phase_timer
+                shake_j1 = POSE_LIFT[0] + 0.35 * math.sin(2.5 * t)              # Base Yaw Sweep
+                shake_j2 = POSE_LIFT[1] + 0.15 * math.sin(3.0 * t)              # Shoulder Pitch Wave
+                shake_j3 = POSE_LIFT[2] + 0.10 * math.cos(3.0 * t)              # Elbow Pitch
+                shake_j4 = POSE_LIFT[3] + 0.40 * math.sin(4.0 * t)              # Wrist Roll Shake
+                shake_j5 = POSE_LIFT[4] + 0.25 * math.cos(5.0 * t)              # Wrist Pitch Vibration
+                shake_j6 = POSE_LIFT[5] + 0.50 * math.sin(6.0 * t)              # Wrist Tip Impact Spin
+
+                current_arm_target = [shake_j1, shake_j2, shake_j3, shake_j4, shake_j5, shake_j6]
+                current_gripper_target = GRIPPER_CLOSED_BALL
+
+                if phase_timer >= 4.5:
+                    phase = 5
+                    phase_timer = 0.0
+                    print(f"[Cycle {cycle_count}] Phase 5: Lowering Ball and Releasing...")
+
+            elif phase == 5:
+                # Phase 5: Return to Pedestal & Open Gripper (2.0s)
+                t_ratio = phase_timer / 2.0
+                if t_ratio < 0.6:
+                    current_arm_target = interpolate_pose(POSE_LIFT, POSE_GRASP, t_ratio / 0.6)
+                    current_gripper_target = GRIPPER_CLOSED_BALL
+                else:
+                    release_ratio = (t_ratio - 0.6) / 0.4
+                    current_arm_target = POSE_GRASP
+                    current_gripper_target = interpolate_pose(GRIPPER_CLOSED_BALL, GRIPPER_OPEN, release_ratio)
+
+                if phase_timer >= 2.0:
+                    phase = 0
+                    phase_timer = 0.0
+                    cycle_count += 1
+                    print(f"[SUCCESS] Cycle {cycle_count - 1} completed! Resetting to Home...")
 
         # ---------------------------------------------------------
         # Apply Targets to PiPER Joints

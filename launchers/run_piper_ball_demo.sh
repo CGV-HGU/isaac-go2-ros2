@@ -35,6 +35,12 @@ for arg in "$@"; do
         --as2)
             EXTRA_ARGS+=(--as2_mounted)
             ;;
+        --t1)
+            EXTRA_ARGS+=(--trajectory_csv "experiments/bird_strike/trajectories/trajectory_t1_step.csv")
+            ;;
+        --t2)
+            EXTRA_ARGS+=(--trajectory_csv "experiments/bird_strike/trajectories/trajectory_t2_sweep.csv")
+            ;;
         --headless)
             EXTRA_ARGS+=(--headless)
             ;;
