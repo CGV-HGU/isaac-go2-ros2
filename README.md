@@ -82,11 +82,11 @@ isaac-go2-ros2/
 │   └── README.md                              # 런처 상세 사용법
 │
 ├── experiments/                               # 🔬 [정량 검증 및 전문 실험 패키지]
-│   └── bird_strike/                           # 🦅 버드 스트라이크 & 외란 재현성 벤치마크 패키지
+│   └── bird_strike/                           # 🎯 로봇팔 이동 표적 리그 (비전 추적 벤치마크)
 │       ├── run_sim_check.sh                   # Isaac Sim 사전 검증 런처
-│       ├── sim_piper_ball_pick_and_move.py    # 공 파지 및 다이내믹 쉐이크 시뮬레이터 검증 코드
+│       ├── sim_piper_ball_pick_and_move.py    # 공 파지·이동 시뮬레이션 (초안, 미실행)
 │       ├── trajectories/                      # 실물 PiPER 드래그 티칭 궤적 저장소 (.csv)
-│       └── README.md                          # 실험 설계 및 티칭 플레이백 가이드
+│       └── README.md                          # 실험 설계, 현재 상태, 안전 수칙
 │
 ├── docs/                                      # 📚 [연구 및 기술 문서 허브]
 │   ├── COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md    # 🌟 DAMP 프루닝 & 생체 모사 인지 마스터 플랜 (RA-L)

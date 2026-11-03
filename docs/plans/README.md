@@ -1,8 +1,9 @@
 # Research Plans Directory
 **Computer Graphics and Vision Lab (CGV)**
 
-본 폴더는 연구실의 SCIE 논문(IEEE RA-L, ICRA, CoRL) 전략 및 마스터 플랜 문서를 보관합니다.
+* **DAMP 전략 메모 (v5.0 정정판)**: [`../BIO_INSPIRED_DAMP_STRATEGY.md`](../BIO_INSPIRED_DAMP_STRATEGY.md)
+  - 상태: 전략 초안. 실험 데이터 없음. 이전 판의 성능 수치는 예시값이라 삭제함.
+* **통합 마스터 플랜**: [`../COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](../COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md)
 
-* **최신 마스터 플랜**: [`COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](../COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md)
-  - 주제: DAMP (Driving-Aware Memory Pruning) & Physical AI 3계층 인지 아키텍처
-  - 타겟: IEEE Robotics and Automation Letters (RA-L) 2026
+> [!NOTE]
+> 예전에 이 폴더에 있던 `BIO_INSPIRED_DAMP_STRATEGY.md` 사본(v1.0)은 상위 문서와 내용이 달라 혼동을 일으켜서 삭제했습니다.

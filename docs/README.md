@@ -8,8 +8,8 @@
 ## 📚 주요 문서 바로가기 (Quick Links)
 
 ### 1. 연구 및 마스터 플랜 (Research & Master Plans)
-* **[`BIO_INSPIRED_DAMP_STRATEGY.md`](BIO_INSPIRED_DAMP_STRATEGY.md) / [`plans/`](plans/)**:  
-  🌟 **[핵심 전략]** 파리의 시각 반사(Fly) + 쥐의 해마 프루닝(Rat) 기반 2단계 수학적 인지 아키텍처 및 IEEE RA-L 기고 전략.
+* **[`BIO_INSPIRED_DAMP_STRATEGY.md`](BIO_INSPIRED_DAMP_STRATEGY.md)**:  
+  DAMP (Driving-Aware Memory Pruning) 전략 메모 v5.0 (정정판). **실험 데이터가 아직 없는 전략 초안**입니다.
 * **[`COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md)**:  
   DAMP와 건민 연구원의 S2E, AS2-PiPER 사족보행 모바일 매니퓰레이터 통합 마스터 플랜.
 

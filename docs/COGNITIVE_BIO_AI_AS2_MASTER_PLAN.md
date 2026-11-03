@@ -94,16 +94,17 @@ graph LR
 
 ---
 
-## 3. 정량적 평가 매트릭스 (The Winning Table)
+## 3. 정량적 평가 매트릭스 (측정 계획)
 
-논문 통과를 결정짓는 핵심 비교 표입니다. 제안하는 DAMP가 기존 기법들을 압도함을 증명합니다.
+> [!WARNING]
+> 이전 판의 이 표에 있던 수치(16.8 GB, 84.5% 절감, 충돌률 0.0%, 완주율 98.5% 등)는 **측정값이 아니라 임의로 넣은 예시값**이었으므로 삭제했습니다. 아래 표는 측정해야 할 항목 목록입니다. 세부 내용은 [`BIO_INSPIRED_DAMP_STRATEGY.md`](BIO_INSPIRED_DAMP_STRATEGY.md) v5.0을 참고하세요.
 
-| 기법 (Methods) | 메모리 사용량 (RAM/VRAM) | 메모리 절감율 (%) | 그래프 쿼리 지연 (ms) | 주행 충돌률 (Collision Rate) | 자율주행 완주율 (Success Rate) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **No Pruning (Hydra / Kimera 원본)** | 16.8 GB (OOM 발생) | 0% (기준) | 148 ms | 0.0% (다운 전까지) | 35.0% (장기 주행 실패) |
-| **Naive Distance Cut (10m 반경 밖 삭제)** | 2.1 GB | 87.5% | 11 ms | **18.5% (코너 충돌 발생!)** | 72.0% (위험성 높음) |
-| **Random / FIFO Pruning** | 3.6 GB | 78.5% | 14 ms | **24.0% (핵심 노드 유실)** | 61.5% (불안정) |
-| **Proposed DAMP (현우 님 기법)** | **2.6 GB** | **84.5% 절감** | **12 ms (초고속)** | **0.0% (완전 무결)** | **98.5% (SOTA 달성) 🏆** |
+| 기법 (Methods) | 메모리 사용량 | 그래프 쿼리 지연 (ms) | 프루닝 유발 충돌 증가 | 완주율 |
+| :--- | :--- | :--- | :--- | :--- |
+| No Pruning (Hydra 계열 원본) | `[측정 예정]` | `[측정 예정]` | 기준 | `[측정 예정]` |
+| Sliding Window / Voxel Downsampling | `[측정 예정]` | `[측정 예정]` | `[측정 예정]` | `[측정 예정]` |
+| Clio 계열 task-driven 병합 | `[측정 예정]` | `[측정 예정]` | `[측정 예정]` | `[측정 예정]` |
+| Proposed DAMP | `[측정 예정]` | `[측정 예정]` | `[측정 예정]` | `[측정 예정]` |
 
 ---
 
@@ -146,7 +147,7 @@ graph TD
 ```mermaid
 graph TD
     subgraph Lab_Modules ["CGV 연구실 3대 핵심 표준 모듈 (Core Modules)"]
-        M1["🧠 [기억·인지 모듈] DAMP Memory\n(현우 연구원: 3D Scene Graph Pruning)\n메모리 84% 절감 & 12ms 초고속 쿼리"]
+        M1["🧠 [기억·인지 모듈] DAMP Memory\n(현우 연구원: 3D Scene Graph Pruning)\n장거리 주행 메모리 증가 억제 (성능 측정 예정)"]
         M2["⚡ [정책·제어 모듈] S2E Policy\n(건민 연구원: Latent Trajectory Controller)\n50Hz 지연 보상 & 전신 모빌리티 궤적 생성"]
         M3["🦾 [물리·검증 플랫폼] AS2 + PiPER Testbed\n(CGV Lab Physical AI Platform)\n고난도 사족보행 로코-매니퓰레이션 실증"]
     end
