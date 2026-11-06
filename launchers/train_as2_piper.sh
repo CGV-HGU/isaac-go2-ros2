@@ -18,6 +18,7 @@ cd "${REPO_ROOT}"
 TASK="Isaac-Velocity-Flat-Unitree-AS2-Piper-v0"
 EXTRA_ARGS=()
 HEADLESS_FLAG="--headless"
+SKIP_PREFLIGHT=0
 
 for arg in "$@"; do
     case "$arg" in
@@ -32,6 +33,9 @@ for arg in "$@"; do
             ;;
         --headless)
             HEADLESS_FLAG="--headless"
+            ;;
+        --skip-preflight|--no-preflight)
+            SKIP_PREFLIGHT=1
             ;;
         *)
             EXTRA_ARGS+=("$arg")
@@ -57,8 +61,10 @@ else
     ISAACLAB_CMD=("python")
 fi
 
-# Run preflight GPU verification
-"${ISAACLAB_CMD[@]}" scripts/tools/preflight_check.py --require-gpu
+# Run preflight GPU verification unless bypassed
+if [[ "${SKIP_PREFLIGHT}" -eq 0 ]]; then
+    "${ISAACLAB_CMD[@]}" scripts/tools/preflight_check.py --require-gpu
+fi
 
 RUN_ARGS=("--task" "${TASK}")
 if [[ -n "${HEADLESS_FLAG}" ]]; then

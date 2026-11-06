@@ -58,6 +58,22 @@ GRIPPER_MAX_UM = 70000
 GRIPPER_BALL_GRASP_UM = 26000  # ~2.6cm stroke between finger pads
 
 
+def clamp_joint_angles(j_deg: Any) -> list[float]:
+    """Clamp 6 arm joint angles (degrees) to the physical limits in ``PIPER_JOINT_LIMITS_DEG``."""
+    if len(j_deg) != 6:
+        raise ValueError(f"Expected 6 joint angles, got {len(j_deg)}.")
+    clamped: list[float] = []
+    for i, val in enumerate(j_deg):
+        min_lim, max_lim = PIPER_JOINT_LIMITS_DEG[i]
+        clamped.append(float(min(max_lim, max(min_lim, float(val)))))
+    return clamped
+
+
+def clamp_gripper_um(gripper_um: float | int) -> int:
+    """Clamp gripper stroke in micrometers to ``[GRIPPER_MIN_UM, GRIPPER_MAX_UM]``."""
+    return int(min(GRIPPER_MAX_UM, max(GRIPPER_MIN_UM, int(round(float(gripper_um))))))
+
+
 # ==============================================================================
 # SDK Interface & Mock Fallback
 # ==============================================================================
@@ -466,11 +482,12 @@ def execute_record(args: argparse.Namespace) -> None:
     print(" 4. Press [Ctrl + C] when finished to save the CSV trajectory.")
     print("=" * 60 + "\n")
 
-    try:
-        input("Press [ENTER] to START recording...")
-    except KeyboardInterrupt:
-        print("\nRecording canceled.")
-        return
+    if sys.stdin.isatty() and not getattr(args, "no_confirm", False):
+        try:
+            input("Press [ENTER] to START recording...")
+        except KeyboardInterrupt:
+            print("\nRecording canceled.")
+            return
 
     print("\n>>> [RECORDING STARTED] Sampling trajectory... (Press Ctrl+C to STOP)\n")
     trajectory: List[dict] = []
@@ -562,17 +579,23 @@ def execute_playback(args: argparse.Namespace) -> None:
     if not trajectory:
         raise ValueError("Trajectory is empty.")
 
+    if float(args.speed) <= 0.0:
+        raise ValueError(f"Playback speed must be strictly positive, got {args.speed}.")
+    effective_speed = float(args.speed)
+
     total_duration = trajectory[-1]["timestamp"] - trajectory[0]["timestamp"]
-    scaled_duration = total_duration / max(args.speed, 0.01)
+    scaled_duration = total_duration / effective_speed
     print(f"[INFO] Loaded {len(trajectory)} frames. Trajectory Duration: {total_duration:.2f}s (Replay: {scaled_duration:.2f}s)")
 
-    # Safety check on peak velocities under requested speed factor
+    # Safety check on peak velocities and joint limits under requested speed factor
     stats = compute_trajectory_stats(trajectory)
+    if stats.get("has_joint_limit_violation"):
+        print(f"[WARNING] Trajectory contains {len(stats.get('violations', []))} joint/gripper limit violations! Out-of-bound targets will be safely clamped.")
     for j_name, j_data in stats.get("joints", {}).items():
-        peak_scaled_vel = j_data["max_vel_degps"] * args.speed
+        peak_scaled_vel = j_data["max_vel_degps"] * effective_speed
         if peak_scaled_vel > 180.0:
             print(
-                f"[WARNING] Playback speed {args.speed:.2f}x results in peak velocity {peak_scaled_vel:.1f}°/s on {j_name} (exceeds 180°/s safety threshold)!"
+                f"[WARNING] Playback speed {effective_speed:.2f}x results in peak velocity {peak_scaled_vel:.1f}°/s on {j_name} (exceeds 180°/s safety threshold)!"
             )
 
     piper = resolve_piper_interface(args.can, use_mock=args.mock)
@@ -599,28 +622,33 @@ def execute_playback(args: argparse.Namespace) -> None:
     print(f"  Target Start (deg): {[round(x, 1) for x in target_start_deg]}")
 
     # Enable arm motors for CAN command control
-    speed_pct = int(min(max(args.speed * 40, 10), 80))
+    speed_pct = int(min(max(effective_speed * 40, 10), 80))
     piper.MotionCtrl_2(0x01, 0x01, speed_pct, 0x00)
     piper.EnableArm(7)
     time.sleep(0.1)
 
     # 2. Smoothly ramp from current position to first waypoint over ramp_time
-    ramp_duration = max(float(args.ramp_time), 1.0)
-    print(f"\n>>> [PHASE 1] Smoothly moving to initial trajectory waypoint ({ramp_duration:.1f}s)...")
-    ramp_steps = int(ramp_duration * 50)
-    for i in range(ramp_steps):
-        alpha = smooth_s_curve(i / float(ramp_steps), 0.0, 1.0)
-        interp_deg = [
-            current_deg[k] + alpha * (target_start_deg[k] - current_deg[k])
-            for k in range(6)
-        ]
-        raw_cmd = [int(round(d * 1000.0)) for d in interp_deg]
-        piper.JointCtrl(*raw_cmd)
-        piper.GripperCtrl(int(first_frame["gripper_um"]), 1000, 0x01, 0)
-        time.sleep(0.02)
-
-    print(">>> Initial pose reached. Ready for trajectory execution.")
-    time.sleep(0.5)
+    ramp_duration = max(float(args.ramp_time), 0.0)
+    if ramp_duration > 0.0:
+        print(f"\n>>> [PHASE 1] Smoothly moving to initial trajectory waypoint ({ramp_duration:.1f}s)...")
+        ramp_steps = max(1, int(ramp_duration * 50))
+        ramp_dt = 0.02 if not getattr(args, "mock", False) else (0.02 / max(effective_speed, 1.0))
+        for i in range(ramp_steps):
+            alpha = smooth_s_curve(i / float(ramp_steps), 0.0, 1.0)
+            interp_deg = [
+                current_deg[k] + alpha * (target_start_deg[k] - current_deg[k])
+                for k in range(6)
+            ]
+            clamped_deg = clamp_joint_angles(interp_deg)
+            raw_cmd = [int(round(d * 1000.0)) for d in clamped_deg]
+            clamped_grip = clamp_gripper_um(first_frame["gripper_um"])
+            piper.JointCtrl(*raw_cmd)
+            piper.GripperCtrl(clamped_grip, 1000, 0x01, 0)
+            if ramp_dt > 1e-4:
+                time.sleep(ramp_dt)
+        print(">>> Initial pose reached. Ready for trajectory execution.")
+        if not getattr(args, "mock", False):
+            time.sleep(0.5)
 
     # 3. Trajectory Playback Loop
     print("\n>>> [PHASE 2] Executing Trajectory Playback... (Press Ctrl+C to ABORT)\n")
@@ -629,29 +657,27 @@ def execute_playback(args: argparse.Namespace) -> None:
     try:
         for idx, frame in enumerate(trajectory):
             # Compute time to wait according to frame timestamp
-            frame_time = frame["timestamp"] / args.speed
+            frame_time = frame["timestamp"] / effective_speed
             actual_elapsed = time.monotonic() - playback_start
             wait_s = frame_time - actual_elapsed
             if wait_s > 0:
-                time.sleep(wait_s)
+                time.sleep(wait_s if not getattr(args, "mock", False) else min(wait_s, 0.01 / effective_speed))
 
-            # Send CAN position command
-            raw_cmd = [
-                int(round(frame["j1_deg"] * 1000.0)),
-                int(round(frame["j2_deg"] * 1000.0)),
-                int(round(frame["j3_deg"] * 1000.0)),
-                int(round(frame["j4_deg"] * 1000.0)),
-                int(round(frame["j5_deg"] * 1000.0)),
-                int(round(frame["j6_deg"] * 1000.0)),
-            ]
+            # Send CAN position command (with joint limit and gripper stroke safety clamping)
+            frame_deg = clamp_joint_angles([
+                frame["j1_deg"], frame["j2_deg"], frame["j3_deg"],
+                frame["j4_deg"], frame["j5_deg"], frame["j6_deg"],
+            ])
+            raw_cmd = [int(round(d * 1000.0)) for d in frame_deg]
+            clamped_grip = clamp_gripper_um(frame["gripper_um"])
             piper.JointCtrl(*raw_cmd)
-            piper.GripperCtrl(int(frame["gripper_um"]), 1000, 0x01, 0)
+            piper.GripperCtrl(clamped_grip, 1000, 0x01, 0)
 
             if idx % 50 == 0 or idx == len(trajectory) - 1:
                 progress_pct = (idx + 1) / len(trajectory) * 100.0
                 print(
                     f"[{progress_pct:5.1f}% | {actual_elapsed:5.2f}s] "
-                    f"Cmd: J1={frame['j1_deg']:+6.1f}°, J2={frame['j2_deg']:+6.1f}°, Grip={frame['gripper_um'] / 1000.0:4.1f}mm"
+                    f"Cmd: J1={frame_deg[0]:+6.1f}°, J2={frame_deg[1]:+6.1f}°, Grip={clamped_grip / 1000.0:4.1f}mm"
                 )
 
         print("\n[SUCCESS] Trajectory replay completed successfully!")
@@ -684,14 +710,29 @@ def compute_trajectory_stats(trajectory: List[dict]) -> dict:
         "total_duration_s": total_time,
         "average_rate_hz": avg_rate,
         "joints": {},
+        "has_joint_limit_violation": False,
+        "has_gripper_limit_violation": False,
+        "violations": [],
     }
 
     for j in range(1, 7):
         key = f"j{j}_deg"
+        min_lim, max_lim = PIPER_JOINT_LIMITS_DEG[j - 1]
         vals = [f[key] for f in trajectory]
         min_v = min(vals)
         max_v = max(vals)
         rng = max_v - min_v
+
+        # Check joint limits
+        if min_v < min_lim or max_v > max_lim:
+            stats["has_joint_limit_violation"] = True
+            stats["violations"].append({
+                "joint": f"joint_{j}",
+                "min_deg": min_v,
+                "max_deg": max_v,
+                "limit_min_deg": min_lim,
+                "limit_max_deg": max_lim,
+            })
 
         # Calculate finite-difference peak velocity
         max_vel = 0.0
@@ -707,9 +748,24 @@ def compute_trajectory_stats(trajectory: List[dict]) -> dict:
             "max_deg": max_v,
             "range_deg": rng,
             "max_vel_degps": max_vel,
+            "limit_min_deg": min_lim,
+            "limit_max_deg": max_lim,
         }
 
-    grip_vals = [f["gripper_um"] / 1000.0 for f in trajectory]
+    raw_grips = [f["gripper_um"] for f in trajectory]
+    min_grip_um = min(raw_grips) if raw_grips else 0
+    max_grip_um = max(raw_grips) if raw_grips else 0
+    if min_grip_um < GRIPPER_MIN_UM or max_grip_um > GRIPPER_MAX_UM:
+        stats["has_gripper_limit_violation"] = True
+        stats["violations"].append({
+            "gripper": True,
+            "min_um": min_grip_um,
+            "max_um": max_grip_um,
+            "limit_min_um": GRIPPER_MIN_UM,
+            "limit_max_um": GRIPPER_MAX_UM,
+        })
+
+    grip_vals = [um / 1000.0 for um in raw_grips]
     stats["gripper"] = {
         "min_mm": min(grip_vals) if grip_vals else 0.0,
         "max_mm": max(grip_vals) if grip_vals else 0.0,
@@ -772,6 +828,14 @@ def main() -> None:
     rec_parser.add_argument("--output", type=str, default="experiments/bird_strike/trajectories/recorded_trajectory.csv",
                             help="Output CSV file path")
     rec_parser.add_argument("--mock", action="store_true", help="Run with simulated mock arm without physical CAN hardware")
+    rec_parser.add_argument(
+        "--no-confirm",
+        "--yes",
+        action="store_true",
+        dest="no_confirm",
+        default=False,
+        help="Skip interactive confirmation prompts (for automated / headless recording)",
+    )
 
     # Command: playback
     play_parser = subparsers.add_parser("playback", help="Safely replay a CSV trajectory on PiPER")

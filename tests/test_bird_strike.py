@@ -9,8 +9,9 @@ Verifies:
 1. Smooth half-cosine S-curve interpolation (boundary values, monotonicity, smoothness).
 2. Deterministic benchmark trajectory synthesis (T1 Step Response and T2 Velocity Sweep).
 3. CSV persistence, roundtrip fidelity, and flexible column handling (degrees, radians, missing fields).
-4. Kinematic statistics, range validation, and finite-difference velocity calculation.
-5. Mock hardware interface and safe playback execution (pre-flight ramp and safe-disable).
+4. Kinematic statistics, range validation, limit violation detection, and finite-difference velocity calculation.
+5. Mock hardware interface, automated recording, and safe playback execution (pre-flight ramp, limit clamping, safe-disable).
+6. Simulation math and trajectory sampling in sim_piper_ball_pick_and_move.
 """
 
 from __future__ import annotations
@@ -25,19 +26,37 @@ import pytest
 
 from experiments.bird_strike import (
     GRIPPER_BALL_GRASP_UM,
+    GRIPPER_CLOSED_BALL,
     GRIPPER_MAX_UM,
     GRIPPER_MIN_UM,
+    GRIPPER_OPEN,
     PIPER_JOINT_LIMITS_DEG,
+    POSE_GRASP,
+    POSE_HOME,
+    POSE_HOVER,
+    POSE_LIFT,
     MockPiperInterface,
+    clamp_gripper_um,
+    clamp_joint_angles,
+    compute_dynamic_shake_pose,
     compute_trajectory_stats,
     generate_t1_step_trajectory,
     generate_t2_sweep_trajectory,
+    gripper_um_to_finger_joint_m,
+    interpolate_pose,
     load_trajectory_csv,
+    prepare_csv_trajectory_frames,
     resolve_piper_interface,
+    sample_trajectory_frame,
     save_trajectory_csv,
     smooth_s_curve,
 )
-from experiments.bird_strike.piper_teach_playback import execute_playback
+from experiments.bird_strike.piper_teach_playback import (
+    execute_info,
+    execute_playback,
+    execute_record,
+)
+from experiments.bird_strike.sim_piper_ball_pick_and_move import build_arg_parser
 
 
 class TestInterpolationAndCurves:
@@ -160,15 +179,45 @@ class TestCsvSerializationAndRoundtrip:
             load_trajectory_csv(bad_csv)
 
 
-class TestTrajectoryStatsAndMockExecution:
-    """Test stats computation and mock hardware playback execution."""
+class TestHardwareSafetyAndClamping:
+    """Test angle and gripper clamping against physical limits."""
 
-    def test_compute_trajectory_stats(self):
+    def test_clamp_joint_angles_within_and_exceeding_limits(self):
+        # Within limits
+        safe_deg = [0.0, 45.0, -85.0, 0.0, 40.0, 0.0]
+        assert clamp_joint_angles(safe_deg) == safe_deg
+
+        # Out-of-bounds: J1 > 150 -> 150, J2 < 0 -> 0, J3 > 0 -> 0, J4 < -135 -> -135
+        out_deg = [180.0, -10.0, 10.0, -200.0, 150.0, -250.0]
+        clamped = clamp_joint_angles(out_deg)
+        assert clamped[0] == 150.0
+        assert clamped[1] == 0.0
+        assert clamped[2] == 0.0
+        assert clamped[3] == -135.0
+        assert clamped[4] == 100.0
+        assert clamped[5] == -180.0
+
+    def test_clamp_joint_angles_wrong_length_raises(self):
+        with pytest.raises(ValueError, match="Expected 6 joint angles"):
+            clamp_joint_angles([0.0, 10.0])
+
+    def test_clamp_gripper_um(self):
+        assert clamp_gripper_um(26000) == 26000
+        assert clamp_gripper_um(-1000) == GRIPPER_MIN_UM
+        assert clamp_gripper_um(100000) == GRIPPER_MAX_UM
+
+
+class TestTrajectoryStatsAndMockExecution:
+    """Test stats computation, mock hardware recording, playback execution, and info inspection."""
+
+    def test_compute_trajectory_stats_normal_and_violation(self):
         traj = generate_t1_step_trajectory(dt=0.02)
         stats = compute_trajectory_stats(traj)
         assert stats["num_frames"] == 1201
         assert stats["total_duration_s"] == pytest.approx(24.0)
         assert stats["average_rate_hz"] == pytest.approx(50.0, abs=0.1)
+        assert stats["has_joint_limit_violation"] is False
+        assert stats["has_gripper_limit_violation"] is False
 
         j1_stats = stats["joints"]["joint_1"]
         assert j1_stats["min_deg"] == pytest.approx(-15.0, abs=1e-2)
@@ -178,6 +227,30 @@ class TestTrajectoryStatsAndMockExecution:
 
         assert stats["gripper"]["min_mm"] == pytest.approx(26.0)
         assert stats["gripper"]["max_mm"] == pytest.approx(26.0)
+
+        # Test violation detection with out-of-bound point
+        traj_violation = list(traj[:5])
+        traj_violation.append({
+            "timestamp": 0.12,
+            "dt": 0.02,
+            "j1_deg": 190.0,  # exceeds +150
+            "j2_deg": 45.0,
+            "j3_deg": -85.0,
+            "j4_deg": 0.0,
+            "j5_deg": 40.0,
+            "j6_deg": 0.0,
+            "gripper_um": 90000,  # exceeds 70000
+            "j1_rad": 0.0,
+            "j2_rad": 0.0,
+            "j3_rad": 0.0,
+            "j4_rad": 0.0,
+            "j5_rad": 0.0,
+            "j6_rad": 0.0,
+        })
+        v_stats = compute_trajectory_stats(traj_violation)
+        assert v_stats["has_joint_limit_violation"] is True
+        assert v_stats["has_gripper_limit_violation"] is True
+        assert len(v_stats["violations"]) == 2
 
     def test_mock_piper_interface_lifecycle(self):
         piper = resolve_piper_interface("can0", use_mock=True)
@@ -202,18 +275,138 @@ class TestTrajectoryStatsAndMockExecution:
         assert piper.DisableArm(7) is True
         assert piper.enabled is False
 
-    def test_mock_playback_execution(self, tmp_path):
-        # Generate short trajectory for fast execution
-        traj = generate_t1_step_trajectory(dt=0.1)[:10]  # 10 frames = 0.9s
+    def test_mock_playback_execution_with_clamping_and_zero_speed_guard(self, tmp_path):
+        traj = generate_t1_step_trajectory(dt=0.1)[:5]
         csv_path = tmp_path / "short_t1.csv"
         save_trajectory_csv(csv_path, traj)
 
+        # Normal mock playback with speed=50.0
         args = argparse.Namespace(
             input=str(csv_path),
             can="can0",
-            speed=50.0,  # Fast playback
-            ramp_time=1.0,
+            speed=50.0,
+            ramp_time=0.01,
             safe_disable=True,
             mock=True,
         )
         execute_playback(args)
+
+        # Speed <= 0 should raise ValueError
+        args_zero = argparse.Namespace(
+            input=str(csv_path),
+            can="can0",
+            speed=0.0,
+            ramp_time=0.01,
+            safe_disable=True,
+            mock=True,
+        )
+        with pytest.raises(ValueError, match="Playback speed must be strictly positive"):
+            execute_playback(args_zero)
+
+    def test_mock_record_execution(self, tmp_path):
+        out_csv = tmp_path / "mock_record.csv"
+        args = argparse.Namespace(
+            can="can0",
+            rate_hz=50.0,
+            duration=0.05,  # 50ms record -> 2-3 frames
+            output=str(out_csv),
+            mock=True,
+            no_confirm=True,
+        )
+        execute_record(args)
+        assert out_csv.is_file()
+        rec_data = load_trajectory_csv(out_csv)
+        assert len(rec_data) >= 1
+        assert "j1_deg" in rec_data[0]
+        assert "gripper_um" in rec_data[0]
+
+    def test_execute_info(self, tmp_path, capsys):
+        traj = generate_t1_step_trajectory(dt=0.1)[:5]
+        csv_path = tmp_path / "info_traj.csv"
+        save_trajectory_csv(csv_path, traj)
+
+        args = argparse.Namespace(input=str(csv_path))
+        execute_info(args)
+        captured = capsys.readouterr().out
+        assert "Trajectory File Inspection" in captured
+        assert "Total Frames:     5" in captured
+
+
+class TestSimulationMathAndTrajectoryHelpers:
+    """Test pure-python simulation math and helper functions from sim_piper_ball_pick_and_move."""
+
+    def test_interpolate_pose_boundaries_and_halfway(self):
+        p0 = [0.0, 10.0, -20.0]
+        p1 = [10.0, 30.0, 0.0]
+        assert interpolate_pose(p0, p1, 0.0) == pytest.approx(p0)
+        assert interpolate_pose(p0, p1, 1.0) == pytest.approx(p1)
+        half = interpolate_pose(p0, p1, 0.5)
+        assert half == pytest.approx([5.0, 20.0, -10.0])
+
+    def test_gripper_um_to_finger_joint_m(self):
+        # 0 um -> (0.0, 0.0)
+        assert gripper_um_to_finger_joint_m(0) == pytest.approx((0.0, 0.0))
+        # 70000 um (70mm) -> finger stroke 35mm = 0.035m (symmetric joint7 & joint8)
+        assert gripper_um_to_finger_joint_m(70000) == pytest.approx((0.035, -0.035))
+        # Upper clamp
+        assert gripper_um_to_finger_joint_m(100000) == pytest.approx((0.035, -0.035))
+        # Lower clamp
+        assert gripper_um_to_finger_joint_m(-5000) == pytest.approx((0.0, 0.0))
+
+    def test_prepare_csv_trajectory_frames(self):
+        raw = [
+            {
+                "timestamp": 0.0,
+                "j1_rad": 0.1,
+                "j2_rad": 0.2,
+                "j3_rad": -0.3,
+                "j4_rad": 0.0,
+                "j5_rad": 0.5,
+                "j6_rad": 0.0,
+                "gripper_um": 70000,
+            }
+        ]
+        frames = prepare_csv_trajectory_frames(raw)
+        assert len(frames) == 1
+        assert frames[0]["timestamp"] == 0.0
+        assert frames[0]["arm_rad"] == [0.1, 0.2, -0.3, 0.0, 0.5, 0.0]
+        assert frames[0]["gripper_rad"] == pytest.approx([0.035, -0.035])
+
+    def test_sample_trajectory_frame(self):
+        frames = [
+            {"timestamp": 0.0, "arm_rad": [0.0] * 6, "gripper_rad": [0.035, -0.035]},
+            {"timestamp": 0.5, "arm_rad": [0.5] * 6, "gripper_rad": [0.020, -0.020]},
+            {"timestamp": 1.0, "arm_rad": [1.0] * 6, "gripper_rad": [0.013, -0.013]},
+        ]
+        arm_t0, grip_t0 = sample_trajectory_frame(frames, sim_time=0.0, speed=1.0)
+        assert arm_t0 == [0.0] * 6
+        assert grip_t0 == pytest.approx([0.035, -0.035])
+
+        arm_t_mid, grip_t_mid = sample_trajectory_frame(frames, sim_time=0.5, speed=1.0)
+        assert arm_t_mid == [0.5] * 6
+        assert grip_t_mid == pytest.approx([0.020, -0.020])
+
+        arm_t1_hold, grip_t1_hold = sample_trajectory_frame(frames, sim_time=1.0, speed=1.0, loop=False)
+        assert arm_t1_hold == [1.0] * 6
+        assert grip_t1_hold == pytest.approx([0.013, -0.013])
+
+        # Empty fallback
+        arm_def, grip_def = sample_trajectory_frame([], sim_time=0.0)
+        assert arm_def == POSE_HOME
+        assert grip_def == GRIPPER_OPEN
+
+    def test_compute_dynamic_shake_pose(self):
+        shake_0 = compute_dynamic_shake_pose(phase_timer=0.0)
+        assert len(shake_0) == 6
+        # At t=0: sin(0)=0, cos(0)=1
+        assert shake_0[0] == pytest.approx(POSE_LIFT[0])
+        assert shake_0[1] == pytest.approx(POSE_LIFT[1])
+        assert shake_0[2] == pytest.approx(POSE_LIFT[2] + 0.10)
+        assert shake_0[4] == pytest.approx(POSE_LIFT[4] + 0.25)
+
+    def test_build_arg_parser(self):
+        parser = build_arg_parser()
+        args = parser.parse_args(["--ball_radius", "0.030", "--speed", "2.0"])
+        assert args.ball_radius == pytest.approx(0.030)
+        assert args.speed == pytest.approx(2.0)
+        assert args.as2_mounted is False

@@ -215,6 +215,16 @@ class TestImageAndPointCloudDecoders:
         assert pts.shape == (3, 3)
         np.testing.assert_allclose(pts, points, rtol=1e-5)
 
+        # Edge cases: max_points <= 0 must safely return at most 1 point without dividing by zero
+        pts_zero = decode_pointcloud2_xyz(msg, max_points=0)
+        assert pts_zero.shape == (1, 3)
+        pts_neg = decode_pointcloud2_xyz(msg, max_points=-5)
+        assert pts_neg.shape == (1, 3)
+
+        # Missing fields / empty data
+        msg_no_fields = SimpleNamespace(fields=[], width=3, height=1, point_step=12, data=b"")
+        assert decode_pointcloud2_xyz(msg_no_fields).shape == (0, 3)
+
 
 class TestFullPerceptionGateAndTypeClassification:
     """Test RGB-D handle localization, Key '1' proximity gating, and door type classification."""

@@ -15,6 +15,8 @@ from .piper_teach_playback import (
     GRIPPER_MIN_UM,
     PIPER_JOINT_LIMITS_DEG,
     MockPiperInterface,
+    clamp_gripper_um,
+    clamp_joint_angles,
     compute_trajectory_stats,
     generate_t1_step_trajectory,
     generate_t2_sweep_trajectory,
@@ -22,6 +24,19 @@ from .piper_teach_playback import (
     resolve_piper_interface,
     save_trajectory_csv,
     smooth_s_curve,
+)
+from .sim_piper_ball_pick_and_move import (
+    GRIPPER_CLOSED_BALL,
+    GRIPPER_OPEN,
+    POSE_GRASP,
+    POSE_HOME,
+    POSE_HOVER,
+    POSE_LIFT,
+    compute_dynamic_shake_pose,
+    gripper_um_to_finger_joint_m,
+    interpolate_pose,
+    prepare_csv_trajectory_frames,
+    sample_trajectory_frame,
 )
 
 __all__ = [
@@ -31,6 +46,8 @@ __all__ = [
     "GRIPPER_MIN_UM",
     "PIPER_JOINT_LIMITS_DEG",
     "MockPiperInterface",
+    "clamp_gripper_um",
+    "clamp_joint_angles",
     "compute_trajectory_stats",
     "generate_t1_step_trajectory",
     "generate_t2_sweep_trajectory",
@@ -38,4 +55,15 @@ __all__ = [
     "resolve_piper_interface",
     "save_trajectory_csv",
     "smooth_s_curve",
+    "GRIPPER_CLOSED_BALL",
+    "GRIPPER_OPEN",
+    "POSE_GRASP",
+    "POSE_HOME",
+    "POSE_HOVER",
+    "POSE_LIFT",
+    "compute_dynamic_shake_pose",
+    "gripper_um_to_finger_joint_m",
+    "interpolate_pose",
+    "prepare_csv_trajectory_frames",
+    "sample_trajectory_frame",
 ]

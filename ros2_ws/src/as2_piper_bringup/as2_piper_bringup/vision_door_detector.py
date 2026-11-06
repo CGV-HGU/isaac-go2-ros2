@@ -402,21 +402,24 @@ def decode_ros_image_msg(msg: Any) -> np.ndarray:
 
 def decode_pointcloud2_xyz(msg: Any, max_points: int = 4096) -> np.ndarray:
     """Extract ``(N, 3)`` float32 ``(x, y, z)`` points from ``sensor_msgs/PointCloud2``."""
-    offsets = {f.name: f.offset for f in msg.fields}
+    fields = getattr(msg, "fields", None) or []
+    offsets = {f.name: f.offset for f in fields if hasattr(f, "name") and hasattr(f, "offset")}
     if not {"x", "y", "z"}.issubset(offsets):
         return np.empty((0, 3), dtype=np.float32)
 
-    total_pts = int(msg.width) * int(msg.height)
-    if total_pts <= 0 or msg.point_step <= 0:
+    total_pts = int(getattr(msg, "width", 0)) * int(getattr(msg, "height", 0))
+    point_step = int(getattr(msg, "point_step", 0))
+    if total_pts <= 0 or point_step <= 0:
         return np.empty((0, 3), dtype=np.float32)
 
-    stride = max(1, total_pts // max_points)
+    safe_max = max(1, int(max_points))
+    stride = max(1, total_pts // safe_max)
     endian = ">" if getattr(msg, "is_bigendian", False) else "<"
     ox, oy, oz = offsets["x"], offsets["y"], offsets["z"]
-    raw = memoryview(msg.data)
+    raw = memoryview(getattr(msg, "data", b""))
     pts = []
     for idx in range(0, total_pts, stride):
-        base = idx * msg.point_step
+        base = idx * point_step
         if base + max(ox, oy, oz) + 4 > len(raw):
             break
         x = struct.unpack_from(f"{endian}f", raw, base + ox)[0]

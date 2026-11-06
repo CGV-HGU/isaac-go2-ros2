@@ -174,3 +174,10 @@ class TestObservationBuilderAndPolicyInterface:
         assert hasattr(mod, "DoorAutoOpener")
         assert hasattr(mod, "DOOR_TYPES")
         assert "lever_push" in mod.DOOR_TYPES
+
+    def test_package_init_exports(self):
+        import as2_piper_bringup as pkg
+        assert hasattr(pkg, "build_locomotion_observation")
+        assert hasattr(pkg, "detect_door_and_handle_rgbd_lidar")
+        assert hasattr(pkg, "decode_pointcloud2_xyz")
+        assert hasattr(pkg, "AS2_DEFAULT_LEG_POS_12")

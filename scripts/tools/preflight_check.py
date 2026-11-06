@@ -74,7 +74,21 @@ def main() -> int:
     )
 
     # 3. Shell script LF line-ending check
-    sh_files = ["train_as2_piper.sh", "train_as2.sh", "play_as2_piper.sh", "spawn_as2_piper.sh", "spawn_as2_piper_hospital.sh"]
+    sh_files = [
+        "train_as2_piper.sh",
+        "train_as2.sh",
+        "play_as2_piper.sh",
+        "spawn_as2_piper.sh",
+        "spawn_as2_piper_hospital.sh",
+        "run_piper_ball_demo.sh",
+        "launchers/train_as2_piper.sh",
+        "launchers/train_as2.sh",
+        "launchers/play_as2_piper.sh",
+        "launchers/spawn_as2_piper.sh",
+        "launchers/spawn_as2_piper_hospital.sh",
+        "launchers/run_piper_ball_demo.sh",
+        "experiments/bird_strike/run_sim_check.sh",
+    ]
     crlf_found = []
     for sh in sh_files:
         sp = os.path.join(repo_root, sh)
