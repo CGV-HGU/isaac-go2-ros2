@@ -340,9 +340,17 @@ def detect_door_and_handle_rgbd_lidar(
     )
 
 
-def decode_ros_image_msg(msg) -> np.ndarray:
-    """Decode ``sensor_msgs/Image`` respecting both ``msg.step`` row padding and ``msg.is_bigendian``."""
-    enc = msg.encoding.lower()
+def decode_ros_image_msg(msg: Any) -> np.ndarray:
+    """Decode ``sensor_msgs/Image`` respecting both ``msg.step`` row padding and ``msg.is_bigendian``.
+
+    Supports:
+    - ``32FC1``: Float32 metric depth (Isaac Sim / synthetic depth).
+    - ``16UC1`` / ``mono16``: Uint16 millimeter depth (Intel RealSense default).
+    - ``mono8`` / ``8uc1``: 8-bit single-channel grayscale.
+    - ``rgb8`` / ``bgr8``: 3-channel 8-bit color (normalized to RGB).
+    - ``rgba8`` / ``bgra8``: 4-channel 8-bit color (normalized to RGB).
+    """
+    enc = str(msg.encoding).lower().strip()
     h, w = int(msg.height), int(msg.width)
     if h <= 0 or w <= 0:
         raise ValueError(f"Invalid image dimensions {w}x{h}.")
@@ -365,6 +373,14 @@ def decode_ros_image_msg(msg) -> np.ndarray:
         rows = np.frombuffer(buf, dtype=np.uint8, count=h * step).reshape(h, step)[:, :row_bytes]
         return np.ascontiguousarray(rows).view(np.dtype(f"{endian}u2")).reshape(h, w).astype(np.uint16)
 
+    if enc in ("mono8", "8uc1"):
+        row_bytes = w
+        step = int(getattr(msg, "step", 0)) or row_bytes
+        if step < row_bytes or len(buf) < h * step:
+            raise ValueError(f"Buffer length {len(buf)} smaller than {h}*{step} for {msg.encoding}.")
+        rows = np.frombuffer(buf, dtype=np.uint8, count=h * step).reshape(h, step)[:, :row_bytes]
+        return np.ascontiguousarray(rows).reshape(h, w).copy()
+
     if enc in ("rgb8", "bgr8"):
         row_bytes = w * 3
         step = int(getattr(msg, "step", 0)) or row_bytes
@@ -384,7 +400,7 @@ def decode_ros_image_msg(msg) -> np.ndarray:
     raise ValueError(f"Unsupported sensor_msgs/Image encoding: '{msg.encoding}'.")
 
 
-def _decode_pointcloud2_xyz(msg, max_points: int = 4096) -> np.ndarray:
+def decode_pointcloud2_xyz(msg: Any, max_points: int = 4096) -> np.ndarray:
     """Extract ``(N, 3)`` float32 ``(x, y, z)`` points from ``sensor_msgs/PointCloud2``."""
     offsets = {f.name: f.offset for f in msg.fields}
     if not {"x", "y", "z"}.issubset(offsets):
@@ -395,7 +411,7 @@ def _decode_pointcloud2_xyz(msg, max_points: int = 4096) -> np.ndarray:
         return np.empty((0, 3), dtype=np.float32)
 
     stride = max(1, total_pts // max_points)
-    endian = ">" if msg.is_bigendian else "<"
+    endian = ">" if getattr(msg, "is_bigendian", False) else "<"
     ox, oy, oz = offsets["x"], offsets["y"], offsets["z"]
     raw = memoryview(msg.data)
     pts = []
@@ -408,6 +424,9 @@ def _decode_pointcloud2_xyz(msg, max_points: int = 4096) -> np.ndarray:
         z = struct.unpack_from(f"{endian}f", raw, base + oz)[0]
         pts.append((x, y, z))
     return np.asarray(pts, dtype=np.float32) if pts else np.empty((0, 3), dtype=np.float32)
+
+
+_decode_pointcloud2_xyz = decode_pointcloud2_xyz
 
 
 def main(args: list[str] | None = None) -> None:
@@ -560,6 +579,13 @@ def main(args: list[str] | None = None) -> None:
                 type_msg.data = res.suggested_door_type
                 self._type_pub.publish(type_msg)
 
+        def cleanup(self) -> None:
+            """Lifecycle teardown: announce door not ready to prevent stale auto-trigger."""
+            try:
+                self._publish_not_ready()
+            except Exception:
+                pass
+
     rclpy.init(args=args)
     node = VisionDoorDetectorNode()
     try:
@@ -567,6 +593,7 @@ def main(args: list[str] | None = None) -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        node.cleanup()
         node.destroy_node()
         rclpy.shutdown()
 

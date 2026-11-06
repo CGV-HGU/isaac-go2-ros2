@@ -137,6 +137,14 @@ ignore-words-list = "haa,slq,collapsable,buss,reacher,thirdparty"
 
 [tool.pytest.ini_options]
 
+testpaths = [
+    "tests",
+    "ros2_ws/src/as2_piper_bringup/test",
+]
+pythonpath = [
+    ".",
+    "ros2_ws/src/as2_piper_bringup",
+]
 markers = [
     "isaacsim_ci: mark test to run in isaacsim ci",
 ]

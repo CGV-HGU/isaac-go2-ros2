@@ -180,6 +180,21 @@ def build_locomotion_observation(
     expected_obs_dim: int = 64,
 ) -> np.ndarray:
     """Construct exact unscaled SI policy observation matching ``rough_env_cfg.py`` (``preserve_order=True``)."""
+    if len(base_lin_vel_b) != 3:
+        raise ValueError(f"base_lin_vel_b must have length 3, got {len(base_lin_vel_b)}")
+    if len(base_ang_vel_b) != 3:
+        raise ValueError(f"base_ang_vel_b must have length 3, got {len(base_ang_vel_b)}")
+    if len(quat_wxyz) != 4:
+        raise ValueError(f"quat_wxyz must have length 4, got {len(quat_wxyz)}")
+    if len(cmd_vel_xy_yaw) != 3:
+        raise ValueError(f"cmd_vel_xy_yaw must have length 3, got {len(cmd_vel_xy_yaw)}")
+    if len(leg_pos_12) != 12:
+        raise ValueError(f"leg_pos_12 must have length 12, got {len(leg_pos_12)}")
+    if len(leg_vel_12) != 12:
+        raise ValueError(f"leg_vel_12 must have length 12, got {len(leg_vel_12)}")
+    if len(last_action_12) != 12:
+        raise ValueError(f"last_action_12 must have length 12, got {len(last_action_12)}")
+
     lin_v = np.asarray(base_lin_vel_b, dtype=np.float32).reshape(3)
     ang_v = np.asarray(base_ang_vel_b, dtype=np.float32).reshape(3)
     proj_g = compute_projected_gravity_wxyz(quat_wxyz)
@@ -194,6 +209,10 @@ def build_locomotion_observation(
     if expected_obs_dim == 48:
         obs = np.concatenate([lin_v, ang_v, proj_g, cmd, q_leg_rel, dq_leg, act], axis=0)
     elif expected_obs_dim == 64:
+        if arm_pos_8 is not None and len(arm_pos_8) != 8:
+            raise ValueError(f"arm_pos_8 must have length 8, got {len(arm_pos_8)}")
+        if arm_vel_8 is not None and len(arm_vel_8) != 8:
+            raise ValueError(f"arm_vel_8 must have length 8, got {len(arm_vel_8)}")
         q_arm = (
             np.asarray(arm_pos_8, dtype=np.float32).reshape(8)
             if arm_pos_8 is not None
@@ -522,6 +541,19 @@ def main(args: list[str] | None = None) -> None:
                 self._piper_hw.JointCtrl(*deg_001)
                 self._piper_hw.GripperCtrl(grip_um, 1000, 0x01, 0)
 
+        def cleanup(self) -> None:
+            """Safe lifecycle teardown: stop robot twist and cleanly disable CAN motors."""
+            try:
+                self.publish_zero_twist()
+            except Exception:
+                pass
+            if self._piper_hw is not None:
+                try:
+                    self.get_logger().info("Disabling AgileX PiPER arm motors for safe shutdown...")
+                    self._piper_hw.DisableArm(7)
+                except Exception as exc:
+                    self.get_logger().warning(f"Error during PiPER CAN shutdown: {exc}")
+
     rclpy.init(args=args)
     node = AS2PiperSim2RealBridgeNode()
     try:
@@ -529,7 +561,7 @@ def main(args: list[str] | None = None) -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        node.publish_zero_twist()
+        node.cleanup()
         node.destroy_node()
         rclpy.shutdown()
 

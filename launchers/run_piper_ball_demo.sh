@@ -13,20 +13,23 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 # Locate Isaac Lab Python launcher
-ISAACLAB_EXE=""
+ISAACLAB_CMD=()
 if [[ -x "${REPO_ROOT}/isaaclab.sh" ]]; then
-    ISAACLAB_EXE="${REPO_ROOT}/isaaclab.sh"
+    ISAACLAB_CMD=("${REPO_ROOT}/isaaclab.sh" "-p")
+elif [[ -f "${REPO_ROOT}/isaaclab.sh" ]]; then
+    ISAACLAB_CMD=("bash" "${REPO_ROOT}/isaaclab.sh" "-p")
 elif command -v isaaclab &>/dev/null; then
-    ISAACLAB_EXE="isaaclab"
+    ISAACLAB_CMD=("isaaclab" "-p")
+elif command -v python3 &>/dev/null; then
+    ISAACLAB_CMD=("python3")
 else
-    # Fallback to python3 if running within active Isaac Lab conda/docker environment
-    ISAACLAB_EXE="python3"
+    ISAACLAB_CMD=("python")
 fi
 
 echo "========================================================================"
 echo " [Isaac Lab 3.0] AgileX PiPER Ball Grasping & Dynamic Motion Demo"
 echo " Pre-flight Verification before Real Hardware Deployment"
-echo " CGV Lab - Computer Graphics and Vision Lab"
+echo " Computer Graphics and Vision Lab (CGV)"
 echo "========================================================================"
 
 EXTRA_ARGS=()
@@ -50,8 +53,4 @@ for arg in "$@"; do
     esac
 done
 
-if [[ "${ISAACLAB_EXE}" == *"isaaclab.sh"* ]]; then
-    exec "${ISAACLAB_EXE}" -p experiments/bird_strike/sim_piper_ball_pick_and_move.py "${EXTRA_ARGS[@]}"
-else
-    exec "${ISAACLAB_EXE}" experiments/bird_strike/sim_piper_ball_pick_and_move.py "${EXTRA_ARGS[@]}"
-fi
+exec "${ISAACLAB_CMD[@]}" experiments/bird_strike/sim_piper_ball_pick_and_move.py "${EXTRA_ARGS[@]}"

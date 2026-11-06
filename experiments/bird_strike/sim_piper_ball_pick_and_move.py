@@ -30,6 +30,8 @@ parser.add_argument("--ball_mass", type=float, default=0.035,
                     help="Mass of target ball in kg (default: 0.035kg).")
 parser.add_argument("--trajectory_csv", type=str, default="",
                     help="Optional path to trajectory CSV (e.g. trajectories/trajectory_t1_step.csv) to replay in Isaac Sim.")
+parser.add_argument("--speed", type=float, default=1.0,
+                    help="Playback speed multiplier for CSV trajectory replay (default: 1.0).")
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -189,24 +191,35 @@ def main():
     # Optional CSV trajectory playback
     csv_trajectory = []
     if args_cli.trajectory_csv:
-        if os.path.isfile(args_cli.trajectory_csv):
-            import csv
-            with open(args_cli.trajectory_csv, mode="r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    csv_trajectory.append({
-                        "timestamp": float(row["timestamp"]),
-                        "arm_rad": [
-                            float(row.get("j1_rad", math.radians(float(row["j1_deg"])))),
-                            float(row.get("j2_rad", math.radians(float(row["j2_deg"])))),
-                            float(row.get("j3_rad", math.radians(float(row["j3_deg"])))),
-                            float(row.get("j4_rad", math.radians(float(row["j4_deg"])))),
-                            float(row.get("j5_rad", math.radians(float(row["j5_deg"])))),
-                            float(row.get("j6_rad", math.radians(float(row["j6_deg"])))),
-                        ],
-                        "gripper_rad": [0.013, -0.013],
-                    })
-            print(f"[INFO] Replaying {len(csv_trajectory)} frames from CSV: {args_cli.trajectory_csv}")
+        csv_path = os.path.abspath(args_cli.trajectory_csv) if not os.path.isabs(args_cli.trajectory_csv) else args_cli.trajectory_csv
+        if not os.path.isfile(csv_path):
+            repo_candidate = os.path.join(os.path.dirname(__file__), "..", "..", args_cli.trajectory_csv)
+            if os.path.isfile(repo_candidate):
+                csv_path = os.path.abspath(repo_candidate)
+
+        if os.path.isfile(csv_path):
+            try:
+                from experiments.bird_strike.piper_teach_playback import load_trajectory_csv
+            except ImportError:
+                from piper_teach_playback import load_trajectory_csv
+
+            raw_traj = load_trajectory_csv(csv_path)
+            for row in raw_traj:
+                # Finger displacement: 0 um -> 0.0m, 70000 um -> 0.035m (symmetric joint7 & joint8)
+                grip_finger_m = min(0.035, max(0.0, (float(row["gripper_um"]) / 1_000_000.0) / 2.0))
+                csv_trajectory.append({
+                    "timestamp": float(row["timestamp"]),
+                    "arm_rad": [
+                        float(row["j1_rad"]),
+                        float(row["j2_rad"]),
+                        float(row["j3_rad"]),
+                        float(row["j4_rad"]),
+                        float(row["j5_rad"]),
+                        float(row["j6_rad"]),
+                    ],
+                    "gripper_rad": [grip_finger_m, -grip_finger_m],
+                })
+            print(f"[INFO] Replaying {len(csv_trajectory)} frames from CSV: {csv_path} (Speed: {args_cli.speed:.2f}x)")
         else:
             print(f"[WARNING] Trajectory CSV file not found: {args_cli.trajectory_csv}. Falling back to default 5-phase demo.")
 
@@ -216,10 +229,15 @@ def main():
         phase_timer += dt
 
         if csv_trajectory:
-            # CSV Playback Mode (repeating loop)
+            # CSV Playback Mode (repeating loop with speed multiplier)
             total_duration = csv_trajectory[-1]["timestamp"]
-            t_loop = sim_time % max(total_duration, 0.01)
-            frame_dt = csv_trajectory[1]["timestamp"] - csv_trajectory[0]["timestamp"] if len(csv_trajectory) > 1 else 0.02
+            speed = max(args_cli.speed, 0.01)
+            t_loop = (sim_time * speed) % max(total_duration, 0.01)
+            frame_dt = (
+                csv_trajectory[1]["timestamp"] - csv_trajectory[0]["timestamp"]
+                if len(csv_trajectory) > 1
+                else 0.02
+            )
             idx = min(int(round(t_loop / max(frame_dt, 1e-4))), len(csv_trajectory) - 1)
             current_arm_target = csv_trajectory[idx]["arm_rad"]
             current_gripper_target = csv_trajectory[idx]["gripper_rad"]

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Train Unitree AS2 + AgileX PiPER with RSL-RL in Isaac Lab
+# Computer Graphics and Vision Lab (CGV)
+#
 # Usage:
 #   ./launchers/train_as2_piper.sh --flat               # Stage 1: Flat baseline (500 iter, ~12 min)
 #   ./launchers/train_as2_piper.sh --rough              # Stage 2: Rough + Arm swing balance (1500 iter, ~30 min)
@@ -15,6 +17,7 @@ cd "${REPO_ROOT}"
 
 TASK="Isaac-Velocity-Flat-Unitree-AS2-Piper-v0"
 EXTRA_ARGS=()
+HEADLESS_FLAG="--headless"
 
 for arg in "$@"; do
     case "$arg" in
@@ -23,6 +26,12 @@ for arg in "$@"; do
             ;;
         --rough)
             TASK="Isaac-Velocity-Rough-Unitree-AS2-Piper-v0"
+            ;;
+        --gui|--no-headless)
+            HEADLESS_FLAG=""
+            ;;
+        --headless)
+            HEADLESS_FLAG="--headless"
             ;;
         *)
             EXTRA_ARGS+=("$arg")
@@ -35,14 +44,28 @@ echo " [CGV Lab] Unitree AS2 + AgileX PiPER RSL-RL Training"
 echo " Task : ${TASK}"
 echo "======================================================================"
 
-if [ -f "./isaaclab.sh" ]; then
-    ./isaaclab.sh -p scripts/tools/preflight_check.py --require-gpu
-    ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py \
-        --task "${TASK}" \
-        --headless "${EXTRA_ARGS[@]}"
+ISAACLAB_CMD=()
+if [[ -x "${REPO_ROOT}/isaaclab.sh" ]]; then
+    ISAACLAB_CMD=("${REPO_ROOT}/isaaclab.sh" "-p")
+elif [[ -f "${REPO_ROOT}/isaaclab.sh" ]]; then
+    ISAACLAB_CMD=("bash" "${REPO_ROOT}/isaaclab.sh" "-p")
+elif command -v isaaclab &>/dev/null; then
+    ISAACLAB_CMD=("isaaclab" "-p")
+elif command -v python3 &>/dev/null; then
+    ISAACLAB_CMD=("python3")
 else
-    python scripts/tools/preflight_check.py --require-gpu
-    python scripts/reinforcement_learning/rsl_rl/train.py \
-        --task "${TASK}" \
-        --headless "${EXTRA_ARGS[@]}"
+    ISAACLAB_CMD=("python")
 fi
+
+# Run preflight GPU verification
+"${ISAACLAB_CMD[@]}" scripts/tools/preflight_check.py --require-gpu
+
+RUN_ARGS=("--task" "${TASK}")
+if [[ -n "${HEADLESS_FLAG}" ]]; then
+    RUN_ARGS+=("${HEADLESS_FLAG}")
+fi
+if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+    RUN_ARGS+=("${EXTRA_ARGS[@]}")
+fi
+
+exec "${ISAACLAB_CMD[@]}" scripts/reinforcement_learning/rsl_rl/train.py "${RUN_ARGS[@]}"

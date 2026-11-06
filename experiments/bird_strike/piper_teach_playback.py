@@ -393,22 +393,44 @@ def load_trajectory_csv(filepath: str | Path) -> List[dict]:
     with open(path, mode="r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            t = float(row["timestamp"])
+            dt = float(row.get("dt", 0.02)) if row.get("dt") else 0.02
+
+            # Parse 6 joints in degrees and radians, supporting either representation seamlessly
+            j_deg: list[float] = []
+            j_rad: list[float] = []
+            for j_idx in range(1, 7):
+                deg_key = f"j{j_idx}_deg"
+                rad_key = f"j{j_idx}_rad"
+                if deg_key in row and row[deg_key] != "":
+                    deg_val = float(row[deg_key])
+                    rad_val = float(row[rad_key]) if (rad_key in row and row[rad_key] != "") else math.radians(deg_val)
+                elif rad_key in row and row[rad_key] != "":
+                    rad_val = float(row[rad_key])
+                    deg_val = math.degrees(rad_val)
+                else:
+                    raise KeyError(f"Row {reader.line_num} in '{path}' missing joint {j_idx} data ('{deg_key}' or '{rad_key}')")
+                j_deg.append(deg_val)
+                j_rad.append(rad_val)
+
+            grip_um = int(float(row.get("gripper_um", GRIPPER_BALL_GRASP_UM if "gripper_um" not in row else row["gripper_um"] or 0)))
+
             trajectory.append({
-                "timestamp": float(row["timestamp"]),
-                "dt": float(row.get("dt", 0.02)),
-                "j1_deg": float(row["j1_deg"]),
-                "j2_deg": float(row["j2_deg"]),
-                "j3_deg": float(row["j3_deg"]),
-                "j4_deg": float(row["j4_deg"]),
-                "j5_deg": float(row["j5_deg"]),
-                "j6_deg": float(row["j6_deg"]),
-                "gripper_um": int(float(row.get("gripper_um", 0))),
-                "j1_rad": float(row.get("j1_rad", math.radians(float(row["j1_deg"])))),
-                "j2_rad": float(row.get("j2_rad", math.radians(float(row["j2_deg"])))),
-                "j3_rad": float(row.get("j3_rad", math.radians(float(row["j3_deg"])))),
-                "j4_rad": float(row.get("j4_rad", math.radians(float(row["j4_deg"])))),
-                "j5_rad": float(row.get("j5_rad", math.radians(float(row["j5_deg"])))),
-                "j6_rad": float(row.get("j6_rad", math.radians(float(row["j6_deg"])))),
+                "timestamp": t,
+                "dt": dt,
+                "j1_deg": j_deg[0],
+                "j2_deg": j_deg[1],
+                "j3_deg": j_deg[2],
+                "j4_deg": j_deg[3],
+                "j5_deg": j_deg[4],
+                "j6_deg": j_deg[5],
+                "gripper_um": grip_um,
+                "j1_rad": j_rad[0],
+                "j2_rad": j_rad[1],
+                "j3_rad": j_rad[2],
+                "j4_rad": j_rad[3],
+                "j5_rad": j_rad[4],
+                "j6_rad": j_rad[5],
             })
     return trajectory
 
@@ -544,6 +566,15 @@ def execute_playback(args: argparse.Namespace) -> None:
     scaled_duration = total_duration / max(args.speed, 0.01)
     print(f"[INFO] Loaded {len(trajectory)} frames. Trajectory Duration: {total_duration:.2f}s (Replay: {scaled_duration:.2f}s)")
 
+    # Safety check on peak velocities under requested speed factor
+    stats = compute_trajectory_stats(trajectory)
+    for j_name, j_data in stats.get("joints", {}).items():
+        peak_scaled_vel = j_data["max_vel_degps"] * args.speed
+        if peak_scaled_vel > 180.0:
+            print(
+                f"[WARNING] Playback speed {args.speed:.2f}x results in peak velocity {peak_scaled_vel:.1f}°/s on {j_name} (exceeds 180°/s safety threshold)!"
+            )
+
     piper = resolve_piper_interface(args.can, use_mock=args.mock)
     piper.ConnectPort()
     time.sleep(0.2)
@@ -634,15 +665,13 @@ def execute_playback(args: argparse.Namespace) -> None:
 
 
 # ==============================================================================
-# Info / Inspection Mode
+# Info & Trajectory Statistics
 # ==============================================================================
 
-def execute_info(args: argparse.Namespace) -> None:
-    """Print trajectory statistics and analysis."""
-    trajectory = load_trajectory_csv(args.input)
+def compute_trajectory_stats(trajectory: List[dict]) -> dict:
+    """Calculate summary statistics including min/max angles, ranges, and peak joint velocities."""
     if not trajectory:
-        print(f"[ERROR] Trajectory file '{args.input}' contains no data.")
-        return
+        return {}
 
     n = len(trajectory)
     t0 = trajectory[0]["timestamp"]
@@ -650,15 +679,12 @@ def execute_info(args: argparse.Namespace) -> None:
     total_time = t1 - t0
     avg_rate = (n - 1) / max(total_time, 1e-4)
 
-    print("=" * 72)
-    print(f" Trajectory File Inspection: {args.input}")
-    print("=" * 72)
-    print(f" Total Frames:     {n}")
-    print(f" Total Duration:   {total_time:.3f} s")
-    print(f" Average Rate:     {avg_rate:.2f} Hz")
-    print("-" * 72)
-    print(f" {'Joint':<10} | {'Min (deg)':<12} | {'Max (deg)':<12} | {'Range (deg)':<12} | {'Max Vel (°/s)':<14}")
-    print("-" * 72)
+    stats: dict[str, Any] = {
+        "num_frames": n,
+        "total_duration_s": total_time,
+        "average_rate_hz": avg_rate,
+        "joints": {},
+    }
 
     for j in range(1, 7):
         key = f"j{j}_deg"
@@ -676,10 +702,54 @@ def execute_info(args: argparse.Namespace) -> None:
                 if vel > max_vel:
                     max_vel = vel
 
-        print(f" Joint {j:<4} | {min_v:+10.2f}° | {max_v:+10.2f}° | {rng:10.2f}° | {max_vel:12.2f} °/s")
+        stats["joints"][f"joint_{j}"] = {
+            "min_deg": min_v,
+            "max_deg": max_v,
+            "range_deg": rng,
+            "max_vel_degps": max_vel,
+        }
 
     grip_vals = [f["gripper_um"] / 1000.0 for f in trajectory]
-    print(f" Gripper    | {min(grip_vals):10.1f}mm | {max(grip_vals):10.1f}mm | {max(grip_vals) - min(grip_vals):10.1f}mm | {'N/A':<14}")
+    stats["gripper"] = {
+        "min_mm": min(grip_vals) if grip_vals else 0.0,
+        "max_mm": max(grip_vals) if grip_vals else 0.0,
+        "range_mm": (max(grip_vals) - min(grip_vals)) if grip_vals else 0.0,
+    }
+
+    return stats
+
+
+def execute_info(args: argparse.Namespace) -> None:
+    """Print trajectory statistics and analysis."""
+    trajectory = load_trajectory_csv(args.input)
+    if not trajectory:
+        print(f"[ERROR] Trajectory file '{args.input}' contains no data.")
+        return
+
+    stats = compute_trajectory_stats(trajectory)
+
+    print("=" * 72)
+    print(f" Trajectory File Inspection: {args.input}")
+    print("=" * 72)
+    print(f" Total Frames:     {stats['num_frames']}")
+    print(f" Total Duration:   {stats['total_duration_s']:.3f} s")
+    print(f" Average Rate:     {stats['average_rate_hz']:.2f} Hz")
+    print("-" * 72)
+    print(f" {'Joint':<10} | {'Min (deg)':<12} | {'Max (deg)':<12} | {'Range (deg)':<12} | {'Max Vel (°/s)':<14}")
+    print("-" * 72)
+
+    for j in range(1, 7):
+        j_data = stats["joints"][f"joint_{j}"]
+        print(
+            f" Joint {j:<4} | {j_data['min_deg']:+10.2f}° | {j_data['max_deg']:+10.2f}° | "
+            f"{j_data['range_deg']:10.2f}° | {j_data['max_vel_degps']:12.2f} °/s"
+        )
+
+    g_data = stats["gripper"]
+    print(
+        f" Gripper    | {g_data['min_mm']:10.1f}mm | {g_data['max_mm']:10.1f}mm | "
+        f"{g_data['range_mm']:10.1f}mm | {'N/A':<14}"
+    )
     print("=" * 72)
 
 

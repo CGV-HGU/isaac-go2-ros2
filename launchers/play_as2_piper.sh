@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Play Trained Unitree AS2 + AgileX PiPER Policy (WASD + Arm Teleop + Key '1' Door)
+# Computer Graphics and Vision Lab (CGV)
+#
 # Usage:
 #   ./launchers/play_as2_piper.sh --flat --spawn_door --door_type lever_push --real-time
 #   ./launchers/play_as2_piper.sh --rough --spawn_door --door_type sliding --real-time
@@ -35,10 +37,22 @@ echo " [CGV Lab] Unitree AS2 + AgileX PiPER Teleop & Door Manipulation Play"
 echo " Task : ${TASK}"
 echo "======================================================================"
 
-if [ -f "./isaaclab.sh" ]; then
-    ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/play.py \
-        --task "${TASK}" "${EXTRA_ARGS[@]}"
+ISAACLAB_CMD=()
+if [[ -x "${REPO_ROOT}/isaaclab.sh" ]]; then
+    ISAACLAB_CMD=("${REPO_ROOT}/isaaclab.sh" "-p")
+elif [[ -f "${REPO_ROOT}/isaaclab.sh" ]]; then
+    ISAACLAB_CMD=("bash" "${REPO_ROOT}/isaaclab.sh" "-p")
+elif command -v isaaclab &>/dev/null; then
+    ISAACLAB_CMD=("isaaclab" "-p")
+elif command -v python3 &>/dev/null; then
+    ISAACLAB_CMD=("python3")
 else
-    python scripts/reinforcement_learning/rsl_rl/play.py \
-        --task "${TASK}" "${EXTRA_ARGS[@]}"
+    ISAACLAB_CMD=("python")
 fi
+
+RUN_ARGS=("--task" "${TASK}")
+if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+    RUN_ARGS+=("${EXTRA_ARGS[@]}")
+fi
+
+exec "${ISAACLAB_CMD[@]}" scripts/reinforcement_learning/rsl_rl/play.py "${RUN_ARGS[@]}"

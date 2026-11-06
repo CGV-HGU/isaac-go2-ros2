@@ -141,6 +141,7 @@ isaac-go2-ros2/
 | **DAMP 메모리 프루닝 논문/연구 계획을 보고 싶다** | `docs/` | [`COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](docs/COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md) |
 | **GPU 서버 학습 및 센서 설정법을 보고 싶다** | `docs/` | [`TRAINING_RUNBOOK.md`](docs/TRAINING_RUNBOOK.md) |
 | **로봇 센서(RGB-D/LiDAR) 또는 문 조작 FSM을 수정하고 싶다** | `source/isaaclab_assets/.../` | [`as2_sensors.py`](source/isaaclab_assets/isaaclab_assets/robots/as2_sensors.py), [`door_manipulation.py`](source/isaaclab_assets/isaaclab_assets/robots/door_manipulation.py) |
+| **로봇팔 이동 표적 실험(공 파지/외란/티칭)을 검증하고 싶다** | `experiments/bird_strike/` 또는 `launchers/` | [`run_piper_ball_demo.sh`](launchers/run_piper_ball_demo.sh), [`piper_teach_playback.py`](experiments/bird_strike/piper_teach_playback.py) |
 | **강화학습 보상 함수 및 보행 환경을 수정하고 싶다** | `source/isaaclab_tasks/.../` | `as2_piper/velocity_env_cfg.py` |
 | **ROS 2 문 검출 노드 또는 실물 로봇 제어기를 수정하고 싶다** | `ros2_ws/src/as2_piper_bringup/` | [`vision_door_detector.py`](ros2_ws/src/as2_piper_bringup/as2_piper_bringup/vision_door_detector.py) |
 | **로봇 3D CAD/URDF 메쉬를 확인하고 싶다** | `robot_arms/piper/descriptions/` | [`as2_piper.urdf`](robot_arms/piper/descriptions/as2_piper.urdf) |

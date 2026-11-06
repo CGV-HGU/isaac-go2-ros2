@@ -264,6 +264,14 @@ class TestLinuxAndGitReadiness:
             "play_as2_piper.sh",
             "spawn_as2_piper.sh",
             "spawn_as2_piper_hospital.sh",
+            "run_piper_ball_demo.sh",
+            "launchers/train_as2_piper.sh",
+            "launchers/train_as2.sh",
+            "launchers/play_as2_piper.sh",
+            "launchers/spawn_as2_piper.sh",
+            "launchers/spawn_as2_piper_hospital.sh",
+            "launchers/run_piper_ball_demo.sh",
+            "experiments/bird_strike/run_sim_check.sh",
             "robot_arms/piper/setup_piper.sh",
         ):
             path = os.path.join(REPO_ROOT, sh)
@@ -271,6 +279,7 @@ class TestLinuxAndGitReadiness:
             with open(path, "rb") as f:
                 raw = f.read()
             assert b"\r\n" not in raw, f"Windows CRLF detected in {sh}; will fail on Linux GPU server!"
+            assert raw.startswith(b"#!/usr/bin/env bash"), f"Missing or invalid bash shebang in {sh}"
 
     def test_no_broken_android_sdcard_links_in_docs(self):
         for doc in ("README.md", "docs/isaac_sim_6_2_as2_piper_guide.md", "robot_arms/piper/README.md"):
