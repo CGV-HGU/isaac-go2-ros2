@@ -17,6 +17,14 @@
 
 온보드 **RGB 카메라 + Depth 카메라 + 3D LiDAR** 센서 스위트, 왼손 보행(`WASD/QE`) + 오른손 6축 팔 동시 조종, `[1]`번 키 근접 조건부 4종 도어 자동 개방, 그리고 **ROS 2 Humble 비전/LiDAR 문 인식 및 Sim-to-Real 제어 패키지(`ros2_ws/src/as2_piper_bringup`)**가 통합되어 있습니다.
 
+> [!NOTE] **저장소 역할 분리 및 공식 Unitree AS2 리소스 안내**
+> - **시뮬레이션 전용**: 본 저장소(`isaac-go2-ros2`, `As2` 브랜치)는 **Isaac Sim 6.2.0 / Isaac Lab 3.0 시뮬레이션 전용**입니다.
+> - **실물 로봇 통합 제어(`CGV-HGU/quadruped_ws`)**: 실물 **Unitree Go2 및 Unitree AS2(단독 12-DoF 주행)** 통합 제어·브링업은 별도 비공개 저장소 **`CGV-HGU/quadruped_ws`**에서 관리합니다.
+> - **Unitree 공식 AS2 리소스**:
+>   - 공식 URDF/XML/메쉬: `unitreerobotics/unitree_ros` (`robots/as2_description/`)
+>   - 공식 C++/Python SDK: `unitreerobotics/unitree_sdk2` (`example/as2/`), `unitreerobotics/unitree_sdk2_python` (`unitree_sdk2py/as2/`)
+>   - 공식 MuJoCo / RL: `unitreerobotics/unitree_mujoco` (`unitree_robots/as2/`), `unitreerobotics/unitree_rl_mjlab` (`src/assets/robots/unitree_as2/`)
+
 ---
 
 ## 2. 주요 기능 및 지원 환경 (Key Features)
@@ -89,10 +97,9 @@ isaac-go2-ros2/
 │       └── README.md                          # 실험 설계, 현재 상태, 안전 수칙
 │
 ├── docs/                                      # 📚 [연구 및 기술 문서 허브]
-│   ├── COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md    # 🌟 DAMP 프루닝 & 생체 모사 인지 마스터 플랜 (RA-L)
 │   ├── TRAINING_RUNBOOK.md                    # GPU 서버 학습·센서·시연 Step-by-Step 런북
 │   ├── isaac_sim_6_2_as2_piper_guide.md       # 연구실 서버 및 Isaac Sim 종합 기술 매뉴얼
-│   ├── plans/                                 # 세부 연구 기획 및 논문 로드맵
+│   ├── plans/                                 # 브랜치 현황 및 비공개 문서 이관 안내
 │   ├── guides/                                # 시뮬레이션 및 센서 상세 매뉴얼
 │   └── README.md                              # 문서 디렉토리 색인
 │
@@ -138,7 +145,7 @@ isaac-go2-ros2/
 | :--- | :--- | :--- |
 | **강화학습을 바로 돌리고 싶다** | `launchers/` 또는 루트 `./` | [`train_as2_piper.sh`](launchers/train_as2_piper.sh) |
 | **로봇을 키보드로 조종하고 문을 열어보고 싶다** | `launchers/` 또는 루트 `./` | [`play_as2_piper.sh`](launchers/play_as2_piper.sh) |
-| **DAMP 메모리 프루닝 논문/연구 계획을 보고 싶다** | `docs/` | [`COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md`](docs/COGNITIVE_BIO_AI_AS2_MASTER_PLAN.md) |
+| **실물 Go2 / AS2 단독 주행 제어 코드를 찾고 싶다** | 비공개 실기 워크스페이스 | `CGV-HGU/quadruped_ws` (Private) |
 | **GPU 서버 학습 및 센서 설정법을 보고 싶다** | `docs/` | [`TRAINING_RUNBOOK.md`](docs/TRAINING_RUNBOOK.md) |
 | **로봇 센서(RGB-D/LiDAR) 또는 문 조작 FSM을 수정하고 싶다** | `source/isaaclab_assets/.../` | [`as2_sensors.py`](source/isaaclab_assets/isaaclab_assets/robots/as2_sensors.py), [`door_manipulation.py`](source/isaaclab_assets/isaaclab_assets/robots/door_manipulation.py) |
 | **로봇팔 이동 표적 실험(공 파지/외란/티칭)을 검증하고 싶다** | `experiments/bird_strike/` 또는 `launchers/` | [`run_piper_ball_demo.sh`](launchers/run_piper_ball_demo.sh), [`piper_teach_playback.py`](experiments/bird_strike/piper_teach_playback.py) |
